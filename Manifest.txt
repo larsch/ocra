@@ -1,0 +1,7 @@
+History.txt
+Manifest.txt
+README.txt
+Rakefile
+bin/ocra
+lib/ocra.rb
+test/test_ocra.rb
