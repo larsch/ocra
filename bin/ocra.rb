@@ -12,6 +12,8 @@ ocra [--dll dllname] [--no-lzma] script.rb
 --no-lzma        Disable LZMA compression of the executable.
 --quiet          Suppress output.
 --help           Display this information.
+--windows        Force Windows application (rubyw.exe)
+--console        Force console application (ruby.exe)
 EOF
 
 while arg = ARGV.shift
@@ -22,6 +24,10 @@ while arg = ARGV.shift
     $extra_dlls << ARGV.shift
   when /\A--quiet\z/
     $quiet = true
+  when /\A--windows\z/
+    $force_windows = true
+  when /\A--console\z/
+    $force_console = true
   when /\A--help\z/, /\A--/
     puts usage
     exit
@@ -45,7 +51,9 @@ load $files[0]
 libs = $LOADED_FEATURES.map { |scr|
   sp = $:.find { |path| File.file?(File.join(path, scr)) }
   [scr, sp]
-}
+}.select { |file,path| path }
+
+gemspecs = Gem.loaded_specs.map { |name,info| info.loaded_from }
 
 if defined?(DATA)
   $sebimage = DATA.read(DATA.readline.to_i).unpack("m")[0]
@@ -118,6 +126,7 @@ class SebBuilder
     @of << [OP_CREATE_FILE, tgt, str.size, str].pack("VZ*VA*")
   end
   def createprocess(image, cmdline)
+    puts "l #{image} #{cmdline}"
     @of << [OP_CREATE_PROCESS, image, cmdline].pack("VZ*Z*")
   end
   def close
@@ -126,17 +135,41 @@ class SebBuilder
 end
 
 
-executable = $files[0].sub(/(\.rb)?$/, '.exe')
+executable = $files[0].sub(/(\.rbw?)?$/, '.exe')
 
 puts "=== Building #{executable}" unless $quiet
 SebBuilder.new(executable) do |sb|
   sb.mkdir('src')
-  sb.createfile($files[0], 'src\\' + $files[0])
+
+  $files.each do |file|
+    path = File.join('src', file).tr('/','\\')
+    sb.createfile(file, path)
+  end
   sb.mkdir('bin')
-  sb.createfile(File.join(bindir, "ruby.exe"), "bin\\ruby.exe")
+  
+  if ($files[0] =~ /\.rbw$/ && !$force_windows) || $force_console
+    rubyexe = "ruby.exe"
+  else
+    rubyexe = "ruby.exe"
+  end
+  
+  sb.createfile(File.join(bindir, rubyexe), "bin\\" + rubyexe)
+  
   sb.createfile(File.join(bindir, libruby_so), "bin\\msvcrt-ruby18.dll")
   $extra_dlls.each { |dll|
     sb.createfile(File.join(bindir, dll), File.join("bin", dll).tr('/','\\'))
+  }
+  #sb.createfile('c:\lang\Ruby-186-27\lib\ruby\gems\1.8\specifications\wxruby-2.0.0-x86-mswin32-60.gemspec',
+  #              'lib\ruby\gems\1.8\specifications\wxruby-2.0.0-x86-mswin32-60.gemspec')
+
+  exec_prefix = RbConfig::CONFIG['exec_prefix']
+  gemspecs.each { |gemspec|
+    pref = gemspec[0,exec_prefix.size]
+    path = gemspec[exec_prefix.size+1..-1]
+    if pref != exec_prefix
+      raise "#{gemspec} does not exist in the Ruby installation. Don't know where to put it."
+    end
+    sb.createfile(gemspec, path.tr('/','\\'))
   }
 
   libs.each { |path, tgt|
@@ -144,12 +177,13 @@ SebBuilder.new(executable) do |sb|
     if jn =~ /\/(lib\/ruby\/.*)$/
       dst = $1
     else
-      dst = tgt
+      dst = path.dup
     end
     dst.tr!('/', '\\')
     sb.createfile(jn, dst)
   }
   
-  sb.createprocess("bin\\ruby.exe", "ruby.exe \xff\\src\\" + $files[0])
+  sb.createprocess("bin\\" + rubyexe, "#{rubyexe} \xff\\src\\" + $files[0])
+  puts "=== Compressing" unless $quiet or not $lzma_mode
 end
 puts "=== Finished (Final size was #{File.size(executable)})" unless $quiet

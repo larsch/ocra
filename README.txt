@@ -10,6 +10,12 @@ FIX (describe your package)
 
 * FIX (list of features or problems)
 
+== TODO:
+
+* Handle environment variables (RUBYOPT, RUBYLIB)
+* No-console stub
+* Ensure cleanup using PendingFileRenameOperations
+
 == SYNOPSIS:
 
   FIX (code sample of usage)
