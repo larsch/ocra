@@ -108,6 +108,7 @@ OP_CREATE_DIRECTORY = 1
 OP_CREATE_FILE = 2
 OP_CREATE_PROCESS = 3
 OP_DECOMPRESS_LZMA = 4
+OP_SETENV = 5
 
 class SebBuilder
   def initialize(path)
@@ -158,6 +159,10 @@ class SebBuilder
     puts "l #{image} #{cmdline}" unless $quiet
     @of << [OP_CREATE_PROCESS, image, cmdline].pack("VZ*Z*")
   end
+  def setenv(name, value)
+    puts "e #{name} #{value}"
+    @of << [OP_SETENV, name, value].pack("VZ*Z*")
+  end
   def close
     @of.close
   end
@@ -206,7 +211,9 @@ SebBuilder.new(executable) do |sb|
     dst = tgt.tr('/', '\\')
     sb.createfile(path, dst)
   }
-  
+
+  sb.setenv('RUBYOPT', '')
+  sb.setenv('RUBYLIB', '')
   sb.createprocess("bin\\" + rubyexe, "#{rubyexe} \xff\\src\\" + $files[0])
   puts "=== Compressing" unless $quiet or not $lzma_mode
 end

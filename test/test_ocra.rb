@@ -2,6 +2,7 @@ require "test/unit"
 require "ocra"
 require "tmpdir"
 require "fileutils"
+require "rbconfig"
 
 class TestOcra < Test::Unit::TestCase
 
@@ -107,7 +108,12 @@ class TestOcra < Test::Unit::TestCase
       f << "require 'gdbm'\n"
       f << "exit 104 if $0 == __FILE__ and defined?(GDBM)\n"
     end
-    assert system("ruby", ocra, "--quiet", "--dll", "gdbm.dll", "gdbmdll.rb")
+    bindir = RbConfig::CONFIG['bindir']
+    
+    gdbmdllpath = Dir[File.join(bindir, 'gdbm*.dll')][0]
+    raise "gdbm dll was not found" unless gdbmdllpath
+    gdbmdll = File.basename(gdbmdllpath)
+    assert system("ruby", ocra, "--quiet", "--dll", gdbmdll, "gdbmdll.rb")
     path = ENV['PATH']
     ENV['PATH'] = "."
     begin

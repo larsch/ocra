@@ -16,7 +16,8 @@ const BYTE Signature[] = { 0x41, 0xb6, 0xba, 0x4e };
 #define OP_CREATE_FILE 2
 #define OP_CREATE_PROCESS 3
 #define OP_DECOMPRESS_LZMA 4
-#define OP_MAX 5
+#define OP_SETENV 5
+#define OP_MAX 6
 
 void ProcessImage(LPVOID p, DWORD size);
 void ProcessOpcodes(LPVOID* p);
@@ -26,6 +27,7 @@ BOOL OpCreateFile(LPVOID *p);
 BOOL OpCreateDirectory(LPVOID *p);
 BOOL OpCreateProcess(LPVOID *p);
 BOOL OpDecompressLzma(LPVOID *p);
+BOOL OpSetEnv(LPVOID *p);
 #include <LzmaDec.h>
 
 typedef BOOL (*POpcodeHandler)(LPVOID*);
@@ -37,7 +39,8 @@ POpcodeHandler OpcodeHandlers[OP_MAX] = {
    &OpCreateDirectory,
    &OpCreateFile,
    &OpCreateProcess,
-   &OpDecompressLzma
+   &OpDecompressLzma,
+   &OpSetEnv
 };
 
 CHAR InstDir[MAX_PATH];
@@ -382,3 +385,19 @@ BOOL OpEnd(LPVOID* p)
 {
    return FALSE;
 }
+
+BOOL OpSetEnv(LPVOID* p)
+{
+   LPTSTR Name = GetString(p);
+   LPTSTR Value = GetString(p);
+   if (!SetEnvironmentVariable(Name, Value))
+   {
+      fprintf(stderr, "Failed to set environment variable (error %lu).\n", GetLastError());
+      return FALSE;
+   }
+   else
+   {
+      return TRUE;
+   }
+}
+
