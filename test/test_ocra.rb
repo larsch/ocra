@@ -138,5 +138,15 @@ class TestOcra < Test::Unit::TestCase
     system("relativerequire.exe")
     assert_equal 160, $?.exitstatus
   end
+
+  def test_exiting
+    File.open("exiting.rb", "w") do |f|
+      f << "exit 214\n"
+    end
+    assert system("ruby", ocra, "--quiet", "exiting.rb")
+    assert File.exist?("exiting.exe")
+    system("exiting.exe")
+    assert_equal 214, $?.exitstatus
+  end
   
 end

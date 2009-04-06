@@ -390,7 +390,12 @@ BOOL OpSetEnv(LPVOID* p)
 {
    LPTSTR Name = GetString(p);
    LPTSTR Value = GetString(p);
-   if (!SetEnvironmentVariable(Name, Value))
+   CHAR ExpandedValue[MAX_PATH];
+   ExpandPath(ExpandedValue, Value);
+#ifdef _DEBUG
+   printf("SetEnv(%s, %s)\n", Name, ExpandedValue);
+#endif
+   if (!SetEnvironmentVariable(Name, ExpandedValue))
    {
       fprintf(stderr, "Failed to set environment variable (error %lu).\n", GetLastError());
       return FALSE;
