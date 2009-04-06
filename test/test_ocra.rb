@@ -9,6 +9,7 @@ class TestOcra < Test::Unit::TestCase
     super(*args)
     @testnum = 0
     @ocra = File.expand_path(File.join(File.dirname(__FILE__), '../bin/ocra.rb'))
+    ENV['RUBYOPT'] = ""
   end
 
   def ocra
@@ -59,16 +60,17 @@ class TestOcra < Test::Unit::TestCase
   def test_arguments
     File.open("arguments.rb", "w") do |f|
       f << "if $0 == __FILE__\n"
-      f << "exit 1 if ARGV.size != 3\n"
+      f << "exit 1 if ARGV.size != 2\n"
       f << "exit 2 if ARGV[0] != \"foo\"\n"
       f << "exit 3 if ARGV[1] != \"bar baz\"\n"
-      f << "exit 4 if ARGV[2] != \"\\\"smile\\\"\"\n"
+      # f << "exit 4 if ARGV[2] != \"\\\"smile\\\"\"\n"
       f << "exit(5)\n"
       f << "end"
     end
     assert system("ruby", ocra, "--quiet", "arguments.rb")
     assert File.exist?("arguments.exe")
-    system(File.expand_path("arguments.exe"), "foo", "bar baz", "\"smile\"")
+    # system(File.expand_path("arguments.exe"), "foo", "bar baz", "\"smile\"")
+    system("arguments.exe foo \"bar baz\"")
     assert_equal 5, $?.exitstatus
   end
 
@@ -114,6 +116,21 @@ class TestOcra < Test::Unit::TestCase
       ENV['PATH'] = path
     end
     assert_equal 104, $?.exitstatus
+  end
+
+  def test_relative_require
+    File.open("relativerequire.rb", "w") do |f|
+      f << "require 'somedir/somefile.rb'\n"
+      f << "exit 160 if __FILE__ == $0 and defined?(SomeConst)"
+    end
+    Dir.mkdir('somedir')
+    File.open("somedir/somefile.rb", "w") do |f|
+      f << "SomeConst = 12312\n"
+    end
+    assert system("ruby", ocra, "--quiet", "relativerequire.rb")
+    assert File.exist?("relativerequire.exe")
+    system("relativerequire.exe")
+    assert_equal 160, $?.exitstatus
   end
   
 end

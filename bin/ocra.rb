@@ -48,12 +48,41 @@ end
 
 puts "=== Loading script to check dependencies" unless $quiet
 load $files[0]
-libs = $LOADED_FEATURES.map { |scr|
-  sp = $:.find { |path| File.file?(File.join(path, scr)) }
-  [scr, sp]
-}.select { |file,path| path }
 
-gemspecs = Gem.loaded_specs.map { |name,info| info.loaded_from }
+
+libs = []
+
+
+features = $LOADED_FEATURES.dup
+
+require 'rbconfig'
+exec_prefix = RbConfig::CONFIG['exec_prefix']
+src_prefix = File.expand_path(File.dirname($files[0]))
+
+features.each do |filename|
+  path = $:.find { |p| File.exist?(File.expand_path(filename, p)) }
+  if path
+    fullpath = File.expand_path(filename, path)
+    if fullpath.index(exec_prefix) == 0
+      libs << [ fullpath, fullpath[exec_prefix.size+1..-1] ]
+    elsif fullpath.index(src_prefix) == 0
+      libs << [ fullpath, "src/" + fullpath[src_prefix.size+1..-1]]
+    else
+      libs << [ fullpath, filename.dup ]
+    end
+  else
+    puts "=== WARNING: Couldn't find #{filename}"
+  end
+end
+
+# puts libs.map { |x| x.inspect }
+#exit
+
+if defined?(Gem)
+  gemspecs = Gem.loaded_specs.map { |name,info| info.loaded_from }
+else
+  gemspecs = []
+end
 
 if defined?(DATA)
   $sebimage = DATA.read(DATA.readline.to_i).unpack("m")[0]
@@ -126,7 +155,7 @@ class SebBuilder
     @of << [OP_CREATE_FILE, tgt, str.size, str].pack("VZ*VA*")
   end
   def createprocess(image, cmdline)
-    puts "l #{image} #{cmdline}"
+    puts "l #{image} #{cmdline}" unless $quiet
     @of << [OP_CREATE_PROCESS, image, cmdline].pack("VZ*Z*")
   end
   def close
@@ -155,7 +184,7 @@ SebBuilder.new(executable) do |sb|
   
   sb.createfile(File.join(bindir, rubyexe), "bin\\" + rubyexe)
   
-  sb.createfile(File.join(bindir, libruby_so), "bin\\msvcrt-ruby18.dll")
+  sb.createfile(File.join(bindir, libruby_so), "bin\\#{libruby_so}")
   $extra_dlls.each { |dll|
     sb.createfile(File.join(bindir, dll), File.join("bin", dll).tr('/','\\'))
   }
@@ -173,14 +202,9 @@ SebBuilder.new(executable) do |sb|
   }
 
   libs.each { |path, tgt|
-    jn = File.join(tgt, path)
-    if jn =~ /\/(lib\/ruby\/.*)$/
-      dst = $1
-    else
-      dst = path.dup
-    end
-    dst.tr!('/', '\\')
-    sb.createfile(jn, dst)
+    # p [path,tgt]
+    dst = tgt.tr('/', '\\')
+    sb.createfile(path, dst)
   }
   
   sb.createprocess("bin\\" + rubyexe, "#{rubyexe} \xff\\src\\" + $files[0])
