@@ -260,11 +260,6 @@ EOF
   
 end # module Ocra
 
-if defined? Gem
-  puts "=== Warning: Rubygems is loaded. Rubygems will be included the archive."
-  puts "        RUBYOPT=#{ENV['RUBYOPT']}"
-end
-
 if File.basename(__FILE__) == File.basename($0)
   Ocra.initialize_ocra
   Ocra.parseargs(ARGV)
