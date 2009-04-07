@@ -28,6 +28,30 @@ module Ocra
   def Ocra.build_exe
     libs = []
 
+    if $autoload
+      # Force loading autoloaded
+      modules_checked = []
+      loop do
+        modules_to_check = []
+        ObjectSpace.each_object(Module) do |m|
+          modules_to_check << m unless modules_checked.include?(m)
+        end
+        break if modules_to_check.empty?
+        modules_to_check.each do |m|
+          modules_checked << m
+          m.constants.each do |c|
+            if m.autoload?(c)
+              begin
+                m.const_get(c)
+              rescue LoadError
+                puts "=== WARNING: #{m}::#{c} was not loadable"
+              end
+            end
+          end
+        end
+      end
+    end
+
     features = $LOADED_FEATURES.dup
 
     require 'rbconfig'
@@ -35,7 +59,7 @@ module Ocra
     src_prefix = File.expand_path(File.dirname($files[0]))
     sitelibdir = RbConfig::CONFIG['sitelibdir']
     instsitelibdir = sitelibdir[exec_prefix.size+1..-1]
-    
+
     # Find loaded files
     features.each do |filename|
       path = $:.find { |p| File.exist?(File.expand_path(filename, p)) }
@@ -52,7 +76,7 @@ module Ocra
         puts "=== WARNING: Couldn't find #{filename}"
       end
     end
-    
+
     # Find gemspecs to include
     if defined?(Gem)
       gemspecs = Gem.loaded_specs.map { |name,info| info.loaded_from }
@@ -179,6 +203,7 @@ end # module Ocra
 $lzma_mode = true
 $extra_dlls = []
 $files = []
+$autoload = true
 
 usage = <<EOF
 ocra [--dll dllname] [--no-lzma] script.rb
@@ -189,6 +214,7 @@ ocra [--dll dllname] [--no-lzma] script.rb
 --help           Display this information.
 --windows        Force Windows application (rubyw.exe)
 --console        Force console application (ruby.exe)
+--no-autoload    Don't load/include script.rb's autoloads
 EOF
 
 while arg = ARGV.shift
@@ -203,6 +229,8 @@ while arg = ARGV.shift
     $force_windows = true
   when /\A--console\z/
     $force_console = true
+  when /\A--no-autoload\z/
+    $autoload = false
   when /\A--help\z/, /\A--/
     puts usage
     exit

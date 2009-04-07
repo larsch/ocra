@@ -148,5 +148,50 @@ class TestOcra < Test::Unit::TestCase
     system("exiting.exe")
     assert_equal 214, $?.exitstatus
   end
+
+  def test_autoload
+    File.open("autoload.rb", "w") do |f|
+      f << "$:.unshift File.dirname(__FILE__)\n"
+      f << "autoload :Foo, 'foo'\n"
+      f << "Foo if __FILE__ == $0\n"
+    end
+    File.open("foo.rb", "w") do |f|
+      f << "class Foo; end\n"
+    end
+    assert system("ruby", ocra, "--quiet", "autoload.rb")
+    assert File.exist?("autoload.exe")
+    File.unlink('foo.rb')
+    assert system("autoload.exe")
+    # assert_equal 214, $?.exitstatus
+  end
+
+  def test_autoload_missing
+    File.open("autoloadmissing.rb", "w") do |f|
+      f << "$:.unshift File.dirname(__FILE__)\n"
+      f << "autoload :Foo, 'foo'\n"
+    end
+    assert system("ruby", ocra, "--quiet", "autoloadmissing.rb")
+    assert File.exist?("autoloadmissing.exe")
+    assert system("autoloadmissing.exe")
+  end
   
+  def test_autoload_nested
+    File.open("autoloadnested.rb", "w") do |f|
+      f << "$:.unshift File.dirname(__FILE__)\n"
+      f << "module Bar\n"
+      f << "  autoload :Foo, 'foo'\n"
+      f << "end\n"
+      f << "Bar::Foo if __FILE__ == $0\n"
+    end
+    File.open("foo.rb", "w") do |f|
+      f << "module Bar\n"
+      f << "class Foo; end\n"
+      f << "end\n"
+    end
+    assert system("ruby", ocra, "--quiet", "autoloadnested.rb")
+    assert File.exist?("autoloadnested.exe")
+    File.unlink('foo.rb')
+    assert system("autoloadnested.exe")
+    # assert_equal 214, $?.exitstatus
+  end
 end
