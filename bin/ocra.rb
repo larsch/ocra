@@ -19,7 +19,11 @@ module Ocra
     attr_accessor :force_console
     attr_accessor :quiet
     attr_reader :lzmapath
-    attr_reader :sebimage
+    attr_reader :stubimage
+    
+    def get_next_embedded_image
+      DATA.read(DATA.readline.to_i).unpack("m")[0]
+    end
   end
 
   def Ocra.initialize_ocra
@@ -29,13 +33,14 @@ module Ocra
     @load_autoload = true
     
     if defined?(DATA)
-      @sebimage = DATA.read(DATA.readline.to_i).unpack("m")[0]
-      lzmaimage = DATA.read(DATA.readline.to_i).unpack("m")[0]
+      @stubimage = get_next_embedded_image
+      lzmaimage = get_next_embedded_image
       @lzmapath = File.join(ENV['TEMP'], 'lzma.exe').tr('/','\\')
-      File.open(@lzmapath, "wb") { |f| f << lzmaimage }
+      File.open(@lzmapath, "wb") { |file| file << lzmaimage }
     else
-      @sebimage = File.open(File.join(File.dirname(__FILE__), '../share/ocra/stub.exe'), "rb") { |f| f.read }
-      @lzmapath = File.expand_path('../share/ocra/lzma.exe', File.dirname(__FILE__)).tr('/','\\')
+      ocrapath = File.dirname(__FILE__)
+      @stubimage = File.open(File.join(ocrapath, '../share/ocra/stub.exe'), "rb") { |file| file.read }
+      @lzmapath = File.expand_path('../share/ocra/lzma.exe', ocrapath).tr('/','\\')
       raise "lzma.exe not found" unless File.exist?(@lzmapath)
     end
   end
@@ -80,45 +85,61 @@ EOF
       exit
     end
   end
-  
-  def Ocra.build_exe
-    libs = []
 
-    if Ocra.load_autoload
-      # Force loading autoloaded
-      modules_checked = []
-      loop do
-        modules_to_check = []
-        ObjectSpace.each_object(Module) do |m|
-          modules_to_check << m unless modules_checked.include?(m)
-        end
-        break if modules_to_check.empty?
-        modules_to_check.each do |m|
-          modules_checked << m
-          m.constants.each do |c|
-            if m.autoload?(c)
-              begin
-                m.const_get(c)
-              rescue LoadError
-                puts "=== WARNING: #{m}::#{c} was not loadable"
-              end
+  # Force loading autoloaded constants. Searches through all modules
+  # (and hence classes), and checks their constants for autoloaded
+  # ones, then attempts to load them.
+  def Ocra.attempt_load_autoload
+    modules_checked = []
+    loop do
+      modules_to_check = []
+      ObjectSpace.each_object(Module) do |mod|
+        modules_to_check << mod unless modules_checked.include?(mod)
+      end
+      break if modules_to_check.empty?
+      modules_to_check.each do |mod|
+        modules_checked << mod
+        mod.constants.each do |const|
+          if mod.autoload?(const)
+            begin
+              mod.const_get(const)
+            rescue LoadError
+              puts "=== WARNING: #{mod}::#{const} was not loadable"
             end
           end
         end
       end
     end
+  end
+  
+  def Ocra.build_exe
+    # Attempt to autoload libraries before doing anything else.
+    attempt_load_autoload if Ocra.load_autoload
 
+    # Store the currently loaded files (before we require rbconfig for
+    # our own use).
     features = $LOADED_FEATURES.dup
+
+    # Find gemspecs to include
+    if defined?(Gem)
+      gemspecs = Gem.loaded_specs.map { |name,info| info.loaded_from }
+    else
+      gemspecs = []
+    end
 
     require 'rbconfig'
     exec_prefix = RbConfig::CONFIG['exec_prefix']
     src_prefix = File.expand_path(File.dirname(Ocra.files[0]))
     sitelibdir = RbConfig::CONFIG['sitelibdir']
-    instsitelibdir = sitelibdir[exec_prefix.size+1..-1]
+    bindir = RbConfig::CONFIG['bindir']
+    libruby_so = RbConfig::CONFIG['LIBRUBY_SO']
 
+    instsitelibdir = sitelibdir[exec_prefix.size+1..-1]
+    
     # Find loaded files
+    libs = []
     features.each do |filename|
-      path = $:.find { |p| File.exist?(File.expand_path(filename, p)) }
+      path = $:.find { |path| File.exist?(File.expand_path(filename, path)) }
       if path
         fullpath = File.expand_path(filename, path)
         if fullpath.index(exec_prefix) == 0
@@ -133,45 +154,33 @@ EOF
       end
     end
 
-    # Find gemspecs to include
-    if defined?(Gem)
-      gemspecs = Gem.loaded_specs.map { |name,info| info.loaded_from }
-    else
-      gemspecs = []
-    end
-
-    require 'rbconfig'
-    bindir = RbConfig::CONFIG['bindir']
-    libruby_so = RbConfig::CONFIG['LIBRUBY_SO']
-
     executable = Ocra.files[0].sub(/(\.rbw?)?$/, '.exe')
 
     puts "=== Building #{executable}" unless Ocra.quiet
     SebBuilder.new(executable) do |sb|
-      sb.mkdir('src')
-
+      # Add explicitly mentioned files
       Ocra.files.each do |file|
         path = File.join('src', file).tr('/','\\')
         sb.createfile(file, path)
       end
-      sb.mkdir('bin')
-      
+
+      # Add the ruby executable and DLL
       if (Ocra.files[0] =~ /\.rbw$/ && !Ocra.force_windows) || Ocra.force_console
         rubyexe = "ruby.exe"
       else
         rubyexe = "ruby.exe"
       end
-      
       sb.createfile(File.join(bindir, rubyexe), "bin\\" + rubyexe)
-      
-      sb.createfile(File.join(bindir, libruby_so), "bin\\#{libruby_so}")
-      Ocra.extra_dlls.each { |dll|
-        sb.createfile(File.join(bindir, dll), File.join("bin", dll).tr('/','\\'))
-      }
-      #sb.createfile('c:\lang\Ruby-186-27\lib\ruby\gems\1.8\specifications\wxruby-2.0.0-x86-mswin32-60.gemspec',
-      #              'lib\ruby\gems\1.8\specifications\wxruby-2.0.0-x86-mswin32-60.gemspec')
+      if libruby_so
+        sb.createfile(File.join(bindir, libruby_so), "bin\\#{libruby_so}")
+      end
 
-      exec_prefix = RbConfig::CONFIG['exec_prefix']
+      # Add extra DLLs
+      Ocra.extra_dlls.each do |dll|
+        sb.createfile(File.join(bindir, dll), File.join("bin", dll).tr('/','\\'))
+      end
+
+      # Add gemspecs
       gemspecs.each { |gemspec|
         pref = gemspec[0,exec_prefix.size]
         path = gemspec[exec_prefix.size+1..-1]
@@ -181,15 +190,18 @@ EOF
         sb.createfile(gemspec, path.tr('/','\\'))
       }
 
-      libs.each { |path, tgt|
-        # p [path,tgt]
-        dst = tgt.tr('/', '\\')
-        sb.createfile(path, dst)
-      }
+      # Add loaded libraries
+      libs.each do |path, target|
+        sb.createfile(path, target.tr('/', '\\'))
+      end
 
+      # Set environment variable
       sb.setenv('RUBYOPT', '')
       sb.setenv('RUBYLIB', '')
+
+      # Launch the script
       sb.createprocess("bin\\" + rubyexe, "#{rubyexe} \xff\\src\\" + Ocra.files[0])
+      
       puts "=== Compressing" unless Ocra.quiet or not Ocra.lzma_mode
     end
     puts "=== Finished (Final size was #{File.size(executable)})" unless Ocra.quiet
@@ -198,12 +210,12 @@ EOF
   class SebBuilder
     def initialize(path)
       @paths = {}
-      File.open(path, "wb") do |f|
-        f.write(Ocra.sebimage)
+      File.open(path, "wb") do |ocrafile|
+        ocrafile.write(Ocra.stubimage)
         if Ocra.lzma_mode
           @of = ""
         else
-          @of = f
+          @of = ocrafile
         end
         yield(self)
 
@@ -211,20 +223,20 @@ EOF
           begin
             File.open("tmpin", "wb") { |tmp| tmp.write(@of) }
             system("#{Ocra.lzmapath} e tmpin tmpout 2>NUL") or fail
-            @c = File.open("tmpout", "rb") { |tmp| tmp.read }
-            f.write([OP_DECOMPRESS_LZMA, @c.size, @c].pack("VVA*"))
-            f.write([OP_END].pack("V"))
+            compressed_data = File.open("tmpout", "rb") { |tmp| tmp.read }
+            ocrafile.write([OP_DECOMPRESS_LZMA, compressed_data.size, compressed_data].pack("VVA*"))
+            ocrafile.write([OP_END].pack("V"))
           ensure
             File.unlink("tmpin") if File.exist?("tmpin")
             File.unlink("tmpout") if File.exist?("tmpout")
           end
         else
-          f.write(@of) if Ocra.lzma_mode
+          ocrafile.write(@of) if Ocra.lzma_mode
         end
 
-        f.write([OP_END].pack("V"))
-        f.write([Ocra.sebimage.size].pack("V"))
-        f.write(Signature.pack("C*"))
+        ocrafile.write([OP_END].pack("V"))
+        ocrafile.write([Ocra.stubimage.size].pack("V")) # Pointer to start of opcodes
+        ocrafile.write(Signature.pack("C*"))
       end
     end
     def mkdir(path)
@@ -241,7 +253,7 @@ EOF
     end
     def createfile(src, tgt)
       ensuremkdir(File.dirname(tgt))
-      str = File.open(src, "rb") { |s| s.read }
+      str = File.open(src, "rb") { |file| file.read }
       puts "a #{tgt}" unless Ocra.quiet
       @of << [OP_CREATE_FILE, tgt, str.size, str].pack("VZ*VA*")
     end
