@@ -11,4 +11,4 @@ stub.exe: $(OBJS)
 	$(CC) $(CFLAGS) $(OBJS) -s -o stub
 
 clean:
-	rm $(OBJS)
+	rm -f $(OBJS)
