@@ -27,11 +27,6 @@ module Ocra
   end
 
   def Ocra.initialize_ocra
-    @lzma_mode = true
-    @extra_dlls = []
-    @files = []
-    @load_autoload = true
-    
     if defined?(DATA)
       @stubimage = get_next_embedded_image
       lzmaimage = get_next_embedded_image
@@ -46,6 +41,14 @@ module Ocra
   end
 
   def Ocra.parseargs(argv)
+    lzma_mode = true
+    extra_dlls = []
+    files = []
+    load_autoload = true
+    force_windows = false
+    force_console = false
+    quiet = false
+    
     usage = <<EOF
 ocra [--dll dllname] [--no-lzma] script.rb
 
@@ -61,29 +64,42 @@ EOF
     while arg = argv.shift
       case arg
       when /\A--(no-)?lzma\z/
-        Ocra.lzma_mode = !$1
+        lzma_mode = !$1
       when /\A--dll\z/
-        Ocra.extra_dlls << argv.shift
+        extra_dlls << argv.shift
       when /\A--quiet\z/
-        Ocra.quiet = true
+        quiet = true
       when /\A--windows\z/
-        Ocra.force_windows = true
+        force_windows = true
       when /\A--console\z/
-        Ocra.force_console = true
+        force_console = true
       when /\A--no-autoload\z/
-        Ocra.load_autoload = false
+        load_autoload = false
       when /\A--help\z/, /\A--/
         puts usage
         exit
       else
-        @files << arg
+        files << arg
       end
     end
 
-    if Ocra.files.empty?
+    if files.empty?
       puts usage
       exit
     end
+
+    @lzma_mode = lzma_mode
+    @extra_dlls = extra_dlls
+    @quiet = quiet
+    @force_windows = force_windows
+    @force_console = force_console
+    @load_autoload = load_autoload
+    @files = files
+  end
+
+  def Ocra.init(argv)
+    parseargs(argv)
+    initialize_ocra
   end
 
   # Force loading autoloaded constants. Searches through all modules
@@ -157,7 +173,7 @@ EOF
     executable = Ocra.files[0].sub(/(\.rbw?)?$/, '.exe')
 
     puts "=== Building #{executable}" unless Ocra.quiet
-    SebBuilder.new(executable) do |sb|
+    OcraBuilder.new(executable) do |sb|
       # Add explicitly mentioned files
       Ocra.files.each do |file|
         path = File.join('src', file).tr('/','\\')
@@ -207,7 +223,7 @@ EOF
     puts "=== Finished (Final size was #{File.size(executable)})" unless Ocra.quiet
   end
   
-  class SebBuilder
+  class OcraBuilder
     def initialize(path)
       @paths = {}
       File.open(path, "wb") do |ocrafile|
@@ -268,19 +284,20 @@ EOF
     def close
       @of.close
     end
-  end # class SebBuilder
+  end # class OcraBuilder
   
 end # module Ocra
 
 if File.basename(__FILE__) == File.basename($0)
-  Ocra.initialize_ocra
-  Ocra.parseargs(ARGV)
-  puts "=== Loading script to check dependencies" unless Ocra.quiet
-  $0 = "<ocra>"
+  Ocra.init(ARGV)
   ARGV.clear
+  
   at_exit do
     Ocra.build_exe
-    exit
+    exit(0)
   end
+  
+  puts "=== Loading script to check dependencies" unless Ocra.quiet
+  $0 = Ocra.files[0]
   load Ocra.files[0]
 end
