@@ -50,7 +50,7 @@ module Ocra
     quiet = false
     
     usage = <<EOF
-ocra [--dll dllname] [--no-lzma] script.rb
+ocra [options] script.rb
 
 --dll dllname    Include additional DLLs from the Ruby bindir.
 --no-lzma        Disable LZMA compression of the executable.

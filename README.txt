@@ -5,19 +5,36 @@
 == DESCRIPTION:
 
 OCRA (One-Click Ruby Application) builds Windows executables from Ruby
-source code. The executable is a self-extracting, self-running package
-that contains the Ruby interpreter, your source code and any
-additional ruby libraries or DLL.
+source code. The executable is a self-extracting, self-running
+executable that contains the Ruby interpreter, your source code and
+any additionally needed ruby libraries or DLL.
 
 == FEATURES/PROBLEMS:
 
-* FIX (list of features or problems)
+* LZMA Compression (optional, default on)
+* Windows support only
+* Ruby 1.9 support
+* Both console programs and desktop programs supported (no console will
+  pop up with .rbw files).
 
-* Your program should 'require' all necessary files when invoked
-  without arguments, so ocra can detect all dependencies. Autoloaded
-  constants should work.
+== TODO:
 
-* Ocra does not set up a include path. Use "$:.unshift
+* Clean up using manual recursive deletion (not SHop).
+
+== SYNOPSIS:
+
+ocra.rb [option] your/script.rb
+
+* OCRA will load your script (using Kernel#load) and build the
+  executable when it exits.
+
+* Your program should 'require' all necessary files when invoked without
+  arguments, so ocra can detect all dependencies.
+
+* Autoloaded constants (e.g. modules and classes) should work. Ocra
+  attempts to load all autoload definitions.
+
+* Ocra does not set up the include path. Use "$:.unshift
   File.dirname(__FILE__)" at the start of your script if you need to
   'require' additional source files in the same directory no matter
   what the user's current working directory is.
@@ -25,47 +42,52 @@ additional ruby libraries or DLL.
 * DLLs needs to be added manually (e.g. sqlite3.dll, gdbm.dll,
   etc.). Use the --dll option.
 
-== TECHINICAL DETAILS
-
-* Library files from your Ruby installation are included in the same
-  path (relative to the installation root). Ruby's default search
-  paths will find them there.
-
-* Library files from custom paths additional (e.g. ruby -I some/path)
-  will be placed into the site dir (lib/ruby/site_ruby).
-
-* The RUBYOPT and RUBYLIB variables are cleared before your program is
-  launched by the executable in order not to interfere with any Ruby
-  installation on the end user's installation.
-
-* Autoloaded constants will be attempted loaded when building the
-  executable. Modules that doesn't exist will be ignore (but a warning
-  will be logged.)
-  
-== TODO:
-
-* Handle environment variables (RUBYOPT, RUBYLIB).
-* No-console stub.
-* Clean up using manual recursive deletion (not SHop).
-* Ensure cleanup using PendingFileRenameOperations
-
-== SYNOPSIS:
-
-  FIX (code sample of usage)
-
 == REQUIREMENTS:
 
 * Windows
+* Working Ruby installation
 
 == INSTALL:
 
 * FIX (sudo gem install, anything else)
 
+== TECHNICAL DETAILS
+
+The Ocra stub extracts the contents into a temporary directory
+(Windows' default temporary directory). The directory will contains
+the same directory layout as your Ruby installlation. The source files
+for your application will be put in the 'src' subdirectory.
+
+Libraries found in non-standard path (for example, if you invoke Ocra
+with "ruby -I some/path") will be placed into the site dir
+(lib/ruby/site_ruby).
+
+The RUBYOPT and RUBYLIB variables are cleared before your program is
+launched by the executable in order not to interfere with any Ruby
+installation on the end user's installation.
+
+Autoloaded constants will be attempted loaded when building the
+executable. Modules that doesn't exist will be ignore (but a warning
+will be logged.)
+
+== CREDITS:
+
+Thanks for Igor Pavlov for the LZMA compressor and decompressor. The
+source code used was place into Public Domain by Igor Pavlov.
+
+Erik Veenstra for rubyscript2exe which provided inspiration. I did not
+use RubyScript2Exe for the following reasons:
+
+  * As of April 2009, unmaintained and does not work out-of-the box
+    with latest Ruby 1.8 and not at all with Ruby 1.9.
+    
+  * EEE is GPL and written in Pascal
+
 == LICENSE:
 
 (The MIT License)
 
-Copyright (c) 2009 FIX
+Copyright (c) 2009 Lars Christensen
 
 Permission is hereby granted, free of charge, to any person obtaining
 a copy of this software and associated documentation files (the
