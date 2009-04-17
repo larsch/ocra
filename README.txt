@@ -1,6 +1,6 @@
 = ocra
 
-* FIX (url)
+* http://github.com/larsch/ocra/
 
 == DESCRIPTION:
 
