@@ -46,6 +46,7 @@ ocra.rb [option] your/script.rb
 
 * Windows
 * Working Ruby installation
+* MinGW Installation (for building the stub)
 
 == INSTALL:
 
