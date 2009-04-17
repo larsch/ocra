@@ -75,13 +75,7 @@ will be logged.)
 Thanks for Igor Pavlov for the LZMA compressor and decompressor. The
 source code used was place into Public Domain by Igor Pavlov.
 
-Erik Veenstra for rubyscript2exe which provided inspiration. I did not
-use RubyScript2Exe for the following reasons:
-
-  * As of April 2009, unmaintained and does not work out-of-the box
-    with latest Ruby 1.8 and not at all with Ruby 1.9.
-    
-  * EEE is GPL and written in Pascal
+Erik Veenstra for rubyscript2exe which provided inspiration.
 
 == LICENSE:
 
