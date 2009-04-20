@@ -1,5 +1,6 @@
 = ocra
 
+* http://rubyforge.org/projects/ocra/
 * http://github.com/larsch/ocra/
 
 == DESCRIPTION:
@@ -50,7 +51,16 @@ ocra.rb [option] your/script.rb
 
 == INSTALL:
 
-* FIX (sudo gem install, anything else)
+=== Gem
+
+* gem install ocra
+
+Can also be downloaded from http://rubyforge.org/frs/?group_id=8185
+
+== Stand-alone
+
+Get ocrasa.rb from http://rubyforge.org/frs/?group_id=8185. Requires
+nothing but a working Ruby installation on Windows.
 
 == TECHNICAL DETAILS
 
