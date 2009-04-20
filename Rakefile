@@ -5,7 +5,6 @@ require 'hoe'
 require './lib/ocra.rb'
 
 Hoe.new('ocra', Ocra::VERSION) do |p|
-  # p.rubyforge_name = 'ocrax' # if different than lowercase project name
   p.developer('Lars Christensen', 'larsch@belunktum.dk')
 end
 
@@ -18,6 +17,9 @@ task :test => :stub
 
 task :standalone => [ 'bin/ocrasa.rb', 'bin/ocrasa.exe' ]
 
+task :release_standalone => :standalone do
+  sh "rubyforge add_release ocra ocra-standalone #{Ocra::VERSION} bin/ocrasa.rb"
+end
 
 file 'bin/ocrasa.rb' => [ 'bin/ocra.rb', 'share/ocra/stub.exe', 'share/ocra/lzma.exe' ] do
   cp 'bin/ocra.rb', 'bin/ocrasa.rb'
