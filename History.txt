@@ -1,3 +1,9 @@
+=== 1.0.1 / 2009-05-05
+
+* Added stub with windows runtime for windowed applications
+  (e.g. wxRuby) and fixed issue where OCRA would use ruby.exe instead
+  of rubyw.exe for such programs. [#25774]
+
 === 1.0.0 / 2009-04-05
 
 * 1 major enhancement

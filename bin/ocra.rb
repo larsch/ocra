@@ -20,6 +20,7 @@ module Ocra
     attr_accessor :quiet
     attr_reader :lzmapath
     attr_reader :stubimage
+    attr_reader :stubwimage
     
     def get_next_embedded_image
       DATA.read(DATA.readline.to_i).unpack("m")[0]
@@ -29,12 +30,14 @@ module Ocra
   def Ocra.initialize_ocra
     if defined?(DATA)
       @stubimage = get_next_embedded_image
+      @stubwimage = get_next_embedded_image
       lzmaimage = get_next_embedded_image
       @lzmapath = File.join(ENV['TEMP'], 'lzma.exe').tr('/','\\')
       File.open(@lzmapath, "wb") { |file| file << lzmaimage }
     else
       ocrapath = File.dirname(__FILE__)
       @stubimage = File.open(File.join(ocrapath, '../share/ocra/stub.exe'), "rb") { |file| file.read }
+      @stubwimage = File.open(File.join(ocrapath, '../share/ocra/stubw.exe'), "rb") { |file| file.read }
       @lzmapath = File.expand_path('../share/ocra/lzma.exe', ocrapath).tr('/','\\')
       raise "lzma.exe not found" unless File.exist?(@lzmapath)
     end
@@ -172,8 +175,10 @@ EOF
 
     executable = Ocra.files[0].sub(/(\.rbw?)?$/, '.exe')
 
+    windowed = (Ocra.files[0] =~ /\.rbw$/ && !Ocra.force_windows) || Ocra.force_console
+
     puts "=== Building #{executable}" unless Ocra.quiet
-    OcraBuilder.new(executable) do |sb|
+    OcraBuilder.new(executable, windowed) do |sb|
       # Add explicitly mentioned files
       Ocra.files.each do |file|
         path = File.join('src', file).tr('/','\\')
@@ -181,8 +186,8 @@ EOF
       end
 
       # Add the ruby executable and DLL
-      if (Ocra.files[0] =~ /\.rbw$/ && !Ocra.force_windows) || Ocra.force_console
-        rubyexe = "ruby.exe"
+      if windowed
+        rubyexe = "rubyw.exe"
       else
         rubyexe = "ruby.exe"
       end
@@ -224,15 +229,22 @@ EOF
   end
   
   class OcraBuilder
-    def initialize(path)
+    def initialize(path, windowed)
       @paths = {}
       File.open(path, "wb") do |ocrafile|
-        ocrafile.write(Ocra.stubimage)
+
+        if windowed
+          ocrafile.write(Ocra.stubwimage)
+        else
+          ocrafile.write(Ocra.stubimage)
+        end
+          
         if Ocra.lzma_mode
           @of = ""
         else
           @of = ocrafile
         end
+
         yield(self)
 
         if Ocra.lzma_mode
