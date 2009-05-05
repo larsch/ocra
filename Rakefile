@@ -18,8 +18,16 @@ task :test => :stub
 
 task :standalone => [ 'bin/ocrasa.rb' ]
 
-task :release_standalone => :standalone do
-  sh "rubyforge add_release ocra ocra-standalone #{Ocra::VERSION} bin/ocrasa.rb"
+standalone_zip = "bin/ocrasa-#{ENV['VERSION']}.zip"
+
+file standalone_zip => 'bin/ocrasa.rb' do
+  chdir('bin') do
+    system("zip ocrasa-#{ENV['VERSION']}.zip ocrasa.rb")
+  end
+end
+
+task :release_standalone => standalone_zip do
+  sh "rubyforge add_release ocra ocra-standalone #{Ocra::VERSION} #{standalone_zip}"
 end
 
 file 'bin/ocrasa.rb' => [ 'bin/ocra.rb', 'share/ocra/stub.exe', 'share/ocra/stubw.exe', 'share/ocra/lzma.exe' ] do
