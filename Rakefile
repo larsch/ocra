@@ -11,6 +11,8 @@ end
 task :stub do
   sh "mingw32-make -C src"
   cp 'src/stub.exe', 'share/ocra/stub.exe'
+  cp 'src/stubw.exe', 'share/ocra/stubw.exe'
+  cp 'src/edicon.exe', 'share/ocra/edicon.exe'
 end
 
 task :test => :stub
@@ -29,7 +31,7 @@ task :release_standalone => standalone_zip do
   sh "rubyforge add_release ocra ocra-standalone #{Ocra::VERSION} #{standalone_zip}"
 end
 
-file 'bin/ocrasa.rb' => [ 'bin/ocra.rb', 'share/ocra/stub.exe', 'share/ocra/stubw.exe', 'share/ocra/lzma.exe' ] do
+file 'bin/ocrasa.rb' => [ 'bin/ocra.rb', 'share/ocra/stub.exe', 'share/ocra/stubw.exe', 'share/ocra/lzma.exe', 'share/ocra/edicon.exe' ] do
   cp 'bin/ocra.rb', 'bin/ocrasa.rb'
   File.open("bin/ocrasa.rb", "a") do |f|
     f.puts "__END__"
@@ -45,6 +47,11 @@ file 'bin/ocrasa.rb' => [ 'bin/ocra.rb', 'share/ocra/stub.exe', 'share/ocra/stub
     f.puts stub64
     
     lzma = File.open("share/ocra/lzma.exe", "rb") {|g| g.read}
+    lzma64 = [lzma].pack("m")
+    f.puts lzma64.size
+    f.puts lzma64
+
+    lzma = File.open("share/ocra/edicon.exe", "rb") {|g| g.read}
     lzma64 = [lzma].pack("m")
     f.puts lzma64.size
     f.puts lzma64

@@ -156,7 +156,7 @@ void ProcessImage(LPVOID ptr, DWORD size)
    }
    else
    {
-      fprintf(stderr, "Bad signature in SEB.\n");
+      fprintf(stderr, "Bad signature in executable.\n");
    }
 }
 

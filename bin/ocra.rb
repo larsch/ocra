@@ -17,8 +17,10 @@ module Ocra
     attr_accessor :load_autoload
     attr_accessor :force_windows
     attr_accessor :force_console
+    attr_accessor :icon_filename
     attr_accessor :quiet
     attr_reader :lzmapath
+    attr_reader :ediconpath
     attr_reader :stubimage
     attr_reader :stubwimage
     
@@ -34,12 +36,15 @@ module Ocra
       lzmaimage = get_next_embedded_image
       @lzmapath = File.join(ENV['TEMP'], 'lzma.exe').tr('/','\\')
       File.open(@lzmapath, "wb") { |file| file << lzmaimage }
+      ediconimage = get_next_embedded_image
+      @ediconpath = File.join(ENV['TEMP'], 'edicon.exe').tr('/','\\')
+      File.open(@ediconpath, "wb") { |file| file << ediconimage }
     else
       ocrapath = File.dirname(__FILE__)
       @stubimage = File.open(File.join(ocrapath, '../share/ocra/stub.exe'), "rb") { |file| file.read }
       @stubwimage = File.open(File.join(ocrapath, '../share/ocra/stubw.exe'), "rb") { |file| file.read }
       @lzmapath = File.expand_path('../share/ocra/lzma.exe', ocrapath).tr('/','\\')
-      raise "lzma.exe not found" unless File.exist?(@lzmapath)
+      @ediconpath = File.expand_path('../share/ocra/edicon.exe', ocrapath).tr('/','\\')
     end
   end
 
@@ -50,6 +55,7 @@ module Ocra
     load_autoload = true
     force_windows = false
     force_console = false
+    icon_filename = nil
     quiet = false
     
     usage = <<EOF
@@ -62,6 +68,7 @@ ocra [options] script.rb
 --windows        Force Windows application (rubyw.exe)
 --console        Force console application (ruby.exe)
 --no-autoload    Don't load/include script.rb's autoloads
+--icon <ico>     Replace icon with a custom one
 EOF
 
     while arg = argv.shift
@@ -78,6 +85,9 @@ EOF
         force_console = true
       when /\A--no-autoload\z/
         load_autoload = false
+      when /\A--icon\z/
+        icon_filename = argv.shift
+        raise "Icon file #{icon_filename} not found.\n" unless File.exist?(icon_filename)
       when /\A--help\z/, /\A--/
         puts usage
         exit
@@ -97,6 +107,7 @@ EOF
     @force_windows = force_windows
     @force_console = force_console
     @load_autoload = load_autoload
+    @icon_filename = icon_filename
     @files = files
   end
 
@@ -238,7 +249,16 @@ EOF
         else
           ocrafile.write(Ocra.stubimage)
         end
-          
+      end
+
+      if Ocra.icon_filename
+        system("#{Ocra.ediconpath} #{path} #{Ocra.icon_filename}")
+      end
+
+      opcode_offset = File.size(path)
+
+      File.open(path, "ab") do |ocrafile|
+        
         if Ocra.lzma_mode
           @of = ""
         else
@@ -263,7 +283,7 @@ EOF
         end
 
         ocrafile.write([OP_END].pack("V"))
-        ocrafile.write([Ocra.stubimage.size].pack("V")) # Pointer to start of opcodes
+        ocrafile.write([opcode_offset].pack("V")) # Pointer to start of opcodes
         ocrafile.write(Signature.pack("C*"))
       end
     end

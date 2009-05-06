@@ -88,6 +88,9 @@ source code used was place into Public Domain by Igor Pavlov.
 
 Erik Veenstra for rubyscript2exe which provided inspiration.
 
+Dice for the default .exe icon (vit-ruby.ico,
+http://ruby.morphball.net/vit-ruby-ico_en.html)
+
 == LICENSE:
 
 (The MIT License)
