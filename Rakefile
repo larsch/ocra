@@ -11,6 +11,7 @@ end
 task :stub do
   sh "mingw32-make -C src"
   cp 'src/stub.exe', 'share/ocra/stub.exe'
+  cp 'src/stubw.exe', 'share/ocra/stubw.exe'
 end
 
 task :test => :stub

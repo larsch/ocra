@@ -5,4 +5,5 @@ Rakefile
 bin/ocra.rb
 share/ocra/lzma.exe
 share/ocra/stub.exe
+share/ocra/stubw.exe
 test/test_ocra.rb
