@@ -20,6 +20,8 @@ class TestOcra < Test::Unit::TestCase
     @ocra
   end
 
+  OcraRoot = File.expand_path(File.join(File.dirname(__FILE__), '..'))
+
   FixturePath = File.expand_path(File.join(File.dirname(__FILE__), 'fixtures'))
 
   # Sets up an directory with a copy of a fixture and yields to the
@@ -254,6 +256,15 @@ class TestOcra < Test::Unit::TestCase
 
   def test_version
     assert_match(/^Ocra \d+(\.\d)+$/, `ruby #{ocra} --version`)
+  end
+
+  def test_icon
+    with_fixture 'helloworld' do
+      icofile = File.join(OcraRoot, 'src', 'vit-ruby.ico')
+      assert system("ruby", ocra, '--icon', icofile, "helloworld.rb", *DefaultArgs)
+      assert File.exist?("helloworld.exe")
+      assert system("helloworld.exe")
+    end
   end
   
 end
