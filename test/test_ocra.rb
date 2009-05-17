@@ -22,9 +22,35 @@ class TestOcra < Test::Unit::TestCase
 
   FixturePath = File.expand_path(File.join(File.dirname(__FILE__), 'fixtures'))
 
-  def copy_fixture(name)
+  # Sets up an directory with a copy of a fixture and yields to the
+  # block, then cleans up everything. A fixture here is a hierachy of
+  # files located in test/fixtures.
+  def with_fixture(name)
     path = File.join(FixturePath, name)
-    FileUtils.cp_r Dir.glob(File.join(path, '*')), '.'
+    FileUtils.cp_r path, '.'
+    begin
+      cd name do
+        yield
+      end
+    ensure
+      rm_rf 'name'
+    end
+  end
+
+  # Sets up temporary environment variable and yields to the block.
+  def with_env(hash)
+    old = {}
+    hash.each do |k,v|
+      old[k] = ENV[k]
+      ENV[k] = v
+    end
+    begin
+      yield
+    ensure
+      hash.each do |k,v|
+        ENV[k] = old[k]
+      end
+    end
   end
   
   def setup
@@ -40,241 +66,189 @@ class TestOcra < Test::Unit::TestCase
   end
   
   def test_helloworld
-    File.open("helloworld.rb", "w") do |f|
-      f << "hello_world = \"Hello, World!\"\n"
+    with_fixture 'helloworld' do
+      assert system("ruby", ocra, "helloworld.rb", *DefaultArgs)
+      assert File.exist?("helloworld.exe")
+      assert system("helloworld.exe")
     end
-    assert system("ruby", ocra, "helloworld.rb", *DefaultArgs)
-    assert File.exist?("helloworld.exe")
-    assert system("helloworld.exe")
   end
 
   def test_writefile
-    File.open("writefile.rb", "w") do |f|
-      f << "File.open(\"output.txt\", \"w\") do |f| f.write \"output\"; end"
+    with_fixture 'writefile' do
+      assert system("ruby", ocra, "writefile.rb", *DefaultArgs)
+      assert File.exist?("writefile.exe")
+      assert system("writefile.exe")
+      assert File.exist?("output.txt")
+      assert "output", File.read("output.txt")
     end
-    assert system("ruby", ocra, "writefile.rb", *DefaultArgs)
-    assert File.exist?("writefile.exe")
-    assert system("writefile.exe")
-    assert File.exist?("output.txt")
-    assert "output", File.read("output.txt")
   end
 
   def test_exitstatus
-    File.open("exitstatus.rb", "w") do |f|
-      f << "exit 167 if __FILE__ == $0"
+    with_fixture 'exitstatus' do
+      assert system("ruby", ocra, "exitstatus.rb", *DefaultArgs)
+      system("exitstatus.exe")
+      assert_equal 167, $?.exitstatus
     end
-    assert system("ruby", ocra, "exitstatus.rb", *DefaultArgs)
-    system("exitstatus.exe")
-    assert_equal 167, $?.exitstatus
   end
 
   def test_arguments
-    File.open("arguments.rb", "w") do |f|
-      f << "if $0 == __FILE__\n"
-      f << "exit 1 if ARGV.size != 2\n"
-      f << "exit 2 if ARGV[0] != \"foo\"\n"
-      f << "exit 3 if ARGV[1] != \"bar baz\"\n"
-      # f << "exit 4 if ARGV[2] != \"\\\"smile\\\"\"\n"
-      f << "exit(5)\n"
-      f << "end"
+    with_fixture 'arguments' do
+      assert system("ruby", ocra, "arguments.rb", *DefaultArgs)
+      assert File.exist?("arguments.exe")
+      system("arguments.exe foo \"bar baz\"")
+      assert_equal 5, $?.exitstatus
     end
-    assert system("ruby", ocra, "arguments.rb", *DefaultArgs)
-    assert File.exist?("arguments.exe")
-    # system(File.expand_path("arguments.exe"), "foo", "bar baz", "\"smile\"")
-    system("arguments.exe foo \"bar baz\"")
-    assert_equal 5, $?.exitstatus
   end
 
   def test_stdout_redir
-    File.open("stdoutredir.rb", "w") do |f|
-      f << "if $0 == __FILE__\n"
-      f << "puts \"Hello, World!\"\n"
-      f << "end\n"
+    with_fixture 'stdoutredir' do
+      assert system("ruby", ocra, "stdoutredir.rb", *DefaultArgs)
+      assert File.exist?("stdoutredir.exe")
+      system("stdoutredir.exe > output.txt")
+      assert File.exist?("output.txt")
+      assert_equal "Hello, World!\n", File.read("output.txt")
     end
-    assert system("ruby", ocra, "stdoutredir.rb", *DefaultArgs)
-    assert File.exist?("stdoutredir.exe")
-    system("stdoutredir.exe > output.txt")
-    assert File.exist?("output.txt")
-    assert_equal "Hello, World!\n", File.read("output.txt")
   end
 
   def test_stdin_redir
-    File.open("input.txt", "w") do |f|
-      f << "Hello, World!\n"
+    with_fixture 'stdinredir' do
+      assert system("ruby", ocra, "stdinredir.rb", *DefaultArgs)
+      assert File.exist?("stdinredir.exe")
+      system("stdinredir.exe < input.txt")
+      assert 104, $?.exitstatus
     end
-    File.open("stdinredir.rb", "w") do |f|
-      f << "if $0 == __FILE__\n"
-      f << "  exit 104 if gets == \"Hello, World!\\n\""
-      f << "end\n"
-    end
-    assert system("ruby", ocra, "stdinredir.rb", *DefaultArgs)
-    assert File.exist?("stdinredir.exe")
-    system("stdinredir.exe < input.txt")
-    assert 104, $?.exitstatus
   end
 
   def test_gdbmdll
-    File.open("gdbmdll.rb", "w") do |f|
-      f << "require 'gdbm'\n"
-      f << "exit 104 if $0 == __FILE__ and defined?(GDBM)\n"
-    end
     bindir = RbConfig::CONFIG['bindir']
-    
     gdbmdllpath = Dir[File.join(bindir, 'gdbm*.dll')][0]
     raise "gdbm dll was not found" unless gdbmdllpath
     gdbmdll = File.basename(gdbmdllpath)
-    assert system("ruby", ocra, "--dll", gdbmdll, "gdbmdll.rb", *DefaultArgs)
-    path = ENV['PATH']
-    ENV['PATH'] = "."
-    begin
-      system("gdbmdll.exe")
-    ensure
-      ENV['PATH'] = path
+    
+    with_fixture 'gdbmdll' do
+      assert system("ruby", ocra, "--dll", gdbmdll, "gdbmdll.rb", *DefaultArgs)
+      with_env 'PATH' => '.' do
+        system("gdbmdll.exe")
+        assert_equal 104, $?.exitstatus
+      end
     end
-    assert_equal 104, $?.exitstatus
   end
 
   def test_relative_require
-    File.open("relativerequire.rb", "w") do |f|
-      f << "require 'somedir/somefile.rb'\n"
-      f << "exit 160 if __FILE__ == $0 and defined?(SomeConst)"
+    with_fixture 'relativerequire' do
+      assert system("ruby", ocra, "relativerequire.rb", *DefaultArgs)
+      assert File.exist?("relativerequire.exe")
+      system("relativerequire.exe")
+      assert_equal 160, $?.exitstatus
     end
-    Dir.mkdir('somedir')
-    File.open("somedir/somefile.rb", "w") do |f|
-      f << "SomeConst = 12312\n"
-    end
-    assert system("ruby", ocra, "relativerequire.rb", *DefaultArgs)
-    assert File.exist?("relativerequire.exe")
-    system("relativerequire.exe")
-    assert_equal 160, $?.exitstatus
   end
 
-  def test_exiting
-    File.open("exiting.rb", "w") do |f|
-      f << "exit 214\n"
-    end
-    assert system("ruby", ocra, "exiting.rb", *DefaultArgs)
-    assert File.exist?("exiting.exe")
-    system("exiting.exe")
-    assert_equal 214, $?.exitstatus
-  end
-
+  # Test that autoloaded files which are not actually loaded while
+  # running the script through Ocra are included in the resulting
+  # executable.
   def test_autoload
-    File.open("autoload.rb", "w") do |f|
-      f << "$:.unshift File.dirname(__FILE__)\n"
-      f << "autoload :Foo, 'foo'\n"
-      f << "Foo if __FILE__ == $0\n"
+    with_fixture 'autoload' do
+      assert system("ruby", ocra, "autoload.rb", *DefaultArgs)
+      assert File.exist?("autoload.exe")
+      File.unlink('foo.rb')
+      assert system("autoload.exe")
     end
-    File.open("foo.rb", "w") do |f|
-      f << "class Foo; end\n"
-    end
-    assert system("ruby", ocra, "autoload.rb", *DefaultArgs)
-    assert File.exist?("autoload.exe")
-    File.unlink('foo.rb')
-    assert system("autoload.exe")
-    # assert_equal 214, $?.exitstatus
   end
 
+  # Test that autoload statement which point to non-existing files are
+  # ignored by Ocra (a warning may be logged).
   def test_autoload_missing
-    File.open("autoloadmissing.rb", "w") do |f|
-      f << "$:.unshift File.dirname(__FILE__)\n"
-      f << "autoload :Foo, 'foo'\n"
+    with_fixture 'autoloadmissing' do
+      assert system("ruby", ocra, "autoloadmissing.rb", *DefaultArgs)
+      assert File.exist?("autoloadmissing.exe")
+      assert system("autoloadmissing.exe")
     end
-    assert system("ruby", ocra, "autoloadmissing.rb", *DefaultArgs)
-    assert File.exist?("autoloadmissing.exe")
-    assert system("autoloadmissing.exe")
   end
-  
+
+  # Test that Ocra picks up autoload statement nested in modules.
   def test_autoload_nested
-    File.open("autoloadnested.rb", "w") do |f|
-      f << "$:.unshift File.dirname(__FILE__)\n"
-      f << "module Bar\n"
-      f << "  autoload :Foo, 'foo'\n"
-      f << "end\n"
-      f << "Bar::Foo if __FILE__ == $0\n"
+    with_fixture 'autoloadnested' do
+      assert system("ruby", ocra, "autoloadnested.rb", *DefaultArgs)
+      assert File.exist?("autoloadnested.exe")
+      File.unlink('foo.rb')
+      assert system("autoloadnested.exe")
     end
-    File.open("foo.rb", "w") do |f|
-      f << "module Bar\n"
-      f << "class Foo; end\n"
-      f << "end\n"
-    end
-    assert system("ruby", ocra, "autoloadnested.rb", *DefaultArgs)
-    assert File.exist?("autoloadnested.exe")
-    File.unlink('foo.rb')
-    assert system("autoloadnested.exe")
-    # assert_equal 214, $?.exitstatus
   end
 
   # Test that we can use custom include paths when invoking Ocra (ruby
   # -I somepath). In this case the lib scripts are put in the src/
   # directory.
   def test_relative_loadpath1_ilib
-    copy_fixture 'relloadpath1'
-    assert system('ruby', '-I', 'lib', ocra, 'relloadpath1.rb', *DefaultArgs)
-    assert File.exist?('relloadpath1.exe')
-    assert system('relloadpath1.exe')
+    with_fixture 'relloadpath1' do
+      assert system('ruby', '-I', 'lib', ocra, 'relloadpath1.rb', *DefaultArgs)
+      assert File.exist?('relloadpath1.exe')
+      assert system('relloadpath1.exe')
+    end
   end
+
+  # Same as above with './lib'
   def test_relative_loadpath_idotlib
-    copy_fixture 'relloadpath1'
-    assert system('ruby', '-I', './lib', ocra, 'relloadpath1.rb', *DefaultArgs)
-    assert File.exist?('relloadpath1.exe')
-    assert system('relloadpath1.exe')
+    with_fixture 'relloadpath1' do
+      assert system('ruby', '-I', './lib', ocra, 'relloadpath1.rb', *DefaultArgs)
+      assert File.exist?('relloadpath1.exe')
+      assert system('relloadpath1.exe')
+    end
   end
 
   # Test that we can use custom include paths when invoking Ocra (env
   # RUBYLIB=lib). In this case the lib scripts are put in the src/
   # directory.
   def test_relative_loadpath_rubyliblib
-    copy_fixture 'relloadpath1'
-    rubylib = ENV['RUBYLIB']
-    begin
-      ENV['RUBYLIB'] = 'lib'
-      assert system('ruby', ocra, 'relloadpath1.rb', *DefaultArgs)
-      assert File.exist?('relloadpath1.exe')
-      assert system('relloadpath1.exe')
-    ensure
-      ENV['RUBYLIB'] = rubylib
-    end
-  end
-  def test_relative_loadpath_rubylibdotlib
-    copy_fixture 'relloadpath1'
-    rubylib = ENV['RUBYLIB']
-    begin
-      ENV['RUBYLIB'] = './lib'
-      assert system('ruby', ocra, 'relloadpath1.rb', *DefaultArgs)
-      assert File.exist?('relloadpath1.exe')
-      assert system('relloadpath1.exe')
-    ensure
-      ENV['RUBYLIB'] = rubylib
+    with_fixture 'relloadpath1' do
+      with_env 'RUBYLIB' => 'lib' do
+        assert system('ruby', ocra, 'relloadpath1.rb', *DefaultArgs)
+        assert File.exist?('relloadpath1.exe')
+        assert system('relloadpath1.exe')
+      end
     end
   end
 
+  # Same as above with './lib'
+  def test_relative_loadpath_rubylibdotlib
+    with_fixture 'relloadpath1' do
+      with_env 'RUBYLIB' => './lib' do
+        assert system('ruby', ocra, 'relloadpath1.rb', *DefaultArgs)
+        assert File.exist?('relloadpath1.exe')
+        assert system('relloadpath1.exe')
+      end
+    end
+  end
+
+  # Relative path with .. prefix (../lib).
   def test_relative_loadpath2_idotdotlib
-    copy_fixture 'relloadpath2'
-    cd 'src' do
-      assert system('ruby', '-I', '../lib', ocra, 'relloadpath2.rb', *DefaultArgs)
-      assert File.exist?('relloadpath2.exe')
-      assert system('relloadpath2.exe')
+    with_fixture 'relloadpath2' do
+      cd 'src' do
+        assert system('ruby', '-I', '../lib', ocra, 'relloadpath2.rb', *DefaultArgs)
+        assert File.exist?('relloadpath2.exe')
+        assert system('relloadpath2.exe')
+      end
     end
   end
 
   # Test that scripts which modify $LOAD_PATH with a relative path
   # (./lib) work correctly.
   def test_relloadpath3
-    copy_fixture 'relloadpath3'
-    assert system('ruby', ocra, 'relloadpath3.rb', *DefaultArgs)
-    assert File.exist?('relloadpath3.exe')
-    assert system('relloadpath3.exe')
+    with_fixture 'relloadpath3' do
+      assert system('ruby', ocra, 'relloadpath3.rb', *DefaultArgs)
+      assert File.exist?('relloadpath3.exe')
+      assert system('relloadpath3.exe')
+    end
   end
 
   # Test that scripts which modify $LOAD_PATH with a relative path
   # (../lib) work correctly.
   def test_relloadpath4
-    copy_fixture 'relloadpath4'
-    cd 'src' do
-      assert system('ruby', ocra, 'relloadpath4.rb', *DefaultArgs)
-      assert File.exist?('relloadpath4.exe')
-      assert system('relloadpath4.exe')
+    with_fixture 'relloadpath4' do
+      cd 'src' do
+        assert system('ruby', ocra, 'relloadpath4.rb', *DefaultArgs)
+        assert File.exist?('relloadpath4.exe')
+        assert system('relloadpath4.exe')
+      end
     end
   end
   
