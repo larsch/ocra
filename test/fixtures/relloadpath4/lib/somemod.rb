@@ -1,0 +1,2 @@
+module SomeMod
+end

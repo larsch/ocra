@@ -30,6 +30,8 @@ module Ocra
   end
 
   def Ocra.initialize_ocra
+    @load_path_before = $LOAD_PATH.dup
+    
     if defined?(DATA)
       @stubimage = get_next_embedded_image
       @stubwimage = get_next_embedded_image
@@ -143,6 +145,8 @@ EOF
   end
   
   def Ocra.build_exe
+    @added_load_paths = $LOAD_PATH - @load_path_before
+    
     # Attempt to autoload libraries before doing anything else.
     attempt_load_autoload if Ocra.load_autoload
 
@@ -165,6 +169,8 @@ EOF
     libruby_so = RbConfig::CONFIG['LIBRUBY_SO']
 
     instsitelibdir = sitelibdir[exec_prefix.size+1..-1]
+
+    load_path = []
     
     # Find loaded files
     libs = []
@@ -175,7 +181,11 @@ EOF
         if fullpath.index(exec_prefix) == 0
           libs << [ fullpath, fullpath[exec_prefix.size+1..-1] ]
         elsif fullpath.index(src_prefix) == 0
-          libs << [ fullpath, "src/" + fullpath[src_prefix.size+1..-1]]
+          targetpath = "src/" + fullpath[src_prefix.size+1..-1]
+          libs << [ fullpath, targetpath ]
+          if not @added_load_paths.include?(path) and not load_path.include?(path)
+            load_path << File.join("\xFF", File.dirname(targetpath))
+          end
         else
           libs << [ fullpath, File.join(instsitelibdir, filename) ]
         end
@@ -229,7 +239,7 @@ EOF
 
       # Set environment variable
       sb.setenv('RUBYOPT', '')
-      sb.setenv('RUBYLIB', '')
+      sb.setenv('RUBYLIB', load_path.join(';'))
 
       # Launch the script
       sb.createprocess("bin\\" + rubyexe, "#{rubyexe} \xff\\src\\" + Ocra.files[0])
@@ -328,7 +338,7 @@ if File.basename(__FILE__) == File.basename($0)
     Ocra.build_exe
     exit(0)
   end
-  
+
   puts "=== Loading script to check dependencies" unless Ocra.quiet
   $0 = Ocra.files[0]
   load Ocra.files[0]
