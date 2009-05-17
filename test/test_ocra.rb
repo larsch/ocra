@@ -251,5 +251,10 @@ class TestOcra < Test::Unit::TestCase
       end
     end
   end
+
+  def test_version
+    assert_match(/^Ocra \d+(\.\d)+$/, `ruby #{ocra} --version`)
+  end
   
 end
+

@@ -10,6 +10,8 @@ module Ocra
   OP_DECOMPRESS_LZMA = 4
   OP_SETENV = 5
 
+  VERSION = "1.1.0"
+
   class << self
     attr_accessor :lzma_mode
     attr_accessor :extra_dlls
@@ -71,6 +73,7 @@ ocra [options] script.rb
 --console        Force console application (ruby.exe)
 --no-autoload    Don't load/include script.rb's autoloads
 --icon <ico>     Replace icon with a custom one
+--version        Display version number
 EOF
 
     while arg = argv.shift
@@ -90,6 +93,9 @@ EOF
       when /\A--icon\z/
         icon_filename = argv.shift
         raise "Icon file #{icon_filename} not found.\n" unless File.exist?(icon_filename)
+      when /\A--version\z/
+        puts "Ocra #{VERSION}"
+        exit
       when /\A--help\z/, /\A--/
         puts usage
         exit
