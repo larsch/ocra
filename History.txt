@@ -1,3 +1,16 @@
+=== 1.1.0
+
+* Added an icon to the executable. Can be replaced from a .ico file
+  using the --icon <ico> option.
+
+* Improved handling of load paths added either from the command line
+  (ruby -I), RUBYLIB environment variable or during the script (by
+  modifying $: or $LOAD_PATH).
+
+=== 1.0.2 / 2009-05-10
+
+* Added stubw.exe to gem (was missing 1.0.1)
+
 === 1.0.1 / 2009-05-05
 
 * Added stub with windows runtime for windowed applications
@@ -9,4 +22,3 @@
 * 1 major enhancement
 
   * Birthday!
-

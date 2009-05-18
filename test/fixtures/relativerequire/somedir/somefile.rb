@@ -1,0 +1,1 @@
+SomeConst = 12312
