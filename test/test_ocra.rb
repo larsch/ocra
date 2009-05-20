@@ -266,6 +266,13 @@ class TestOcra < Test::Unit::TestCase
       assert system("helloworld.exe")
     end
   end
-  
+
+  def test_resource
+    with_fixture 'resource' do
+      assert system("ruby", ocra, "resource.rb", "resource.txt", "res/resource.txt", *DefaultArgs)
+      assert File.exist?("resource.exe")
+      assert system("resource.exe")
+    end
+  end
 end
 
