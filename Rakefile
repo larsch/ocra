@@ -2,7 +2,7 @@
 
 require 'rubygems'
 require 'hoe'
-require './lib/ocra.rb'
+require 'bin/ocra'
 
 Hoe.new('ocra', Ocra::VERSION) do |p|
   p.developer('Lars Christensen', 'larsch@belunktum.dk')
