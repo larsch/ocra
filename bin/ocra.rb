@@ -12,6 +12,8 @@ module Ocra
 
   VERSION = "1.1.0"
 
+  IGNORE_MODULES = /^enumerator.so$/
+
   class << self
     attr_accessor :lzma_mode
     attr_accessor :extra_dlls
@@ -181,7 +183,7 @@ EOF
     # Find loaded files
     libs = []
     features.each do |filename|
-      path = $:.find { |path| File.exist?(File.expand_path(filename, path)) }
+      path = $:.find { |loadpath| File.exist?(File.expand_path(filename, loadpath)) }
       if path
         fullpath = File.expand_path(filename, path)
         if fullpath.index(exec_prefix) == 0
@@ -196,7 +198,7 @@ EOF
           libs << [ fullpath, File.join(instsitelibdir, filename) ]
         end
       else
-        puts "=== WARNING: Couldn't find #{filename}"
+        puts "=== WARNING: Couldn't find #{filename}" unless filename =~ IGNORE_MODULES
       end
     end
 
