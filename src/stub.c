@@ -19,8 +19,8 @@ const BYTE Signature[] = { 0x41, 0xb6, 0xba, 0x4e };
 #define OP_SETENV 5
 #define OP_MAX 6
 
-void ProcessImage(LPVOID p, DWORD size);
-void ProcessOpcodes(LPVOID* p);
+BOOL ProcessImage(LPVOID p, DWORD size);
+BOOL ProcessOpcodes(LPVOID* p);
 
 BOOL OpEnd(LPVOID *p);
 BOOL OpCreateFile(LPVOID *p);
@@ -33,6 +33,7 @@ BOOL OpSetEnv(LPVOID *p);
 typedef BOOL (*POpcodeHandler)(LPVOID*);
 
 DWORD ExitStatus = 0;
+BOOL ExitCondition = FALSE;
 
 POpcodeHandler OpcodeHandlers[OP_MAX] = {
    &OpEnd,
@@ -111,7 +112,9 @@ int main(int argc, char** argv)
    }
    else
    {
-      ProcessImage(lpv, FileSize);
+      if (!ProcessImage(lpv, FileSize))
+         ExitStatus = -1;
+      
       if (!UnmapViewOfFile(lpv))
          fprintf(stderr, "Failed to unmap view of executable.\n");
    }
@@ -142,7 +145,7 @@ int main(int argc, char** argv)
    Process the image by checking the signature and locating the first
    opcode.
 */
-void ProcessImage(LPVOID ptr, DWORD size)
+BOOL ProcessImage(LPVOID ptr, DWORD size)
 {
    LPVOID pSig = ptr + size - 4;
    if (memcmp(pSig, Signature, 4) == 0)
@@ -152,26 +155,35 @@ void ProcessImage(LPVOID ptr, DWORD size)
 #endif
       DWORD OpcodeOffset = *(DWORD*)(pSig - 4);
       LPVOID pSeg = ptr + OpcodeOffset;
-      ProcessOpcodes(&pSeg);
+      return ProcessOpcodes(&pSeg);
    }
    else
    {
       fprintf(stderr, "Bad signature in executable.\n");
+      return FALSE;
    }
 }
 
 /**
    Process the opcodes in memory.
 */
-void ProcessOpcodes(LPVOID* p)
+BOOL ProcessOpcodes(LPVOID* p)
 {
-   BOOL Stop = FALSE;
-   while(!Stop)
+   while(!ExitCondition)
    {
       DWORD opcode = GetInteger(p);
-      if (opcode >= OP_MAX || !OpcodeHandlers[opcode](p))
-         break;
+      if (opcode < OP_MAX)
+      {
+         if (!OpcodeHandlers[opcode](p))
+            return FALSE;
+      }
+      else
+      {
+         fprintf(stderr, "Invalid opcode '%lu'.\n", opcode);
+         return FALSE;
+      }
    }
+   return TRUE;
 }
 
 /**
@@ -273,7 +285,7 @@ BOOL OpCreateDirectory(LPVOID *p)
 #endif
    
    if (!CreateDirectory(DirName, NULL)){
-      printf("Failed to create directory.\n");
+      printf("Failed to create directory '%s'.\n", DirName);
       return FALSE;
    }
    
@@ -383,7 +395,8 @@ BOOL OpDecompressLzma(LPVOID *p)
 
 BOOL OpEnd(LPVOID* p)
 {
-   return FALSE;
+   ExitCondition = TRUE;
+   return TRUE;
 }
 
 BOOL OpSetEnv(LPVOID* p)
