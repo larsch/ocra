@@ -3,9 +3,9 @@ OBJS = $(SRCS:.c=.o) stubicon.o
 CC = gcc
 
 CFLAGS = -Wall -O2 -DWITH_LZMA -Ilzma -s
-CFLAGS += -D_DEBUG
+# CFLAGS += -D_DEBUG
 
-all: stub.exe stubw.exe
+all: stub.exe stubw.exe edicon.exe
 
 stubicon.o: stub.rc
 	windres -i $< -o $@
