@@ -151,6 +151,28 @@ EOF
       end
     end
   end
+
+  def Ocra.relative_path(src, tgt)
+    a = src.split('/')
+    b = tgt.split('/')
+    while a.first && a.first.downcase == b.first.downcase
+      a.shift
+      b.shift
+    end
+    return tgt if b.first =~ /^[a-z]:/i
+    a.size.times { b.unshift '..' }
+    return b.join('/')
+  end
+
+  def Ocra.find_load_path(paths, path)
+    if path[1,1] == ":"
+      rps = paths.map {|p| relative_path(p, path) }
+      rps.zip(paths).sort_by {|x| x[0].size }.first[1]
+    else
+      candidates = paths.select { |p| File.exist?(File.expand_path(path, p)) }
+      candidates.sort_by {|p| p.size}.last
+    end
+  end
   
   def Ocra.build_exe
     @added_load_paths = $LOAD_PATH - @load_path_before
@@ -183,8 +205,14 @@ EOF
     # Find loaded files
     libs = []
     features.each do |filename|
-      path = $:.find { |loadpath| File.exist?(File.expand_path(filename, loadpath)) }
+      path = find_load_path($:, filename)
       if path
+        if filename[1,1] == ":"
+          filename = relative_path(File.expand_path(path), filename)
+        end
+        if filename =~ /^\.\.\//
+          puts "=== WARNING: Detected a relative require (#{filename}). This is not recommended."
+        end
         fullpath = File.expand_path(filename, path)
         if fullpath.index(exec_prefix) == 0
           libs << [ fullpath, fullpath[exec_prefix.size+1..-1] ]
