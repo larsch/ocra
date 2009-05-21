@@ -1,5 +1,4 @@
 require "test/unit"
-require "ocra"
 require "tmpdir"
 require "fileutils"
 require "rbconfig"
@@ -7,39 +6,42 @@ include FileUtils
 
 class TestOcra < Test::Unit::TestCase
 
+  # Default arguments for invoking OCRA when running tests.
   DefaultArgs = [ '--quiet', '--no-lzma' ]
+
+  # Root of OCRA.
+  OcraRoot = File.expand_path(File.join(File.dirname(__FILE__), '..'))
+
+  # Path to test fixtures.
+  FixturePath = File.expand_path(File.join(File.dirname(__FILE__), 'fixtures'))
+
+  attr_reader :ocra
 
   def initialize(*args)
     super(*args)
     @testnum = 0
-    @ocra = File.expand_path(File.join(File.dirname(__FILE__), '../bin/ocra.rb'))
+    @ocra = File.join(OcraRoot, 'bin', 'ocra.rb')
     ENV['RUBYOPT'] = ""
   end
-
-  def ocra
-    @ocra
-  end
-
-  OcraRoot = File.expand_path(File.join(File.dirname(__FILE__), '..'))
-
-  FixturePath = File.expand_path(File.join(File.dirname(__FILE__), 'fixtures'))
 
   # Sets up an directory with a copy of a fixture and yields to the
   # block, then cleans up everything. A fixture here is a hierachy of
   # files located in test/fixtures.
   def with_fixture(name)
     path = File.join(FixturePath, name)
-    FileUtils.cp_r path, '.'
+    cp_r path, '.'
     begin
       cd name do
         yield
       end
     ensure
-      rm_rf 'name'
+      rm_rf name
     end
   end
 
-  # Sets up temporary environment variable and yields to the block.
+  # Sets up temporary environment variables and yields to the
+  # block. When the block exits, the environment variables are set
+  # back to their original values.
   def with_env(hash)
     old = {}
     hash.each do |k,v|
@@ -55,6 +57,8 @@ class TestOcra < Test::Unit::TestCase
     end
   end
   
+  # Test setup method. Creates a tempory directory to work in and
+  # changes to it. 
   def setup
     @testnum += 1
     @tempdirname = ".ocratest-#{$$}-#{@testnum}"
@@ -62,11 +66,13 @@ class TestOcra < Test::Unit::TestCase
     Dir.chdir @tempdirname
   end
 
+  # Test cleanup method. Exits the temporary directory and deletes it.
   def teardown
     Dir.chdir '..'
     FileUtils.rm_rf @tempdirname
   end
-  
+
+  # Hello world test. Test that we can build and run executables.
   def test_helloworld
     with_fixture 'helloworld' do
       assert system("ruby", ocra, "helloworld.rb", *DefaultArgs)
@@ -75,6 +81,8 @@ class TestOcra < Test::Unit::TestCase
     end
   end
 
+  # Test that executables can writing a file to the current working
+  # directory.
   def test_writefile
     with_fixture 'writefile' do
       assert system("ruby", ocra, "writefile.rb", *DefaultArgs)
@@ -85,6 +93,7 @@ class TestOcra < Test::Unit::TestCase
     end
   end
 
+  # Test that scripts can exit with a specific exit status code.
   def test_exitstatus
     with_fixture 'exitstatus' do
       assert system("ruby", ocra, "exitstatus.rb", *DefaultArgs)
@@ -93,6 +102,7 @@ class TestOcra < Test::Unit::TestCase
     end
   end
 
+  # Test that arguments are passed correctly to scripts.
   def test_arguments
     with_fixture 'arguments' do
       assert system("ruby", ocra, "arguments.rb", *DefaultArgs)
@@ -102,6 +112,8 @@ class TestOcra < Test::Unit::TestCase
     end
   end
 
+  # Test that the standard output from a script can be redirected to a
+  # file.
   def test_stdout_redir
     with_fixture 'stdoutredir' do
       assert system("ruby", ocra, "stdoutredir.rb", *DefaultArgs)
@@ -112,6 +124,8 @@ class TestOcra < Test::Unit::TestCase
     end
   end
 
+  # Test that the standard input to a script can be redirected from a
+  # file.
   def test_stdin_redir
     with_fixture 'stdinredir' do
       assert system("ruby", ocra, "stdinredir.rb", *DefaultArgs)
@@ -121,6 +135,9 @@ class TestOcra < Test::Unit::TestCase
     end
   end
 
+  # Test that executables can include dll's using the --dll
+  # option. Sets PATH=. while running the executable so that it can't
+  # find the DLL from the Ruby installation.
   def test_gdbmdll
     bindir = RbConfig::CONFIG['bindir']
     gdbmdllpath = Dir[File.join(bindir, 'gdbm*.dll')][0]
@@ -136,6 +153,9 @@ class TestOcra < Test::Unit::TestCase
     end
   end
 
+  # Test that scripts can require a file relative to the location of
+  # the script and that such files are correctly added to the
+  # executable.
   def test_relative_require
     with_fixture 'relativerequire' do
       assert system("ruby", ocra, "relativerequire.rb", *DefaultArgs)
@@ -254,10 +274,12 @@ class TestOcra < Test::Unit::TestCase
     end
   end
 
+  # Test that ocra.rb accepts --version and outputs the version number.
   def test_version
     assert_match(/^Ocra \d+(\.\d)+$/, `ruby #{ocra} --version`)
   end
 
+  # Test that ocra.rb accepts --icon.
   def test_icon
     with_fixture 'helloworld' do
       icofile = File.join(OcraRoot, 'src', 'vit-ruby.ico')
@@ -267,6 +289,8 @@ class TestOcra < Test::Unit::TestCase
     end
   end
 
+  # Test that additional non-script files can be added to the
+  # executable and used by the script.
   def test_resource
     with_fixture 'resource' do
       assert system("ruby", ocra, "resource.rb", "resource.txt", "res/resource.txt", *DefaultArgs)
