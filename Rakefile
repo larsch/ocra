@@ -61,6 +61,9 @@ end
 task :clean do
   rm_rf Dir.glob("bin/*.exe")
   sh "mingw32-make -C src clean"
+  rm_f 'share/ocra/stub.exe'
+  rm_f 'share/ocra/stubw.exe'
+  rm_f 'share/ocra/edicon.exe'
 end
 
 # vim: syntax=Ruby
