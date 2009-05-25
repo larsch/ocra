@@ -4,6 +4,8 @@
 
 * Fixed inverted handling of --windows & --console (#25974)
 
+* Fixed installation issue with RubyGems (missing "lib")
+
 === 1.0.2 / 2009-05-10
 
 * Added stubw.exe to gem (was missing 1.0.1)
