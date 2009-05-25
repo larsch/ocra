@@ -6,10 +6,12 @@ require "rbconfig"
 
 class TestOcra < Test::Unit::TestCase
 
+  TESTED_OCRA = ENV['TESTED_OCRA'] || 'ocra.rb'
+
   def initialize(*args)
     super(*args)
     @testnum = 0
-    @ocra = File.expand_path(File.join(File.dirname(__FILE__), '../bin/ocra.rb'))
+    @ocra = File.expand_path(File.join(File.dirname(__FILE__), '..', 'bin', TESTED_OCRA))
     ENV['RUBYOPT'] = ""
   end
 
