@@ -1,6 +1,8 @@
 === 1.0.3 / 2009-05-25
 
-* Fixed invokation of executables with spaces in path names.
+* Fixed invokation of executables with spaces in path names (#25966).
+
+* Fixed inverted handling of --windows & --console (#25974)
 
 === 1.0.2 / 2009-05-10
 

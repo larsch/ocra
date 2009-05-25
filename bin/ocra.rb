@@ -175,7 +175,7 @@ EOF
 
     executable = Ocra.files[0].sub(/(\.rbw?)?$/, '.exe')
 
-    windowed = (Ocra.files[0] =~ /\.rbw$/ && !Ocra.force_windows) || Ocra.force_console
+    windowed = (Ocra.files[0] =~ /\.rbw$/ || Ocra.force_windows) && !Ocra.force_console
 
     puts "=== Building #{executable}" unless Ocra.quiet
     OcraBuilder.new(executable, windowed) do |sb|
