@@ -1,3 +1,11 @@
+=== 1.0.3 / 2009-05-25
+
+* Fixed invokation of executables with spaces in path names.
+
+=== 1.0.2 / 2009-05-10
+
+* Added stubw.exe to gem (was missing 1.0.1)
+
 === 1.0.1 / 2009-05-05
 
 * Added stub with windows runtime for windowed applications

@@ -250,7 +250,7 @@ EOF
         if Ocra.lzma_mode
           begin
             File.open("tmpin", "wb") { |tmp| tmp.write(@of) }
-            system("#{Ocra.lzmapath} e tmpin tmpout 2>NUL") or fail
+            system("\"#{Ocra.lzmapath}\" e tmpin tmpout 2>NUL") or fail
             compressed_data = File.open("tmpout", "rb") { |tmp| tmp.read }
             ocrafile.write([OP_DECOMPRESS_LZMA, compressed_data.size, compressed_data].pack("VVA*"))
             ocrafile.write([OP_END].pack("V"))
