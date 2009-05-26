@@ -63,4 +63,10 @@ task :clean do
   sh "mingw32-make -C src clean"
 end
 
+task :test_standalone => :standalone do
+  ENV['TESTED_OCRA'] = 'ocrasa.rb'
+  system("rake test")
+  ENV['TESTED_OCRA'] = nil
+end
+
 # vim: syntax=Ruby
