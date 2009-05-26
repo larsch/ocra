@@ -32,8 +32,8 @@ ocra.rb [option] your/script.rb
 * Your program should 'require' all necessary files when invoked without
   arguments, so ocra can detect all dependencies.
 
-* Autoloaded constants (e.g. modules and classes) should work. Ocra
-  attempts to load all autoload definitions.
+* Ocra executables clear the RUBYLIB environment variable but set
+  RUBYOPT to whatever value it had when you invoked Ocra.
 
 * Ocra does not set up the include path. Use "$:.unshift
   File.dirname(__FILE__)" at the start of your script if you need to
@@ -64,40 +64,53 @@ nothing but a working Ruby installation on Windows.
 
 == TECHNICAL DETAILS
 
-The Ocra stub extracts the contents into a temporary directory
-(Windows' default temporary directory). The directory will contains
-the same directory layout as your Ruby installlation. The source files
-for your application will be put in the 'src' subdirectory.
+The Ocra stub extracts the Ruby interpreter and your scripts into a
+temporary directory. The directory will contains the same directory
+layout as your Ruby installlation. The source files for your
+application will be put in the 'src' subdirectory.
+
+=== Libraries
+
+Rubygems will be automatically included in the Ocra executable.
 
 Libraries found in non-standard path (for example, if you invoke Ocra
 with "ruby -I some/path") will be placed into the site dir
-(lib/ruby/site_ruby).
+(lib/ruby/site_ruby). Avoid changing $LOAD_PATH / $: from your script
+to include paths outside your source tree.
 
-The RUBYLIB variable is cleared before your program is launched by the
-executable in order not to interfere with any Ruby installation on the
-end user's installation.
-
-Ocra executables set the RUBYOPT environment variable is set to
-whatever value is set when you first invoked ocra.rb to build the
-executable. For example, if you had "RUBYOPT=rubygems" on your build
-PC, Ocra ensures that it is also set on PC's running the executables.
-
-Autoloaded constants will be attempted loaded when building the
+Autoloaded libraries will be attempted loaded when building the
 executable. Modules that doesn't exist will be ignore (but a warning
-will be logged.)
+will be logged).
+
+=== Environment variables
+
+Ocra executables clear the RUBYLIB environment variable before your
+script is launched. This is done to ensure that your script does not
+use load paths from the end user's Ruby installation.
+
+Ocra executables set the RUBYOPT environment variable to the value it
+had when you invoked Ocra. For example, if you had "RUBYOPT=rubygems"
+on your build PC, Ocra ensures that it is also set on PC's running the
+executables.
 
 === Working directory
 
 You should not assume that the current working directory when invoking
-an executable built with .exe is not the location of the source
-script. It can be the directory where the executable is placed (when
-invoked through the Windows Explorer), the users' current working
-directory (when invoking from the Command Prompt), or even
-C:\WINDOWS\SYSTEM32 when the executable is invoked through a file
-association. You can optionally change the directory yourself:
+an executable built with .exe is the location of the source script. It
+can be the directory where the executable is placed (when invoked
+through the Windows Explorer), the users' current working directory
+(when invoking from the Command Prompt), or even C:\WINDOWS\SYSTEM32
+when the executable is invoked through a file association. You can
+optionally change the directory yourself:
 
-   Dir.chdir(File.dirname(__FILE__))
-  
+   Dir.chdir File.dirname(__FILE__)
+
+If you wish to maintain the user's working directory, but need to
+'require' additional Ruby scripts from the source directory, you can
+add the following line to your script:
+
+   $LOAD_PATH.unshift File.dirname(__FILE__)
+
 === $LOAD_PATH/$: mangling
 
 Adding paths to $LOAD_PATH or $: at runtime is not recommended. Adding
@@ -107,6 +120,18 @@ library files in directories below the directory containing your
 source script you can use this idiom:
 
    $LOAD_PATH.unshift File.join(File.dirname(__FILE__), 'path/to/script')
+
+=== Detecting OCRA
+
+You can detect whether Ocra is currently building your script by
+looking for the 'Ocra' constant. If it is defined, Ocra is currenly
+building the executable from your script. For example, you can use
+this to avoid opening a GUI window when compiling executables:
+
+   app = MyApp.new
+   if not defined?(Ocra)
+     app.main_loop
+   end
 
 == CREDITS:
 
