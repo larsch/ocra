@@ -135,6 +135,21 @@ this to avoid opening a GUI window when compiling executables:
      app.main_loop
    end
 
+=== Additional files and resources
+
+You can add additional files to the Ocra executable (for example
+images) by appending them to the command line. They should be placed
+in the source directory with your main script (or a subdirectory).
+
+   ocra.rb mainscript.rb someimage.jpeg docs/document.txt
+
+This will create the following layout in the temporary directory when
+your program is executed:
+
+   src/mainscript.rb
+   src/someimage.jpeg
+   src/docs/document.txt
+
 == CREDITS:
 
 Thanks for Igor Pavlov for the LZMA compressor and decompressor. The
