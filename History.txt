@@ -7,6 +7,9 @@
   (ruby -I), RUBYLIB environment variable or during the script (by
   modifying $: or $LOAD_PATH).
 
+* Now automatically detects loaded DLLs through Win32::API. Disable
+  with --no-autodll.
+
 === 1.0.3 / 2009-05-25
 
 * Fixed invokation of executables with spaces in path names (#25966).

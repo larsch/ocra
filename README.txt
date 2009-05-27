@@ -40,8 +40,10 @@ ocra.rb [option] your/script.rb
   'require' additional source files in the same directory no matter
   what the user's current working directory is.
 
-* DLLs needs to be added manually (e.g. sqlite3.dll, gdbm.dll,
-  etc.). Use the --dll option.
+* Loaded DLLs are detected automatically but only those located in
+  your Ruby installation are included. Automatic detection can be
+  disabled using --no-autodll. DLLs can be manually added using the
+  --dll option.
 
 == REQUIREMENTS:
 

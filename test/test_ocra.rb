@@ -124,13 +124,8 @@ class TestOcra < Test::Unit::TestCase
   end
 
   def test_gdbmdll
-    bindir = RbConfig::CONFIG['bindir']
-    gdbmdllpath = Dir[File.join(bindir, 'gdbm*.dll')][0]
-    raise "gdbm dll was not found" unless gdbmdllpath
-    gdbmdll = File.basename(gdbmdllpath)
-    
     with_fixture 'gdbmdll' do
-      assert system("ruby", ocra, "--dll", gdbmdll, "gdbmdll.rb", *DefaultArgs)
+      assert system("ruby", ocra, "gdbmdll.rb", *DefaultArgs)
       with_env 'PATH' => '.' do
         system("gdbmdll.exe")
         assert_equal 104, $?.exitstatus

@@ -23,6 +23,7 @@ module Ocra
     attr_accessor :force_console
     attr_accessor :icon_filename
     attr_accessor :quiet
+    attr_accessor :autodll
     attr_reader :lzmapath
     attr_reader :ediconpath
     attr_reader :stubimage
@@ -63,6 +64,7 @@ module Ocra
     force_console = false
     icon_filename = nil
     quiet = false
+    autodll = true
     
     usage = <<EOF
 ocra [options] script.rb
@@ -95,6 +97,8 @@ EOF
       when /\A--icon\z/
         icon_filename = argv.shift
         raise "Icon file #{icon_filename} not found.\n" unless File.exist?(icon_filename)
+      when /\A--no-autodll\z/
+        autodll = false
       when /\A--version\z/
         puts "Ocra #{VERSION}"
         exit
@@ -118,6 +122,7 @@ EOF
     @force_console = force_console
     @load_autoload = load_autoload
     @icon_filename = icon_filename
+    @autodll = autodll
     @files = files
   end
 
@@ -230,6 +235,9 @@ EOF
       end
     end
 
+    # Detect additional DLLs
+    dlls = Ocra.autodll ? LibraryDetector.detect_dlls : []
+
     executable = Ocra.files[0].sub(/(\.rbw?)?$/, '.exe')
 
     windowed = (Ocra.files[0] =~ /\.rbw$/ || Ocra.force_windows) && !Ocra.force_console
@@ -253,6 +261,16 @@ EOF
         sb.createfile(File.join(bindir, libruby_so), "bin\\#{libruby_so}")
       end
 
+      # Add detected DLLs
+      dlls.each do |dll|
+        if dll.tr('\\','/').index(exec_prefix) == 0
+          target = dll[exec_prefix.size+1..-1]
+        else
+          target = File.join('bin', File.basename(dll))
+        end
+        sb.createfile(dll, target)
+      end
+      
       # Add extra DLLs
       Ocra.extra_dlls.each do |dll|
         sb.createfile(File.join(bindir, dll), File.join("bin", dll).tr('/','\\'))
@@ -283,6 +301,52 @@ EOF
       puts "=== Compressing" unless Ocra.quiet or not Ocra.lzma_mode
     end
     puts "=== Finished (Final size was #{File.size(executable)})" unless Ocra.quiet
+  end
+
+  module LibraryDetector
+    def LibraryDetector.loaded_dlls
+      begin
+        require 'rubygems'
+        gem 'win32-api', '>=1.4.0'
+        require 'win32/api'
+      rescue Exception => e
+        puts "=== ERROR: Failed to load the win32-api gem. Install win32-api or use --no-autodll."
+        puts "=== CAUSE: #{e.class.name}: #{e.message.chomp}"
+        exit
+      end
+
+      enumprocessmodules = Win32::API.new('EnumProcessModules', 'LPLP', 'B', 'psapi')
+      getmodulefilename = Win32::API.new('GetModuleFileName', 'LPL', 'L')
+      getcurrentprocess = Win32::API.new('GetCurrentProcess', 'V', 'L')
+
+      bytes_needed = 4 * 32
+      module_handle_buffer = nil
+      process_handle = getcurrentprocess.call()
+      loop do
+        module_handle_buffer = "\x00" * bytes_needed
+        bytes_needed_buffer = [0].pack("I")
+        r = enumprocessmodules.call(process_handle, module_handle_buffer, module_handle_buffer.size, bytes_needed_buffer)
+        bytes_needed = bytes_needed_buffer.unpack("I")[0]
+        break if bytes_needed <= module_handle_buffer.size
+      end
+      
+      handles = module_handle_buffer.unpack("I*")
+      handles.select{|x|x>0}.map do |h|
+        str = "\x00" * 256
+        r = getmodulefilename.call(h, str, str.size)
+        str[0,r]
+      end
+    end
+
+    def LibraryDetector.detect_dlls
+      loaded = loaded_dlls
+      exec_prefix = RbConfig::CONFIG['exec_prefix']
+      loaded.select do |path|
+        path.tr('\\','/').index(exec_prefix) == 0 and
+          File.basename(path) =~ /\.dll$/ and
+          File.basename(path).downcase != RbConfig::CONFIG['LIBRUBY_SO'].downcase
+      end
+    end
   end
   
   class OcraBuilder
