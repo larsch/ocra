@@ -18,6 +18,11 @@ any additionally needed ruby libraries or DLL.
 * Both console programs and desktop programs supported (no console will
   pop up with .rbw files).
 
+If you experience problems with Ocra or have found a bug, please use
+the tracker on the RubyForge project page
+http://rubyforge.org/projects/ocra/. You are welcome to ask questions
+in the forums there aswell.
+
 == TODO:
 
 * Clean up using manual recursive deletion (not SHop).
