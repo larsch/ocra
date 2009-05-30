@@ -1,3 +1,7 @@
+=== 1.1.1
+
+* Fixed duplicate entries in the RUBYLIB environment variable.
+
 === 1.1.0
 
 * Added an icon to the executable. Can be replaced from a .ico file

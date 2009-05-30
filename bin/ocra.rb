@@ -293,7 +293,7 @@ EOF
 
       # Set environment variable
       sb.setenv('RUBYOPT', '')
-      sb.setenv('RUBYLIB', load_path.join(';'))
+      sb.setenv('RUBYLIB', load_path.uniq.join(';'))
 
       # Launch the script
       sb.createprocess("bin\\" + rubyexe, "#{rubyexe} \xff\\src\\" + Ocra.files[0])
