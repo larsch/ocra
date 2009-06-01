@@ -307,7 +307,7 @@ EOF
     def LibraryDetector.loaded_dlls
       begin
         require 'rubygems'
-        gem 'win32-api', '>=1.4.0'
+        gem 'win32-api', '>=1.2.0'
         require 'win32/api'
       rescue Exception => e
         puts "=== ERROR: Failed to load the win32-api gem. Install win32-api or use --no-autodll."
