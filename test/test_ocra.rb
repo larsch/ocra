@@ -2,12 +2,22 @@ require "test/unit"
 require "tmpdir"
 require "fileutils"
 require "rbconfig"
+
+begin
+  gem 'win32-api', '>=1.2.0'
+  require "win32/api"
+  $have_win32_api = true
+rescue LoadError => e
+  $have_win32_api = false
+end
+
 include FileUtils
 
 class TestOcra < Test::Unit::TestCase
 
   # Default arguments for invoking OCRA when running tests.
   DefaultArgs = [ '--quiet', '--no-lzma' ]
+  DefaultArgs.push '--no-autodll' if not $have_win32_api
 
   # Name of the tested ocra script.
   TESTED_OCRA = ENV['TESTED_OCRA'] || 'ocra.rb'
@@ -142,8 +152,15 @@ class TestOcra < Test::Unit::TestCase
   # option. Sets PATH=. while running the executable so that it can't
   # find the DLL from the Ruby installation.
   def test_gdbmdll
+    args = DefaultArgs.dup
+    if not $have_win32_api
+      gdbmdll = Dir.glob(File.join(RbConfig::CONFIG['bindir'], 'gdbm*.dll'))[0]
+      return if gdbmdll.nil?
+      args.push '--dll', File.basename(gdbmdll)
+    end
+    
     with_fixture 'gdbmdll' do
-      assert system("ruby", ocra, "gdbmdll.rb", *DefaultArgs)
+      assert system("ruby", ocra, "gdbmdll.rb", *args)
       with_env 'PATH' => '.' do
         system("gdbmdll.exe")
         assert_equal 104, $?.exitstatus
