@@ -323,5 +323,16 @@ class TestOcra < Test::Unit::TestCase
       assert !File.exist?("exception.exe")
     end
   end
-end
 
+  # Test that the RUBYOPT environment variable is preserved.
+  def test_rubyopt
+    with_fixture 'environment' do
+      with_env "RUBYOPT" => "-rtime" do
+        assert system("ruby", ocra, "environment.rb", *DefaultArgs)
+        assert system("environment.exe")
+        env = Marshal.load(File.open("environment", "rb") { |f| f.read })
+        assert_equal "-rtime", env['RUBYOPT']
+      end
+    end
+  end
+end

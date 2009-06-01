@@ -292,7 +292,7 @@ EOF
       end
 
       # Set environment variable
-      sb.setenv('RUBYOPT', '')
+      sb.setenv('RUBYOPT', ENV['RUBYOPT'] || '')
       sb.setenv('RUBYLIB', load_path.uniq.join(';'))
 
       # Launch the script
