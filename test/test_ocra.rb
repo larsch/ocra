@@ -4,6 +4,7 @@ require "fileutils"
 require "rbconfig"
 
 begin
+  require "rubygems"
   gem 'win32-api', '>=1.2.0'
   require "win32/api"
   $have_win32_api = true
@@ -311,6 +312,15 @@ class TestOcra < Test::Unit::TestCase
       assert system("ruby", ocra, "resource.rb", "resource.txt", "res/resource.txt", *DefaultArgs)
       assert File.exist?("resource.exe")
       assert system("resource.exe")
+    end
+  end
+
+  # Test that when exceptions are thrown, no executable will be built.
+  def test_exception
+    with_fixture 'exception' do
+      system("ruby \"#{ocra}\" exception.rb #{DefaultArgs.join(' ')} 2>NUL")
+      assert $?.exitstatus != 0
+      assert !File.exist?("exception.exe")
     end
   end
 end

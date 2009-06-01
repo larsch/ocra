@@ -435,8 +435,10 @@ if File.basename(__FILE__) == File.basename($0)
   ARGV.clear
   
   at_exit do
-    Ocra.build_exe
-    exit(0)
+    if $!.nil?
+      Ocra.build_exe
+      exit(0)
+    end
   end
 
   puts "=== Loading script to check dependencies" unless Ocra.quiet
