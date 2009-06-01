@@ -171,7 +171,7 @@ EOF
 
   def Ocra.find_load_path(paths, path)
     if path[1,1] == ":"
-      rps = paths.map {|p| relative_path(p, path) }
+      rps = paths.map {|p| relative_path(File.expand_path(p), path) }
       rps.zip(paths).sort_by {|x| x[0].size }.first[1]
     else
       candidates = paths.select { |p| File.exist?(File.expand_path(path, p)) }
