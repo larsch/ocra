@@ -24,6 +24,7 @@ module Ocra
     attr_accessor :icon_filename
     attr_accessor :quiet
     attr_accessor :autodll
+    attr_accessor :warnings
     attr_reader :lzmapath
     attr_reader :ediconpath
     attr_reader :stubimage
@@ -65,6 +66,7 @@ module Ocra
     icon_filename = nil
     quiet = false
     autodll = true
+    warnings = true
     
     usage = <<EOF
 ocra [options] script.rb
@@ -78,6 +80,7 @@ ocra [options] script.rb
 --no-autoload    Don't load/include script.rb's autoloads
 --icon <ico>     Replace icon with a custom one
 --version        Display version number
+--no-warnings    Inhibit all warnings
 EOF
 
     while arg = argv.shift
@@ -99,6 +102,8 @@ EOF
         raise "Icon file #{icon_filename} not found.\n" unless File.exist?(icon_filename)
       when /\A--no-autodll\z/
         autodll = false
+      when /\A--no-warnings\z/
+        warnings = false
       when /\A--version\z/
         puts "Ocra #{VERSION}"
         exit
@@ -123,6 +128,7 @@ EOF
     @load_autoload = load_autoload
     @icon_filename = icon_filename
     @autodll = autodll
+    @warnings = warnings
     @files = files
   end
 
@@ -149,7 +155,7 @@ EOF
             begin
               mod.const_get(const)
             rescue LoadError
-              puts "=== WARNING: #{mod}::#{const} was not loadable"
+              puts "=== WARNING: #{mod}::#{const} was not loadable" if Ocra.warnings
             end
           end
         end
@@ -216,7 +222,7 @@ EOF
           filename = relative_path(File.expand_path(path), filename)
         end
         if filename =~ /^\.\.\//
-          puts "=== WARNING: Detected a relative require (#{filename}). This is not recommended."
+          puts "=== WARNING: Detected a relative require (#{filename}). This is not recommended." if Ocra.warnings
         end
         fullpath = File.expand_path(filename, path)
         if fullpath.index(exec_prefix) == 0
@@ -231,7 +237,7 @@ EOF
           libs << [ fullpath, File.join(instsitelibdir, filename) ]
         end
       else
-        puts "=== WARNING: Couldn't find #{filename}" unless filename =~ IGNORE_MODULES
+        puts "=== WARNING: Couldn't find #{filename}" unless filename =~ IGNORE_MODULES or !Ocra.warnings
       end
     end
 

@@ -197,7 +197,9 @@ class TestOcra < Test::Unit::TestCase
   # ignored by Ocra (a warning may be logged).
   def test_autoload_missing
     with_fixture 'autoloadmissing' do
-      assert system("ruby", ocra, "autoloadmissing.rb", *DefaultArgs)
+      args = DefaultArgs.dup
+      args.push '--no-warnings'
+      assert system("ruby", ocra, "autoloadmissing.rb", *args)
       assert File.exist?("autoloadmissing.exe")
       assert system("autoloadmissing.exe")
     end
