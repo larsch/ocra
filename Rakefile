@@ -72,4 +72,43 @@ task :test_standalone => :standalone do
   ENV['TESTED_OCRA'] = nil
 end
 
+def each_ruby_version
+  root = "h:/appl"
+  Dir.glob(File.join(root, 'ruby-*','bin')).each do |path|
+    path.tr!('/','\\')
+    pathenv = ENV['PATH']
+    ENV['PATH'] = path
+    begin
+      yield
+    ensure
+      ENV['PATH'] = pathenv
+    end
+  end
+end
+
+task :setup_all_ruby do
+  ENV['RUBYOPT'] = nil
+  rubygemszip = "rubygems-1.3.4.zip"
+  rubygemsdir = rubygemszip.gsub(/\.zip$/,'')
+  sh "unzip rubygems-1.3.4.zip"
+  begin
+    cd "rubygems-1.3.4" do
+      each_ruby_version do
+        system("ruby -v")
+        system("ruby setup.rb")
+        system("gem install win32-api")
+      end
+    end
+  ensure
+    rm_rf "rubygems-1.3.4"
+  end
+end
+
+task :test_all_ruby do
+  each_ruby_version do
+    system("ruby -v")
+    system("ruby test/test_ocra.rb")
+  end
+end
+
 # vim: syntax=Ruby
