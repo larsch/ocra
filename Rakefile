@@ -4,8 +4,8 @@ require 'rubygems'
 require 'hoe'
 require 'bin/ocra'
 
-Hoe.new('ocra', Ocra::VERSION) do |p|
-  p.developer('Lars Christensen', 'larsch@belunktum.dk')
+Hoe.spec 'ocra' do
+  developer "Lars Christensen", "larsch@belunktum.dk"
 end
 
 task :build_stub do
