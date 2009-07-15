@@ -24,6 +24,7 @@ module Ocra
     attr_accessor :icon_filename
     attr_accessor :quiet
     attr_accessor :autodll
+    attr_accessor :show_warnings
     attr_reader :lzmapath
     attr_reader :ediconpath
     attr_reader :stubimage
@@ -65,6 +66,7 @@ module Ocra
     icon_filename = nil
     quiet = false
     autodll = true
+    show_warnings = true
     
     usage = <<EOF
 ocra [options] script.rb
@@ -102,6 +104,8 @@ EOF
       when /\A--version\z/
         puts "Ocra #{VERSION}"
         exit
+      when /\A--no-warnings\z/
+        show_warnings = false
       when /\A--help\z/, /\A--/
         puts usage
         exit
@@ -124,6 +128,7 @@ EOF
     @icon_filename = icon_filename
     @autodll = autodll
     @files = files
+    @show_warnings = show_warnings
   end
 
   def Ocra.init(argv)
@@ -149,7 +154,7 @@ EOF
             begin
               mod.const_get(const)
             rescue LoadError
-              puts "=== WARNING: #{mod}::#{const} was not loadable"
+              puts "=== WARNING: #{mod}::#{const} was not loadable" if Ocra.show_warnings
             end
           end
         end
@@ -216,7 +221,7 @@ EOF
           filename = relative_path(File.expand_path(path), filename)
         end
         if filename =~ /^\.\.\//
-          puts "=== WARNING: Detected a relative require (#{filename}). This is not recommended."
+          puts "=== WARNING: Detected a relative require (#{filename}). This is not recommended." if Ocra.show_warnings
         end
         fullpath = File.expand_path(filename, path)
         if fullpath.index(exec_prefix) == 0
@@ -231,7 +236,7 @@ EOF
           libs << [ fullpath, File.join(instsitelibdir, filename) ]
         end
       else
-        puts "=== WARNING: Couldn't find #{filename}" unless filename =~ IGNORE_MODULES
+        puts "=== WARNING: Couldn't find #{filename}" unless filename =~ IGNORE_MODULES if Ocra.show_warnings
       end
     end
 
