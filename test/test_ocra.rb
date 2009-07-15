@@ -384,4 +384,17 @@ class TestOcra < Test::Unit::TestCase
       end
     end
   end
+
+  def test_temp_with_space
+    with_fixture 'helloworld' do
+      assert system("ruby", ocra, "helloworld.rb", *DefaultArgs)
+      tempdir = File.expand_path("temporary directory")
+      mkdir_p tempdir
+      with_exe "helloworld.exe" do
+        with_env "TMP" => tempdir.tr('/','\\') do
+          assert system("helloworld.exe")
+        end
+      end
+    end
+  end
 end

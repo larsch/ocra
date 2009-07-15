@@ -305,7 +305,7 @@ EOF
       sb.setenv('RUBYLIB', load_path.uniq.join(';'))
 
       # Launch the script
-      sb.createprocess("bin\\" + rubyexe, "#{rubyexe} \xff\\src\\" + Ocra.files[0])
+      sb.createprocess("bin\\" + rubyexe, "#{rubyexe} \"\xff\\src\\" + Ocra.files[0] + "\"")
       
       puts "=== Compressing" unless Ocra.quiet or not Ocra.lzma_mode
     end
