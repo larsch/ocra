@@ -10,7 +10,7 @@ module Ocra
   OP_DECOMPRESS_LZMA = 4
   OP_SETENV = 5
 
-  VERSION = "1.1.1"
+  VERSION = "1.1.2"
 
   IGNORE_MODULES = /^enumerator.so$/
 
