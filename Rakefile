@@ -75,8 +75,9 @@ task :test_standalone => :standalone do
 end
 
 def each_ruby_version
-  root = "h:/appl"
-  Dir.glob(File.join(root, 'ruby-*','bin')).each do |path|
+  raise "Set RUBIES to point to where you have various versions of Ruby installed" if ENV['RUBIES'].nil?
+  root = ENV['RUBIES']
+  Dir.glob(File.join(root, 'ruby*','bin')).each do |path|
     path.tr!('/','\\')
     pathenv = ENV['PATH']
     ENV['PATH'] = path
