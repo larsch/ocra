@@ -8,12 +8,14 @@ Hoe.new('ocra', Ocra::VERSION) do |p|
   p.developer('Lars Christensen', 'larsch@belunktum.dk')
 end
 
-task :stub do
+task :build_stub do
   sh "mingw32-make -C src"
   cp 'src/stub.exe', 'share/ocra/stub.exe'
   cp 'src/stubw.exe', 'share/ocra/stubw.exe'
   cp 'src/edicon.exe', 'share/ocra/edicon.exe'
 end
+
+file 'share/ocra/stub.exe' => :build_stub
 
 task :test => :stub
 
