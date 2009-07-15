@@ -164,6 +164,9 @@ your program is executed:
    src/someimage.jpeg
    src/docs/document.txt
 
+Paths on the command line can include ** globs to include a hierachy
+of files, for example: "ocra script.rb assets/**/*.png".
+
 == CREDITS:
 
 Thanks for Igor Pavlov for the LZMA compressor and decompressor. The
