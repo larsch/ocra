@@ -345,4 +345,14 @@ class TestOcra < Test::Unit::TestCase
       assert system("exit.exe")
     end
   end
+
+  def test_ocra_executable_env
+    with_fixture 'environment' do
+      assert system("ruby", ocra, "environment.rb", *DefaultArgs)
+      assert system("environment.exe")
+      env = Marshal.load(File.open("environment", "rb") { |f| f.read })
+      expected_path = File.expand_path("environment.exe").tr('/','\\')
+      assert_equal expected_path, env['OCRA_EXECUTABLE']
+    end
+  end
 end

@@ -50,6 +50,12 @@ ocra.rb [option] your/script.rb
   disabled using --no-autodll. DLLs can be manually added using the
   --dll option.
 
+* The current working directory is left untouched by OCRA (Details
+  below).
+
+* When the script is running, the OCRA_EXECUTABLE environment variable
+  points to the .exe (with full path).
+
 == REQUIREMENTS:
 
 * Windows
@@ -99,6 +105,9 @@ Ocra executables set the RUBYOPT environment variable to the value it
 had when you invoked Ocra. For example, if you had "RUBYOPT=rubygems"
 on your build PC, Ocra ensures that it is also set on PC's running the
 executables.
+
+Ocra executables set OCRA_EXECUTABLE to the full path of the
+executable, fx. "C:\Program Files\MyApp\MyApp.exe".
 
 === Working directory
 

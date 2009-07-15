@@ -88,6 +88,9 @@ int main(int argc, char** argv)
       return -1;
    }
 
+   /* Set up environment */
+   SetEnvironmentVariable("OCRA_EXECUTABLE", ImageFileName);
+
    /* Open the image (executable) */
    HANDLE hImage = CreateFile(ImageFileName, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, 0, NULL);
    if (hImage == INVALID_HANDLE_VALUE) {
