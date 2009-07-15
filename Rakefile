@@ -17,7 +17,7 @@ end
 
 file 'share/ocra/stub.exe' => :build_stub
 
-task :test => :stub
+task :test => :build_stub
 
 task :standalone => [ 'bin/ocrasa.rb' ]
 
