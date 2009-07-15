@@ -12,6 +12,8 @@
 * Supports path globs, fx. "ocra script.rb assets/**/*.png". (See
   documentation for Ruby's Dir class).
 
+* Fixed issue with spaces in temporary path (TMP environment).
+
 === 1.1.1
 
 * Fixed duplicate entries in the RUBYLIB environment variable.
