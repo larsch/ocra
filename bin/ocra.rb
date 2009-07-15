@@ -435,7 +435,7 @@ if File.basename(__FILE__) == File.basename($0)
   ARGV.clear
   
   at_exit do
-    if $!.nil?
+    if $!.nil? or $!.kind_of?(SystemExit)
       Ocra.build_exe
       exit(0)
     end

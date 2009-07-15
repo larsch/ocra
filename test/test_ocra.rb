@@ -337,4 +337,12 @@ class TestOcra < Test::Unit::TestCase
       end
     end
   end
+
+  def test_exit
+    with_fixture 'exit' do
+      assert system("ruby", ocra, "exit.rb", *DefaultArgs)
+      assert File.exist?("exit.exe")
+      assert system("exit.exe")
+    end
+  end
 end
