@@ -66,7 +66,7 @@ int main(int argc, char** argv)
 {
    CHAR TempPath[MAX_PATH];
    GetTempPath(MAX_PATH, TempPath);
-   GetTempFileName(TempPath, "seb", 0, InstDir);
+   GetTempFileName(TempPath, "ocrastub", 0, InstDir);
 #ifdef _DEBUG
    printf("Temporary directory: %s\n", InstDir);
 #endif
