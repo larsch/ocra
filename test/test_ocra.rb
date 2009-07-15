@@ -70,6 +70,26 @@ class TestOcra < Test::Unit::TestCase
       end
     end
   end
+
+  def with_tmpdir
+    tempdirname = File.join(ENV['TEMP'], ".ocratest-#{$$}-#{rand 2**32}").tr('\\','/')
+    Dir.mkdir tempdirname
+    begin
+      FileUtils.cd tempdirname do
+        yield
+      end
+    ensure
+      FileUtils.rm_rf tempdirname
+    end
+  end
+
+  def with_exe(name)
+    orig_exe = File.expand_path(name)
+    with_tmpdir do
+      cp orig_exe, File.join('.', File.basename(name))
+      yield
+    end
+  end
   
   # Test setup method. Creates a tempory directory to work in and
   # changes to it. 
@@ -353,6 +373,15 @@ class TestOcra < Test::Unit::TestCase
       env = Marshal.load(File.open("environment", "rb") { |f| f.read })
       expected_path = File.expand_path("environment.exe").tr('/','\\')
       assert_equal expected_path, env['OCRA_EXECUTABLE']
+    end
+  end
+
+  def test_hierarchy
+    with_fixture 'hierarchy' do
+      assert system("ruby", ocra, "hierarchy.rb", "assets/**/*", *DefaultArgs)
+      with_exe "hierarchy.exe" do
+        assert system("hierarchy.exe")
+      end
     end
   end
 end

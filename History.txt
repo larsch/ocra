@@ -7,6 +7,11 @@
 * Path to the generated executable is now avilable to the running
   script in the OCRA_EXECUTABLE environment variable.
 
+* Directories on the command line will now be created.
+
+* Supports path globs, fx. "ocra script.rb assets/**/*.png". (See
+  documentation for Ruby's Dir class).
+
 === 1.1.1
 
 * Fixed duplicate entries in the RUBYLIB environment variable.

@@ -251,8 +251,12 @@ EOF
     OcraBuilder.new(executable, windowed) do |sb|
       # Add explicitly mentioned files
       Ocra.files.each do |file|
-        path = File.join('src', file).tr('/','\\')
-        sb.createfile(file, path)
+        if File.directory?(file)
+          sb.ensuremkdir(File.join('src',file).tr('/','\\'))
+        else
+          path = File.join('src', file).tr('/','\\')
+          sb.createfile(file, path)
+        end
       end
 
       # Add the ruby executable and DLL
