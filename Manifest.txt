@@ -2,7 +2,7 @@ History.txt
 Manifest.txt
 README.txt
 Rakefile
-bin/ocra.rb
+bin/ocra
 share/ocra/lzma.exe
 share/ocra/stub.exe
 share/ocra/stubw.exe

@@ -18,7 +18,7 @@ any additionally needed ruby libraries or DLL.
 * Both console programs and desktop programs supported (no console will
   pop up with .rbw files).
 
-If you experience problems with Ocra or have found a bug, please use
+If you experience problems with OCRA or have found a bug, please use
 the tracker on the RubyForge project page
 http://rubyforge.org/projects/ocra/. You are welcome to ask questions
 in the forums there aswell.
@@ -29,7 +29,7 @@ in the forums there aswell.
 
 == SYNOPSIS:
 
-ocra.rb [option] your/script.rb
+ocra [option] your/script.rb
 
 * OCRA will load your script (using Kernel#load) and build the
   executable when it exits.
@@ -37,10 +37,10 @@ ocra.rb [option] your/script.rb
 * Your program should 'require' all necessary files when invoked without
   arguments, so ocra can detect all dependencies.
 
-* Ocra executables clear the RUBYLIB environment variable but set
-  RUBYOPT to whatever value it had when you invoked Ocra.
+* OCRA executables clear the RUBYLIB environment variable but set
+  RUBYOPT to whatever value it had when you invoked OCRA.
 
-* Ocra does not set up the include path. Use "$:.unshift
+* OCRA does not set up the include path. Use "$:.unshift
   File.dirname(__FILE__)" at the start of your script if you need to
   'require' additional source files in the same directory no matter
   what the user's current working directory is.
@@ -77,16 +77,16 @@ nothing but a working Ruby installation on Windows.
 
 == TECHNICAL DETAILS
 
-The Ocra stub extracts the Ruby interpreter and your scripts into a
+The OCRA stub extracts the Ruby interpreter and your scripts into a
 temporary directory. The directory will contains the same directory
 layout as your Ruby installlation. The source files for your
 application will be put in the 'src' subdirectory.
 
 === Libraries
 
-Rubygems will be automatically included in the Ocra executable.
+Rubygems will be automatically included in the OCRA executable.
 
-Libraries found in non-standard path (for example, if you invoke Ocra
+Libraries found in non-standard path (for example, if you invoke OCRA
 with "ruby -I some/path") will be placed into the site dir
 (lib/ruby/site_ruby). Avoid changing $LOAD_PATH / $: from your script
 to include paths outside your source tree.
@@ -97,16 +97,16 @@ will be logged).
 
 === Environment variables
 
-Ocra executables clear the RUBYLIB environment variable before your
+OCRA executables clear the RUBYLIB environment variable before your
 script is launched. This is done to ensure that your script does not
 use load paths from the end user's Ruby installation.
 
-Ocra executables set the RUBYOPT environment variable to the value it
-had when you invoked Ocra. For example, if you had "RUBYOPT=rubygems"
-on your build PC, Ocra ensures that it is also set on PC's running the
+OCRA executables set the RUBYOPT environment variable to the value it
+had when you invoked OCRA. For example, if you had "RUBYOPT=rubygems"
+on your build PC, OCRA ensures that it is also set on PC's running the
 executables.
 
-Ocra executables set OCRA_EXECUTABLE to the full path of the
+OCRA executables set OCRA_EXECUTABLE to the full path of the
 executable, fx. "C:\Program Files\MyApp\MyApp.exe".
 
 === Working directory
@@ -139,19 +139,19 @@ source script you can use this idiom:
 
 === Detecting OCRA
 
-You can detect whether Ocra is currently building your script by
-looking for the 'Ocra' constant. If it is defined, Ocra is currenly
+You can detect whether OCRA is currently building your script by
+looking for the 'OCRA' constant. If it is defined, OCRA is currenly
 building the executable from your script. For example, you can use
 this to avoid opening a GUI window when compiling executables:
 
    app = MyApp.new
-   if not defined?(Ocra)
+   if not defined?(OCRA)
      app.main_loop
    end
 
 === Additional files and resources
 
-You can add additional files to the Ocra executable (for example
+You can add additional files to the OCRA executable (for example
 images) by appending them to the command line. They should be placed
 in the source directory with your main script (or a subdirectory).
 

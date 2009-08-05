@@ -21,7 +21,7 @@ class TestOcra < Test::Unit::TestCase
   DefaultArgs.push '--no-autodll' if not $have_win32_api
 
   # Name of the tested ocra script.
-  TESTED_OCRA = ENV['TESTED_OCRA'] || 'ocra.rb'
+  TESTED_OCRA = ENV['TESTED_OCRA'] || 'ocra'
 
   # Root of OCRA.
   OcraRoot = File.expand_path(File.join(File.dirname(__FILE__), '..'))

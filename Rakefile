@@ -2,7 +2,6 @@
 
 require 'rubygems'
 require 'hoe'
-require 'bin/ocra'
 
 Hoe.spec 'ocra' do
   developer "Lars Christensen", "larsch@belunktum.dk"
@@ -33,8 +32,8 @@ task :release_standalone => standalone_zip do
   sh "rubyforge add_release ocra ocra-standalone #{Ocra::VERSION} #{standalone_zip}"
 end
 
-file 'bin/ocrasa.rb' => [ 'bin/ocra.rb', 'share/ocra/stub.exe', 'share/ocra/stubw.exe', 'share/ocra/lzma.exe', 'share/ocra/edicon.exe' ] do
-  cp 'bin/ocra.rb', 'bin/ocrasa.rb'
+file 'bin/ocrasa.rb' => [ 'bin/ocra', 'share/ocra/stub.exe', 'share/ocra/stubw.exe', 'share/ocra/lzma.exe', 'share/ocra/edicon.exe' ] do
+  cp 'bin/ocra', 'bin/ocrasa.rb'
   File.open("bin/ocrasa.rb", "a") do |f|
     f.puts "__END__"
     
