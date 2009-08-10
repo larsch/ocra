@@ -14,6 +14,9 @@
 
 * Fixed issue with spaces in temporary path (TMP environment).
 
+* Improved path comparison to ignore case (this is Windows after all)
+  and be a bit more robust.
+
 === 1.1.1
 
 * Fixed duplicate entries in the RUBYLIB environment variable.

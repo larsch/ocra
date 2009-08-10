@@ -14,6 +14,8 @@ module Ocra
 
   IGNORE_MODULES = /^enumerator.so$/
 
+  PATH_SEPARATOR = /[\/\\]/
+
   class << self
     attr_accessor :lzma_mode
     attr_accessor :extra_dlls
@@ -174,6 +176,14 @@ EOF
     return b.join('/')
   end
 
+  # Determines if 'src' is contained in 'tgt' (i.e. it is a subpath of
+  # 'tgt'). Both must be absolute paths and not contain '..'
+  def Ocra.subpath?(src, tgt)
+    src_normalized = src.tr('/','\\')
+    tgt_normalized = tgt.tr('/','\\')
+    src_normalized =~ /^#{Regexp.escape tgt_normalized}[\/\\]/i
+  end
+
   def Ocra.find_load_path(paths, path)
     if path[1,1] == ":"
       rps = paths.map {|p| relative_path(File.expand_path(p), path) }
@@ -224,9 +234,9 @@ EOF
           puts "=== WARNING: Detected a relative require (#{filename}). This is not recommended." if Ocra.show_warnings
         end
         fullpath = File.expand_path(filename, path)
-        if fullpath.index(exec_prefix) == 0
+        if subpath?(fullpath, exec_prefix)
           libs << [ fullpath, fullpath[exec_prefix.size+1..-1] ]
-        elsif fullpath.index(src_prefix) == 0
+        elsif subpath?(fullpath, src_prefix)
           targetpath = "src/" + fullpath[src_prefix.size+1..-1]
           libs << [ fullpath, targetpath ]
           if not @added_load_paths.include?(path) and not load_path.include?(path)
@@ -272,7 +282,7 @@ EOF
 
       # Add detected DLLs
       dlls.each do |dll|
-        if dll.tr('\\','/').index(exec_prefix) == 0
+        if subpath?(dll.tr('\\','/'), exec_prefix)
           target = dll[exec_prefix.size+1..-1]
         else
           target = File.join('bin', File.basename(dll))
@@ -287,12 +297,12 @@ EOF
 
       # Add gemspecs
       gemspecs.each do |gemspec|
-        pref = gemspec[0,exec_prefix.size]
-        path = gemspec[exec_prefix.size+1..-1]
-        if pref != exec_prefix
+        if subpath?(gemspec, exec_prefix)
+          path = gemspec[exec_prefix.size+1..-1]
+          sb.createfile(gemspec, path.tr('/','\\'))
+        else
           raise "#{gemspec} does not exist in the Ruby installation. Don't know where to put it."
         end
-        sb.createfile(gemspec, path.tr('/','\\'))
       end
 
       # Add loaded libraries
@@ -351,8 +361,8 @@ EOF
       loaded = loaded_dlls
       exec_prefix = RbConfig::CONFIG['exec_prefix']
       loaded.select do |path|
-        path.tr('\\','/').index(exec_prefix) == 0 and
-          File.basename(path) =~ /\.dll$/ and
+        Ocra.subpath?(path.tr('\\','/'), exec_prefix) and
+          File.basename(path) =~ /\.dll$/i and
           File.basename(path).downcase != RbConfig::CONFIG['LIBRUBY_SO'].downcase
       end
     end
