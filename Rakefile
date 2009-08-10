@@ -29,6 +29,7 @@ file standalone_zip => 'bin/ocrasa.rb' do
 end
 
 task :release_standalone => standalone_zip do
+  load 'bin/ocra'
   sh "rubyforge add_release ocra ocra-standalone #{Ocra::VERSION} #{standalone_zip}"
 end
 
