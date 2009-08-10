@@ -17,6 +17,11 @@
 * Improved path comparison to ignore case (this is Windows after all)
   and be a bit more robust.
 
+* Added support for RubyGems installed in GEM_HOME (or other part
+  handled by RubyGems). If not installed in the Ruby hierarchy, they
+  will now be installed in a directory named 'gemhome' under the
+  temporary directory.
+
 === 1.1.1
 
 * Fixed duplicate entries in the RUBYLIB environment variable.
