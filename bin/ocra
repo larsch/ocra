@@ -286,14 +286,14 @@ EOF
       end
 
       # Add gemspecs
-      gemspecs.each { |gemspec|
+      gemspecs.each do |gemspec|
         pref = gemspec[0,exec_prefix.size]
         path = gemspec[exec_prefix.size+1..-1]
         if pref != exec_prefix
           raise "#{gemspec} does not exist in the Ruby installation. Don't know where to put it."
         end
         sb.createfile(gemspec, path.tr('/','\\'))
-      }
+      end
 
       # Add loaded libraries
       libs.each do |path, target|
