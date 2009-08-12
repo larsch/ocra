@@ -331,19 +331,11 @@ EOF
 
   module LibraryDetector
     def LibraryDetector.loaded_dlls
-      begin
-        require 'rubygems'
-        gem 'win32-api', '>=1.2.0'
-        require 'win32/api'
-      rescue Exception => e
-        puts "=== ERROR: Failed to load the win32-api gem. Install win32-api or use --no-autodll."
-        puts "=== CAUSE: #{e.class.name}: #{e.message.chomp}"
-        exit
-      end
+      require 'win32api'
 
-      enumprocessmodules = Win32::API.new('EnumProcessModules', 'LPLP', 'B', 'psapi')
-      getmodulefilename = Win32::API.new('GetModuleFileName', 'LPL', 'L')
-      getcurrentprocess = Win32::API.new('GetCurrentProcess', 'V', 'L')
+      enumprocessmodules = Win32API.new('psapi', 'EnumProcessModules', ['L','P','L','P'], 'B')
+      getmodulefilename = Win32API.new('kernel32', 'GetModuleFileName', ['L','P','L'], 'L')
+      getcurrentprocess = Win32API.new('kernel32', 'GetCurrentProcess', ['V'], 'L')
 
       bytes_needed = 4 * 32
       module_handle_buffer = nil
