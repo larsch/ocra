@@ -331,7 +331,7 @@ EOF
 
   module LibraryDetector
     def LibraryDetector.loaded_dlls
-      require 'win32api'
+      require 'Win32API'
 
       enumprocessmodules = Win32API.new('psapi', 'EnumProcessModules', ['L','P','L','P'], 'B')
       getmodulefilename = Win32API.new('kernel32', 'GetModuleFileName', ['L','P','L'], 'L')
