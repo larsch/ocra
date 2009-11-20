@@ -23,8 +23,8 @@ task :standalone => [ 'bin/ocrasa.rb' ]
 standalone_zip = "bin/ocrasa-#{ENV['VERSION']}.zip"
 
 file standalone_zip => 'bin/ocrasa.rb' do
-  chdir('bin') do
-    system("zip ocrasa-#{ENV['VERSION']}.zip ocrasa.rb")
+  chdir 'bin' do
+    system "zip ocrasa-#{ENV['VERSION']}.zip ocrasa.rb"
   end
 end
 
@@ -76,7 +76,7 @@ end
 
 def each_ruby_version
   raise "Set RUBIES to point to where you have various versions of Ruby installed" if ENV['RUBIES'].nil?
-  root = ENV['RUBIES']
+  root = ENV['RUBIES'].tr '\\', '/'
   Dir.glob(File.join(root, 'ruby*','bin')).each do |path|
     path.tr!('/','\\')
     pathenv = ENV['PATH']
@@ -107,10 +107,18 @@ task :setup_all_ruby do
   end
 end
 
-task :test_all_ruby do
+desc 'Run test suite with all version of Ruby found in ENV["RUBIES"]'
+task :test_all_rubies do
   each_ruby_version do
     system("ruby -v")
     system("ruby test/test_ocra.rb")
+  end
+end
+
+desc 'List all version of Ruby found in ENV["RUBIES"]'
+task :list_all_rubies do
+  each_ruby_version do
+    system "ruby -v"
   end
 end
 
