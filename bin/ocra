@@ -267,8 +267,12 @@ EOF
         if File.directory?(file)
           sb.ensuremkdir(File.join('src',file).tr('/','\\'))
         else
-          path = File.join('src', file).tr('/','\\')
-          sb.createfile(file, path)
+          if subpath?(file, exec_prefix)
+            target = file[exec_prefix.size+1..-1]
+          else
+            target = File.join('src', file).tr('/','\\')
+          end
+          sb.createfile(file, target)
         end
       end
 
