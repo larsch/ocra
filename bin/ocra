@@ -278,9 +278,9 @@ EOF
 
       # Add the ruby executable and DLL
       if windowed
-        rubyexe = "rubyw.exe"
+        rubyexe = (RbConfig::CONFIG['rubyw_install_name'] || "rubyw") + ".exe"
       else
-        rubyexe = "ruby.exe"
+        rubyexe = (RbConfig::CONFIG['ruby_install_name'] || "ruby") + ".exe"
       end
       sb.createfile(File.join(bindir, rubyexe), "bin\\" + rubyexe)
       if libruby_so
