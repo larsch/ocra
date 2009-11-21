@@ -420,13 +420,13 @@ EOF
       end
     end
     def mkdir(path)
-      @paths[path] = true
+      @paths[path.downcase] = true
       puts "m #{path}" unless Ocra.quiet
       @of << [OP_CREATE_DIRECTORY, path].pack("VZ*")
     end
     def ensuremkdir(tgt)
       return if tgt == "."
-      if not @paths[tgt]
+      if not @paths[tgt.downcase]
         ensuremkdir(File.dirname(tgt))
         mkdir(tgt)
       end
