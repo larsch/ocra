@@ -1,5 +1,6 @@
 = ocra
 
+* http://ocra.rubyforge.org/
 * http://rubyforge.org/projects/ocra/
 * http://github.com/larsch/ocra/
 
@@ -15,8 +16,7 @@ any additionally needed ruby libraries or DLL.
 * LZMA Compression (optional, default on)
 * Windows support only
 * Ruby 1.9 support
-* Both console programs and desktop programs supported (no console will
-  pop up with .rbw files).
+* Both windowed/console mode supported
 
 If you experience problems with OCRA or have found a bug, please use
 the tracker on the RubyForge project page
@@ -60,7 +60,7 @@ ocra [option] your/script.rb
 
 * Windows
 * Working Ruby installation
-* MinGW Installation (for building the stub)
+* MinGW Installation (when working with the source code only)
 
 == INSTALL:
 
@@ -77,10 +77,20 @@ nothing but a working Ruby installation on Windows.
 
 == TECHNICAL DETAILS
 
-The OCRA stub extracts the Ruby interpreter and your scripts into a
-temporary directory. The directory will contains the same directory
-layout as your Ruby installlation. The source files for your
-application will be put in the 'src' subdirectory.
+OCRA first runs the target script in order to detect any files that
+are loaded and used at runtime (Using Kernel#require and Kernel#load).
+
+OCRA embeds everything needed to run a Ruby script into a single
+executable file. The file contains the .exe stub which is compiled
+from C-code, and a custom opcode format containing instructions to
+create directories, save files, set environment variables and run
+programs. The OCRA script generates this executable and the
+instructions to be run when it is launched.
+
+When executed, the OCRA stub extracts the Ruby interpreter and your
+scripts into a temporary directory. The directory will contains the
+same directory layout as your Ruby installlation. The source files for
+your application will be put in the 'src' subdirectory.
 
 === Libraries
 
@@ -89,11 +99,16 @@ Rubygems will be automatically included in the OCRA executable.
 Libraries found in non-standard path (for example, if you invoke OCRA
 with "ruby -I some/path") will be placed into the site dir
 (lib/ruby/site_ruby). Avoid changing $LOAD_PATH / $: from your script
-to include paths outside your source tree.
+to include paths outside your source tree, since OCRA may place the
+files elsewhere when extracted into the temporary directory.
 
-Autoloaded libraries will be attempted loaded when building the
-executable. Modules that doesn't exist will be ignore (but a warning
-will be logged).
+Autoloaded libraries (Kernel#autoload) will be attempted loaded when
+building the executable. Modules that doesn't exist will be ignore
+(but a warning will be logged).
+
+Conditionally loaded code will not be loaded and included in the
+executable unless the code is actually run when OCRA invokes your
+script.
 
 === Environment variables
 
@@ -107,7 +122,7 @@ on your build PC, OCRA ensures that it is also set on PC's running the
 executables.
 
 OCRA executables set OCRA_EXECUTABLE to the full path of the
-executable, fx. "C:\Program Files\MyApp\MyApp.exe".
+executable, for example, "C:\Program Files\MyApp\MyApp.exe".
 
 === Working directory
 
