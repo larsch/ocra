@@ -330,7 +330,7 @@ EOF
       
       puts "=== Compressing" unless Ocra.quiet or not Ocra.lzma_mode
     end
-    puts "=== Finished (Final size was #{File.size(executable)})" unless Ocra.quiet
+    puts "=== Finished building #{executable} (#{File.size(executable)} bytes)" unless Ocra.quiet
   end
 
   module LibraryDetector
