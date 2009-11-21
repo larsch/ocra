@@ -323,7 +323,7 @@ EOF
       # Set environment variable
       sb.setenv('RUBYOPT', ENV['RUBYOPT'] || '')
       sb.setenv('RUBYLIB', load_path.uniq.join(';'))
-      sb.setenv('GEM_HOME', "\xFF\\gemhome")
+      sb.setenv('GEM_PATH', "\xFF\\gemhome")
 
       # Launch the script
       sb.createprocess("bin\\" + rubyexe, "#{rubyexe} \"\xff\\src\\" + Ocra.files[0] + "\"")
