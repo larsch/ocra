@@ -160,7 +160,7 @@ building the executable from your script. For example, you can use
 this to avoid opening a GUI window when compiling executables:
 
    app = MyApp.new
-   if not defined?(OCRA)
+   if not defined?(Ocra)
      app.main_loop
    end
 
