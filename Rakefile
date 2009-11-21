@@ -122,4 +122,9 @@ task :list_all_rubies do
   end
 end
 
+task :release_docs => :redocs do
+  sh "pscp -r doc/* ocra.rubyforge.org:/var/www/gforge-projects/ocra"
+end
+
+
 # vim: syntax=Ruby
