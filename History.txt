@@ -2,6 +2,10 @@
 
 * Use Win32API (provided with Ruby) instead of win32-api (gem).
 
+* No longer sets GEM_HOME (which would override the default gem
+  path). Instead sets GEM_PATH. Resolves issues with gems not loading
+  on Ruby 1.9.
+
 === 1.1.2
 
 * Warnings can be disabled using --no-warnings.
