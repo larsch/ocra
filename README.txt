@@ -182,6 +182,34 @@ your program is executed:
 Paths on the command line can include ** globs to include a hierachy
 of files, for example: "ocra script.rb assets/**/*.png".
 
+=== Window/Console
+
+Ruby on Windows provides two executables: ruby.exe is a console mode
+application and rubyw.exe is a windowed application which does not
+bring up a console window when launched using the Windows Explorer.
+
+OCRA will automatically select the windowed runtime when your script
+has the ".rbw" extension, or if you specify the "--windows" command
+line options.  Otherwise (or if you specify the "--console" option),
+OCRA will use the console runtime.
+
+If your application works in console mode but not in windowed mode,
+first check if your script works without OCRA using rubyw.exe. You may
+have some output to standard output (puts, print, etc) that can cause
+the windowed runtime to exit early (without raising an exception).
+
+You can also try wrapping your script in an exception handler that
+logs any errors to a file:
+
+   begin
+     # your script here
+   rescue Exception => e
+     File.open("except.log") do |f|
+       f.puts e.inspect
+       f.puts e.backtrace
+     end
+   end
+
 == CREDITS:
 
 Thanks for Igor Pavlov for the LZMA compressor and decompressor. The
