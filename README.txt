@@ -29,32 +29,55 @@ in the forums there aswell.
 
 == SYNOPSIS:
 
-ocra [option] your/script.rb
+ocra [option] script.rb
+
+* Will package "script.rb", the Ruby interpreter and all dependencies
+  (gems and DLLs) into an executable named "script.exe".
+
+=== Compilation:
 
 * OCRA will load your script (using Kernel#load) and build the
   executable when it exits.
 
 * Your program should 'require' all necessary files when invoked without
-  arguments, so ocra can detect all dependencies.
+  arguments, so OCRA can detect all dependencies.
 
-* OCRA executables clear the RUBYLIB environment variable but set
-  RUBYOPT to whatever value it had when you invoked OCRA.
+* DLLs are detected automatically but only those located in your Ruby
+  installation are included.
 
-* OCRA does not set up the include path. Use "$:.unshift
+* .rb files will become console applications. .rbw files will become
+  windowed application (without a console window popping
+  up). Alternatively, use the --console or --windows options.
+
+=== Running your application:
+
+* The 'current working directory' is not changed by OCRA when running
+  your application. You must change to the installation or temporary
+  directory yourself. See also below.
+
+* When the application is running, the OCRA_EXECUTABLE environment
+  variable points to the .exe (with full path).
+
+* The temporary location of the script can be obtained by inspected
+  the $0 variable.
+
+* OCRA does not set up the include path. Use $:.unshift
   File.dirname(__FILE__)" at the start of your script if you need to
   'require' additional source files in the same directory no matter
   what the user's current working directory is.
 
-* Loaded DLLs are detected automatically but only those located in
-  your Ruby installation are included. Automatic detection can be
-  disabled using --no-autodll. DLLs can be manually added using the
-  --dll option.
+=== Pitfalls:
 
-* The current working directory is left untouched by OCRA (Details
-  below).
+* Avoid modifying load paths at run time. Specify load paths using -I
+  or RUBYLIB if you must, but don't expect OCRA to preserve them for
+  runtime. OCRA may pack sources into other directories than you
+  expect.
 
-* When the script is running, the OCRA_EXECUTABLE environment variable
-  points to the .exe (with full path).
+* If you use .rbw files or the --windows option, then check that your
+  application works with rubyw.exe before trying with OCRA.
+
+* Avoid absolute paths in your code and when invoking OCRA.
+
 
 == REQUIREMENTS:
 
@@ -187,16 +210,16 @@ of files, for example: "ocra script.rb assets/**/*.png".
 Ruby on Windows provides two executables: ruby.exe is a console mode
 application and rubyw.exe is a windowed application which does not
 bring up a console window when launched using the Windows Explorer.
-
-OCRA will automatically select the windowed runtime when your script
-has the ".rbw" extension, or if you specify the "--windows" command
-line options.  Otherwise (or if you specify the "--console" option),
-OCRA will use the console runtime.
+By default, or if the --console option is used, OCRA will use the
+console runtime (rubyw.exe). OCRA will automatically select the
+windowed runtime when your script has the ".rbw" extension, or if you
+specify the "--windows" command line options.
 
 If your application works in console mode but not in windowed mode,
-first check if your script works without OCRA using rubyw.exe. You may
-have some output to standard output (puts, print, etc) that can cause
-the windowed runtime to exit early (without raising an exception).
+first check if your script works without OCRA using rubyw.exe. A
+script that prints to standard output (using puts, print etc.) will
+eventually cause an exception when run with rubyw.exe (when the IO
+buffers run full).
 
 You can also try wrapping your script in an exception handler that
 logs any errors to a file:
