@@ -1,0 +1,273 @@
+= ocra
+
+* http://ocra.rubyforge.org/
+* http://rubyforge.org/projects/ocra/
+* http://github.com/larsch/ocra/
+
+== DESCRIPTION:
+
+OCRA (One-Click Ruby Application) builds Windows executables from Ruby
+source code. The executable is a self-extracting, self-running
+executable that contains the Ruby interpreter, your source code and
+any additionally needed ruby libraries or DLL.
+
+== FEATURES/PROBLEMS:
+
+* LZMA Compression (optional, default on)
+* Windows support only
+* Ruby 1.9 support
+* Both windowed/console mode supported
+
+If you experience problems with OCRA or have found a bug, please use
+the tracker on the RubyForge project page
+http://rubyforge.org/projects/ocra/. You are welcome to ask questions
+in the forums there aswell.
+
+== TODO:
+
+* Clean up using manual recursive deletion (not SHop).
+
+== SYNOPSIS:
+
+  ocra [option] script.rb
+
+* Will package +script.rb+, the Ruby interpreter and all dependencies
+  (gems and DLLs) into an executable named "script.exe".
+
+=== Compilation:
+
+* OCRA will load your script (using Kernel#load) and build the
+  executable when it exits.
+
+* Your program should 'require' all necessary files when invoked without
+  arguments, so OCRA can detect all dependencies.
+
+* DLLs are detected automatically but only those located in your Ruby
+  installation are included.
+
+* .rb files will become console applications. .rbw files will become
+  windowed application (without a console window popping
+  up). Alternatively, use the --console or --windows options.
+
+=== Running your application:
+
+* The 'current working directory' is not changed by OCRA when running
+  your application. You must change to the installation or temporary
+  directory yourself. See also below.
+
+* When the application is running, the OCRA_EXECUTABLE environment
+  variable points to the .exe (with full path).
+
+* The temporary location of the script can be obtained by inspected
+  the $0 variable.
+
+* OCRA does not set up the include path. Use <tt>$:.unshift
+  File.dirname($0)</tt> at the start of your script if you need to
+  'require' additional source files in the same directory no matter
+  what the user's current working directory is.
+
+=== Pitfalls:
+
+* Avoid modifying load paths at run time. Specify load paths using -I
+  or RUBYLIB if you must, but don't expect OCRA to preserve them for
+  runtime. OCRA may pack sources into other directories than you
+  expect.
+
+* If you use .rbw files or the --windows option, then check that your
+  application works with rubyw.exe before trying with OCRA.
+
+* Avoid absolute paths in your code and when invoking OCRA.
+
+
+== REQUIREMENTS:
+
+* Windows
+* Working Ruby installation
+* MinGW Installation (when working with the source code only)
+
+== INSTALL:
+
+=== Gem
+
+  gem install ocra
+
+Can also be downloaded from http://rubyforge.org/frs/?group_id=8185
+
+=== Stand-alone
+
+Get ocrasa.rb from http://rubyforge.org/frs/?group_id=8185. Requires
+nothing but a working Ruby installation on Windows.
+
+== TECHNICAL DETAILS
+
+OCRA first runs the target script in order to detect any files that
+are loaded and used at runtime (Using Kernel#require and Kernel#load).
+
+OCRA embeds everything needed to run a Ruby script into a single
+executable file. The file contains the .exe stub which is compiled
+from C-code, and a custom opcode format containing instructions to
+create directories, save files, set environment variables and run
+programs. The OCRA script generates this executable and the
+instructions to be run when it is launched.
+
+When executed, the OCRA stub extracts the Ruby interpreter and your
+scripts into a temporary directory. The directory will contains the
+same directory layout as your Ruby installlation. The source files for
+your application will be put in the 'src' subdirectory.
+
+=== Libraries
+
+Rubygems will be automatically included in the OCRA executable.
+
+Libraries found in non-standard path (for example, if you invoke OCRA
+with "ruby -I some/path") will be placed into the site dir
+(lib/ruby/site_ruby). Avoid changing $LOAD_PATH / $: from your script
+to include paths outside your source tree, since OCRA may place the
+files elsewhere when extracted into the temporary directory.
+
+Autoloaded libraries (Kernel#autoload) will be attempted loaded when
+building the executable. Modules that doesn't exist will be ignore
+(but a warning will be logged).
+
+Conditionally loaded code will not be loaded and included in the
+executable unless the code is actually run when OCRA invokes your
+script.
+
+=== Environment variables
+
+OCRA executables clear the RUBYLIB environment variable before your
+script is launched. This is done to ensure that your script does not
+use load paths from the end user's Ruby installation.
+
+OCRA executables set the RUBYOPT environment variable to the value it
+had when you invoked OCRA. For example, if you had "RUBYOPT=rubygems"
+on your build PC, OCRA ensures that it is also set on PC's running the
+executables.
+
+OCRA executables set OCRA_EXECUTABLE to the full path of the
+executable, for example
+
+  ENV["OCRA_EXECUTABLE"] # => C:\Program Files\MyApp\MyApp.exe
+
+=== Working directory
+
+You should not assume that the current working directory when invoking
+an executable built with .exe is the location of the source script. It
+can be the directory where the executable is placed (when invoked
+through the Windows Explorer), the users' current working directory
+(when invoking from the Command Prompt), or even <tt>C:\\WINDOWS\\SYSTEM32</tt>
+when the executable is invoked through a file association. You can
+optionally change the directory yourself:
+
+   Dir.chdir File.dirname($0)
+
+If you wish to maintain the user's working directory, but need to
+'require' additional Ruby scripts from the source directory, you can
+add the following line to your script:
+
+   $LOAD_PATH.unshift File.dirname($0)
+
+=== $LOAD_PATH/$: mangling
+
+Adding paths to $LOAD_PATH or $: at runtime is not recommended. Adding
+relative load paths depends on the working directory being the same as
+where the script is located (See above). If you have additional
+library files in directories below the directory containing your
+source script you can use this idiom:
+
+   $LOAD_PATH.unshift File.join(File.dirname($0), 'path/to/script')
+
+=== Detecting OCRA
+
+You can detect whether OCRA is currently building your script by
+looking for the 'Ocra' constant. If it is defined, OCRA is currenly
+building the executable from your script. For example, you can use
+this to avoid opening a GUI window when compiling executables:
+
+   app = MyApp.new
+   if not defined?(Ocra)
+     app.main_loop
+   end
+
+=== Additional files and resources
+
+You can add additional files to the OCRA executable (for example
+images) by appending them to the command line. They should be placed
+in the source directory with your main script (or a subdirectory).
+
+   ocra mainscript.rb someimage.jpeg docs/document.txt
+
+This will create the following layout in the temporary directory when
+your program is executed:
+
+   src/mainscript.rb
+   src/someimage.jpeg
+   src/docs/document.txt
+
+Paths on the command line can include ** globs to include a hierachy
+of files, for example
+
+   ocra script.rb assets/**/*.png
+
+=== Window/Console
+
+Ruby on Windows provides two executables: ruby.exe is a console mode
+application and rubyw.exe is a windowed application which does not
+bring up a console window when launched using the Windows Explorer.
+By default, or if the --console option is used, OCRA will use the
+console runtime (rubyw.exe). OCRA will automatically select the
+windowed runtime when your script has the ".rbw" extension, or if you
+specify the "--windows" command line options.
+
+If your application works in console mode but not in windowed mode,
+first check if your script works without OCRA using rubyw.exe. A
+script that prints to standard output (using puts, print etc.) will
+eventually cause an exception when run with rubyw.exe (when the IO
+buffers run full).
+
+You can also try wrapping your script in an exception handler that
+logs any errors to a file:
+
+   begin
+     # your script here
+   rescue Exception => e
+     File.open("except.log") do |f|
+       f.puts e.inspect
+       f.puts e.backtrace
+     end
+   end
+
+== CREDITS:
+
+Thanks for Igor Pavlov for the LZMA compressor and decompressor. The
+source code used was place into Public Domain by Igor Pavlov.
+
+Erik Veenstra for rubyscript2exe which provided inspiration.
+
+Dice for the default .exe icon (vit-ruby.ico,
+http://ruby.morphball.net/vit-ruby-ico_en.html)
+
+== LICENSE:
+
+(The MIT License)
+
+Copyright (c) 2009 Lars Christensen
+
+Permission is hereby granted, free of charge, to any person obtaining
+a copy of this software and associated documentation files (the
+'Software'), to deal in the Software without restriction, including
+without limitation the rights to use, copy, modify, merge, publish,
+distribute, sublicense, and/or sell copies of the Software, and to
+permit persons to whom the Software is furnished to do so, subject to
+the following conditions:
+
+The above copyright notice and this permission notice shall be
+included in all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED 'AS IS', WITHOUT WARRANTY OF ANY KIND,
+EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
