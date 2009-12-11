@@ -31,7 +31,7 @@ in the forums there aswell.
 
   ocra [option] script.rb
 
-* Will package +script.rb+, the Ruby interpreter and all dependencies
+* Will package "script.rb", the Ruby interpreter and all dependencies
   (gems and DLLs) into an executable named "script.exe".
 
 === Compilation:
@@ -47,7 +47,8 @@ in the forums there aswell.
 
 * .rb files will become console applications. .rbw files will become
   windowed application (without a console window popping
-  up). Alternatively, use the --console or --windows options.
+  up). Alternatively, use the <tt>--console</tt> or <tt>--windows</tt>
+  options.
 
 === Running your application:
 
@@ -63,8 +64,8 @@ in the forums there aswell.
 
 * OCRA does not set up the include path. Use <tt>$:.unshift
   File.dirname($0)</tt> at the start of your script if you need to
-  'require' additional source files in the same directory no matter
-  what the user's current working directory is.
+  'require' additional source files from the same directory as your
+  main script.
 
 === Pitfalls:
 
@@ -73,8 +74,8 @@ in the forums there aswell.
   runtime. OCRA may pack sources into other directories than you
   expect.
 
-* If you use .rbw files or the --windows option, then check that your
-  application works with rubyw.exe before trying with OCRA.
+* If you use .rbw files or the <tt>--windows</tt> option, then check
+  that your application works with rubyw.exe before trying with OCRA.
 
 * Avoid absolute paths in your code and when invoking OCRA.
 
@@ -121,9 +122,10 @@ Rubygems will be automatically included in the OCRA executable.
 
 Libraries found in non-standard path (for example, if you invoke OCRA
 with "ruby -I some/path") will be placed into the site dir
-(lib/ruby/site_ruby). Avoid changing $LOAD_PATH / $: from your script
-to include paths outside your source tree, since OCRA may place the
-files elsewhere when extracted into the temporary directory.
+(lib/ruby/site_ruby). Avoid changing <tt>$LOAD_PATH</tt> or
+<tt>$:</tt> from your script to include paths outside your source
+tree, since OCRA may place the files elsewhere when extracted into the
+temporary directory.
 
 Autoloaded libraries (Kernel#autoload) will be attempted loaded when
 building the executable. Modules that doesn't exist will be ignore
@@ -167,13 +169,13 @@ add the following line to your script:
 
    $LOAD_PATH.unshift File.dirname($0)
 
-=== $LOAD_PATH/$: mangling
+=== Load path mangling
 
-Adding paths to $LOAD_PATH or $: at runtime is not recommended. Adding
-relative load paths depends on the working directory being the same as
-where the script is located (See above). If you have additional
-library files in directories below the directory containing your
-source script you can use this idiom:
+Adding paths to <tt>$LOAD_PATH</tt> or <tt>$:</tt> at runtime is not
+recommended. Adding relative load paths depends on the working
+directory being the same as where the script is located (See
+above). If you have additional library files in directories below the
+directory containing your source script you can use this idiom:
 
    $LOAD_PATH.unshift File.join(File.dirname($0), 'path/to/script')
 
@@ -214,10 +216,10 @@ of files, for example
 Ruby on Windows provides two executables: ruby.exe is a console mode
 application and rubyw.exe is a windowed application which does not
 bring up a console window when launched using the Windows Explorer.
-By default, or if the --console option is used, OCRA will use the
-console runtime (rubyw.exe). OCRA will automatically select the
+By default, or if the <tt>--console</tt> option is used, OCRA will use
+the console runtime (rubyw.exe). OCRA will automatically select the
 windowed runtime when your script has the ".rbw" extension, or if you
-specify the "--windows" command line options.
+specify the <tt>--windows</tt> command line option.
 
 If your application works in console mode but not in windowed mode,
 first check if your script works without OCRA using rubyw.exe. A
