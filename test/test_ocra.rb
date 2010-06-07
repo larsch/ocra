@@ -422,4 +422,24 @@ class TestOcra < Test::Unit::TestCase
     end
   end
 
+  def test_relpath
+    with_fixture "helloworld" do
+      assert system("ruby", ocra, "./helloworld.rb", *DefaultArgs)
+      assert File.exist?("helloworld.exe")
+      assert system("helloworld.exe")
+    end
+  end
+
+  def test_relpath_outside
+    with_fixture "helloworld" do
+      mkdir "build"
+      cd "build" do
+        assert system("ruby", ocra, "../helloworld.rb", *DefaultArgs)
+      end
+      assert File.exist?("helloworld.exe")
+      assert system("helloworld.exe")
+    end
+  end
+
+  
 end
