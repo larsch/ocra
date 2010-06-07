@@ -5,6 +5,7 @@ require 'hoe'
 
 Hoe.spec 'ocra' do
   developer "Lars Christensen", "larsch@belunktum.dk"
+  self.readme_file = 'README.rdoc'
 end
 
 task :build_stub do
