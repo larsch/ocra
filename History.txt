@@ -1,3 +1,14 @@
+=== 1.1.4
+
+* Fixed various issues with path and filenames being handled case
+  sensitive.
+
+* Now uses config settings for Ruby executable names (should now also
+  work with ruby installations built with --program-suffix).
+
+* Supported invoking ocra with an absolute path to the script. Will
+  assume that the script is in the root of the source hierachy.
+
 === 1.1.3
 
 * Use Win32API (provided with Ruby) instead of win32-api (gem).

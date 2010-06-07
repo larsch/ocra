@@ -256,7 +256,7 @@ EOF
     # Detect additional DLLs
     dlls = Ocra.autodll ? LibraryDetector.detect_dlls : []
 
-    executable = Ocra.files[0].sub(/(\.rbw?)?$/, '.exe')
+    executable = File.basename(Ocra.files[0].sub(/(\.rbw?)?$/, '.exe'))
 
     windowed = (Ocra.files[0] =~ /\.rbw$/ || Ocra.force_windows) && !Ocra.force_console
 
@@ -264,14 +264,21 @@ EOF
     OcraBuilder.new(executable, windowed) do |sb|
       # Add explicitly mentioned files
       Ocra.files.each do |file|
-        if File.directory?(file)
-          sb.ensuremkdir(File.join('src',file).tr('/','\\'))
+        file = File.expand_path(file)
+
+        if subpath?(file, exec_prefix)
+          target = relative_path(exec_prefix, file)
+        elsif subpath?(file, src_prefix)
+          target = File.join('src', relative_path(src_prefix, file))
         else
-          if subpath?(file, exec_prefix)
-            target = file[exec_prefix.size+1..-1]
-          else
-            target = File.join('src', file).tr('/','\\')
-          end
+          target = File.join('src', File.basename(file))
+        end
+
+        target.tr!('/','\\')
+        
+        if File.directory?(file)
+          sb.ensuremkdir(target)
+        else
           sb.createfile(file, target)
         end
       end
@@ -326,7 +333,7 @@ EOF
       sb.setenv('GEM_PATH', "\xFF\\gemhome")
 
       # Launch the script
-      sb.createprocess("bin\\" + rubyexe, "#{rubyexe} \"\xff\\src\\" + Ocra.files[0] + "\"")
+      sb.createprocess("bin\\" + rubyexe, "#{rubyexe} \"\xff\\src\\" + File.basename(Ocra.files[0]) + "\"")
       
       puts "=== Compressing" unless Ocra.quiet or not Ocra.lzma_mode
     end
