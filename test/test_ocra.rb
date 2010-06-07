@@ -319,7 +319,7 @@ class TestOcra < Test::Unit::TestCase
 
   # Test that ocra.rb accepts --version and outputs the version number.
   def test_version
-    assert_match(/^Ocra \d+(\.\d)+$/, `ruby #{ocra} --version`)
+    assert_match(/^Ocra \d+(\.\d)+$/, `ruby \"#{ocra}\" --version`)
   end
 
   # Test that ocra.rb accepts --icon.

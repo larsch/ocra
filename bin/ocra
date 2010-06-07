@@ -384,7 +384,7 @@ EOF
       end
 
       if Ocra.icon_filename
-        system("#{Ocra.ediconpath} #{path} #{Ocra.icon_filename}")
+        system Ocra.ediconpath, path, Ocra.icon_filename
       end
 
       opcode_offset = File.size(path)
