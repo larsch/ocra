@@ -416,9 +416,9 @@ class TestOcra < Test::Unit::TestCase
       mkdir "build"
       cd "build" do
         assert system("ruby", ocra, File.expand_path("../helloworld.rb"), *DefaultArgs)
+        assert File.exist?("helloworld.exe")
+        assert system("helloworld.exe")
       end
-      assert File.exist?("helloworld.exe")
-      assert system("helloworld.exe")
     end
   end
 
@@ -435,9 +435,9 @@ class TestOcra < Test::Unit::TestCase
       mkdir "build"
       cd "build" do
         assert system("ruby", ocra, "../helloworld.rb", *DefaultArgs)
+        assert File.exist?("helloworld.exe")
+        assert system("helloworld.exe")
       end
-      assert File.exist?("helloworld.exe")
-      assert system("helloworld.exe")
     end
   end
 
