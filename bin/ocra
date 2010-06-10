@@ -16,6 +16,8 @@ module Ocra
 
   PATH_SEPARATOR = /[\/\\]/
 
+  TEMPDIR_MARKER = "\xFF"
+
   class << self
     attr_accessor :lzma_mode
     attr_accessor :extra_dlls
@@ -240,7 +242,7 @@ EOF
           targetpath = "src/" + fullpath[src_prefix.size+1..-1]
           libs << [ fullpath, targetpath ]
           if not @added_load_paths.include?(path) and not load_path.include?(path)
-            load_path << File.join("\xFF", File.dirname(targetpath))
+            load_path << File.join(TEMPDIR_MARKER, File.dirname(targetpath))
           end
         elsif defined?(Gem) and gemhome = Gem.path.find { |pth| subpath?(fullpath, pth) }
           targetpath = File.join("gemhome", relative_path(gemhome, fullpath))
@@ -330,10 +332,10 @@ EOF
       # Set environment variable
       sb.setenv('RUBYOPT', ENV['RUBYOPT'] || '')
       sb.setenv('RUBYLIB', load_path.uniq.join(';'))
-      sb.setenv('GEM_PATH', "\xFF\\gemhome")
+      sb.setenv('GEM_PATH', "#{TEMPDIR_MARKER}\\gemhome")
 
       # Launch the script
-      sb.createprocess("bin\\" + rubyexe, "#{rubyexe} \"\xff\\src\\" + File.basename(Ocra.files[0]) + "\"")
+      sb.createprocess(TEMPDIR_MARKER + "\\bin\\" + rubyexe, "#{rubyexe} \"\xff\\src\\" + File.basename(Ocra.files[0]) + "\"")
       
       puts "=== Compressing" unless Ocra.quiet or not Ocra.lzma_mode
     end
@@ -428,7 +430,7 @@ EOF
     end
     def mkdir(path)
       @paths[path.downcase] = true
-      puts "m #{path}" unless Ocra.quiet
+      puts "m #{showtempdir path}" unless Ocra.quiet
       @of << [OP_CREATE_DIRECTORY, path].pack("VZ*")
     end
     def ensuremkdir(tgt)
@@ -441,20 +443,25 @@ EOF
     def createfile(src, tgt)
       ensuremkdir(File.dirname(tgt))
       str = File.open(src, "rb") { |file| file.read }
-      puts "a #{tgt}" unless Ocra.quiet
+      puts "a #{showtempdir tgt}" unless Ocra.quiet
       @of << [OP_CREATE_FILE, tgt, str.size, str].pack("VZ*VA*")
     end
     def createprocess(image, cmdline)
-      puts "l #{image} #{cmdline}" unless Ocra.quiet
+      puts "l #{showtempdir image} #{showtempdir cmdline}" unless Ocra.quiet
       @of << [OP_CREATE_PROCESS, image, cmdline].pack("VZ*Z*")
     end
     def setenv(name, value)
-      puts "e #{name} #{value}" unless Ocra.quiet
+      puts "e #{name} #{showtempdir value}" unless Ocra.quiet
       @of << [OP_SETENV, name, value].pack("VZ*Z*")
     end
     def close
       @of.close
     end
+
+    def showtempdir(x)
+      x.gsub(TEMPDIR_MARKER, "<tempdir>")
+    end
+      
   end # class OcraBuilder
   
 end # module Ocra

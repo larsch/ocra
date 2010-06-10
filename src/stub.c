@@ -309,9 +309,7 @@ BOOL OpCreateProcess(LPVOID *p)
    StartupInfo.cb = sizeof(StartupInfo);
 
    CHAR ApplicationName[MAX_PATH];
-   strcpy(ApplicationName, InstDir);
-   strcat(ApplicationName, "\\");
-   strcat(ApplicationName, ImageName);
+   ExpandPath(ApplicationName, ImageName);
 
    CHAR CmdLine2[MAX_PATH];
    ExpandPath(CmdLine2, CmdLine);

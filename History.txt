@@ -1,5 +1,8 @@
 === 1.1.4
 
+* The tempdir marker is now pretty-printed as "<tempdir>" in the
+  output.
+
 * Fixed various issues with path and filenames being handled case
   sensitive.
 
