@@ -17,6 +17,10 @@ end
 
 file 'share/ocra/stub.exe' => :build_stub
 
+file 'README.txt' => 'README.rdoc' do
+  cp 'README.rdoc', 'README.txt'
+end
+
 task :test => :build_stub
 
 task :standalone => [ 'bin/ocrasa.rb' ]
