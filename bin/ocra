@@ -166,6 +166,11 @@ EOF
     end
   end
 
+  # Computes the relative path from 'src' to 'tgt'. 'src' must be a
+  # directory (i.e. current working directory.). 'tgt' may be a
+  # directory or filename. The return value will be the relative path
+  # to 'tgt', provided that it can be reached (i.e. is known to be on
+  # same drive).
   def Ocra.relative_path(src, tgt)
     a = src.split('/')
     b = tgt.split('/')
@@ -232,7 +237,7 @@ EOF
         if filename[1,1] == ":"
           filename = relative_path(File.expand_path(path), filename)
         end
-        if filename =~ /^\.\.\//
+        if filename =~ /\/\.\.\//
           puts "=== WARNING: Detected a relative require (#{filename}). This is not recommended." if Ocra.show_warnings
         end
         fullpath = File.expand_path(filename, path)
@@ -248,7 +253,19 @@ EOF
           targetpath = File.join("gemhome", relative_path(gemhome, fullpath))
           libs << [ fullpath, targetpath ]
         else
-          libs << [ fullpath, File.join(instsitelibdir, filename) ]
+          if filename =~ /^\.\// or filename =~ /^[A-Z]:/i
+            # Relative require'd files; Try to put the file relatively to source file.
+            target = File.join(File.dirname(filename))
+            rel_require = relative_path(File.expand_path(File.dirname(files[0])), File.expand_path(filename))
+            if rel_require =~ /^\.\.\/(.*)/
+              target = $1
+              libs << [ fullpath, target ]
+            else
+              puts "=== FATAL: Failed to resolve relative path between \"#{files[0]}\" and \"#{filename}\""
+            end
+          else
+            libs << [ fullpath, File.join(instsitelibdir, filename) ]
+          end
         end
       else
         puts "=== WARNING: Couldn't find #{filename}" unless filename =~ IGNORE_MODULES if Ocra.show_warnings

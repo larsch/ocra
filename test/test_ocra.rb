@@ -441,5 +441,33 @@ class TestOcra < Test::Unit::TestCase
     end
   end
 
+  def test_absrequire
+    with_fixture "absrequire" do
+      cd "someapp/bin" do
+        assert system("ruby", ocra, "someapp.rb", *DefaultArgs)
+        assert File.exist?("someapp.exe")
+        assert system("someapp.exe")
+      end
+    end
+  end
+
+  def test_absrequire_outside
+    with_fixture "absrequire" do
+      cd "someapp" do
+        assert system("ruby", ocra, "bin/someapp.rb", *DefaultArgs)
+        assert File.exist?("someapp.exe")
+        assert system("someapp.exe")
+      end
+    end
+  end
+
+  def test_absrequire_outside_deep
+    with_fixture "absrequire" do
+      assert system("ruby", ocra, "someapp/bin/someapp.rb")
+      assert File.exist?("someapp.exe")
+      assert system("someapp.exe")
+      p $?
+    end
+  end
   
 end
