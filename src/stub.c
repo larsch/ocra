@@ -65,10 +65,11 @@ DWORD GetInteger(LPVOID* p)
 /**
    Handler for console events.
 */
-void ConsoleHandleRoutine(DWORD dwCtrlType)
+BOOL WINAPI ConsoleHandleRoutine(DWORD dwCtrlType)
 {
    // Ignore all events. They will also be dispatched to the child procress (Ruby) which should
    // exit quickly, allowing us to clean up.
+   return TRUE;
 }
 
 int main(int argc, char** argv)
