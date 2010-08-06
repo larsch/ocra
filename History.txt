@@ -4,6 +4,9 @@
   them anyway and exist, allowing the stub to clean up temporary
   files.
 
+* Temporary memory used for decompression is now freed before the ruby
+  interpreter is launched by the stub.
+
 === 1.1.4
 
 * The tempdir marker is now pretty-printed as "<tempdir>" in the

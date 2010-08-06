@@ -9,6 +9,7 @@ module Ocra
   OP_CREATE_PROCESS = 3
   OP_DECOMPRESS_LZMA = 4
   OP_SETENV = 5
+  OP_POST_CREATE_PROCESS = 6
 
   VERSION = "1.1.4"
 
@@ -335,7 +336,7 @@ EOF
       sb.setenv('GEM_PATH', "#{TEMPDIR_MARKER}\\gemhome")
 
       # Launch the script
-      sb.createprocess(TEMPDIR_MARKER + "\\bin\\" + rubyexe, "#{rubyexe} \"\xff\\src\\" + File.basename(Ocra.files[0]) + "\"")
+      sb.postcreateprocess(TEMPDIR_MARKER + "\\bin\\" + rubyexe, "#{rubyexe} \"\xff\\src\\" + File.basename(Ocra.files[0]) + "\"")
       
       puts "=== Compressing" unless Ocra.quiet or not Ocra.lzma_mode
     end
@@ -449,6 +450,10 @@ EOF
     def createprocess(image, cmdline)
       puts "l #{showtempdir image} #{showtempdir cmdline}" unless Ocra.quiet
       @of << [OP_CREATE_PROCESS, image, cmdline].pack("VZ*Z*")
+    end
+    def postcreateprocess(image, cmdline)
+      puts "p #{showtempdir image} #{showtempdir cmdline}" unless Ocra.quiet
+      @of << [OP_POST_CREATE_PROCESS, image, cmdline].pack("VZ*Z*")
     end
     def setenv(name, value)
       puts "e #{name} #{showtempdir value}" unless Ocra.quiet

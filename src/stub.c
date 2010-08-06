@@ -17,10 +17,12 @@ const BYTE Signature[] = { 0x41, 0xb6, 0xba, 0x4e };
 #define OP_CREATE_PROCESS 3
 #define OP_DECOMPRESS_LZMA 4
 #define OP_SETENV 5
-#define OP_MAX 6
+#define OP_POST_CREATE_PROCRESS 6
+#define OP_MAX 7
 
 BOOL ProcessImage(LPVOID p, DWORD size);
 BOOL ProcessOpcodes(LPVOID* p);
+void CreateAndWaitForProcess(LPTSTR ApplicationName, LPTSTR CommandLine);
 
 BOOL OpEnd(LPVOID *p);
 BOOL OpCreateFile(LPVOID *p);
@@ -28,9 +30,14 @@ BOOL OpCreateDirectory(LPVOID *p);
 BOOL OpCreateProcess(LPVOID *p);
 BOOL OpDecompressLzma(LPVOID *p);
 BOOL OpSetEnv(LPVOID *p);
+BOOL OpPostCreateProcess(LPVOID *p);
+
 #include <LzmaDec.h>
 
 typedef BOOL (*POpcodeHandler)(LPVOID*);
+
+LPTSTR PostCreateProcess_ApplicationName = NULL;
+LPTSTR PostCreateProcess_CommandLine = NULL;
 
 DWORD ExitStatus = 0;
 BOOL ExitCondition = FALSE;
@@ -41,7 +48,8 @@ POpcodeHandler OpcodeHandlers[OP_MAX] = {
    &OpCreateFile,
    &OpCreateProcess,
    &OpDecompressLzma,
-   &OpSetEnv
+   &OpSetEnv,
+   &OpPostCreateProcess
 };
 
 CHAR InstDir[MAX_PATH];
@@ -139,6 +147,11 @@ int main(int argc, char** argv)
 
    if (!CloseHandle(hImage))
       fprintf(stderr, "Failed to close executable.\n");
+
+   if (PostCreateProcess_ApplicationName && PostCreateProcess_CommandLine)
+   {
+      CreateAndWaitForProcess(PostCreateProcess_ApplicationName, PostCreateProcess_CommandLine);
+   }
 
    /* Remove the temporary directory */
    SHFILEOPSTRUCT shop;
@@ -310,21 +323,13 @@ BOOL OpCreateDirectory(LPVOID *p)
    return TRUE;
 }
 
-/**
-   Create a new process and wait for it to complete (OP_CREATE_PROCESS
-   opcode handler)
-*/
-BOOL OpCreateProcess(LPVOID *p)
+void GetCreateProcessInfo(LPVOID* p, LPTSTR* pApplicationName, LPTSTR* pCommandLine)
 {
    LPTSTR ImageName = GetString(p);
    LPTSTR CmdLine = GetString(p);
 
-   STARTUPINFO StartupInfo;
-   ZeroMemory(&StartupInfo, sizeof(StartupInfo));
-   StartupInfo.cb = sizeof(StartupInfo);
-
-   CHAR ApplicationName[MAX_PATH];
-   ExpandPath(ApplicationName, ImageName);
+   *pApplicationName = LocalAlloc(LMEM_FIXED, MAX_PATH);
+   ExpandPath(*pApplicationName, ImageName);
 
    CHAR CmdLine2[MAX_PATH];
    ExpandPath(CmdLine2, CmdLine);
@@ -332,24 +337,44 @@ BOOL OpCreateProcess(LPVOID *p)
    LPTSTR MyCmdLine = GetCommandLine();
    LPTSTR MyArgs = SkipArg(MyCmdLine);
    
-   LPTSTR CmdLine3 = LocalAlloc(LMEM_FIXED, strlen(CmdLine2) + 1 + strlen(MyArgs) + 1);
-   strcpy(CmdLine3, CmdLine2);
-   strcat(CmdLine3, " ");
-   strcat(CmdLine3, MyArgs);
+   *pCommandLine = LocalAlloc(LMEM_FIXED, strlen(CmdLine2) + 1 + strlen(MyArgs) + 1);
+   strcpy(*pCommandLine, CmdLine2);
+   strcat(*pCommandLine, " ");
+   strcat(*pCommandLine, MyArgs);
+}
+
+/**
+   Create a new process and wait for it to complete (OP_CREATE_PROCESS
+   opcode handler)
+*/
+BOOL OpCreateProcess(LPVOID *p)
+{
+   LPTSTR ApplicationName;
+   LPTSTR CommandLine;
+   GetCreateProcessInfo(p, &ApplicationName, &CommandLine);
+   CreateAndWaitForProcess(ApplicationName, CommandLine);
+   LocalFree(ApplicationName);
+   LocalFree(CommandLine);
+   return TRUE;
+}
+
+void CreateAndWaitForProcess(LPTSTR ApplicationName, LPTSTR CommandLine)
+{
    
 #ifdef _DEBUG
    printf("CreateProcess(%s, %s)\n", ApplicationName, CmdLine2);
 #endif
-   
-   PROCESS_INFORMATION ProcessInformation;
-   BOOL r = CreateProcess(ApplicationName, CmdLine3, NULL, NULL,
-                 TRUE, 0, NULL, NULL, &StartupInfo, &ProcessInformation);
 
-   LocalFree(CmdLine3);
+   PROCESS_INFORMATION ProcessInformation;
+   STARTUPINFO StartupInfo;
+   ZeroMemory(&StartupInfo, sizeof(StartupInfo));
+   StartupInfo.cb = sizeof(StartupInfo);
+   BOOL r = CreateProcess(ApplicationName, CommandLine, NULL, NULL,
+                          TRUE, 0, NULL, NULL, &StartupInfo, &ProcessInformation);
 
    if (!r)
    {
-      printf("Failed to createprocess %lu\n", GetLastError());
+      printf("Failed to create process (%s): %lu\n", ApplicationName, GetLastError());
    }
 
    WaitForSingleObject(ProcessInformation.hProcess, INFINITE);
@@ -359,9 +384,25 @@ BOOL OpCreateProcess(LPVOID *p)
 
    CloseHandle(ProcessInformation.hProcess);
    CloseHandle(ProcessInformation.hThread);
-   
-   return TRUE;
 }
+
+/**
+ * Sets up a process to be created after all other opcodes have been processed. This can be used to create processes
+ * after the temporary files have all been created and memory has been freed.
+ */
+BOOL OpPostCreateProcess(LPVOID* p)
+{
+   if (PostCreateProcess_ApplicationName || PostCreateProcess_CommandLine)
+   {
+      return FALSE;
+   }
+   else
+   {
+      GetCreateProcessInfo(p, &PostCreateProcess_ApplicationName, &PostCreateProcess_CommandLine);
+      return TRUE;
+   }
+}
+
 
 void *SzAlloc(void *p, size_t size) { p = p; return malloc(size); }
 void SzFree(void *p, void *address) { p = p; free(address); }
