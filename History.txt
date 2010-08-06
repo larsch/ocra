@@ -1,3 +1,9 @@
+=== 1.1.5
+
+* Ignore console events (Ctrl-C, Ctrl-Break). Ruby process handles
+  them anyway and exist, allowing the stub to clean up temporary
+  files.
+
 === 1.1.4
 
 * The tempdir marker is now pretty-printed as "<tempdir>" in the
