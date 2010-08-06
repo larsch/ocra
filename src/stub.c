@@ -62,6 +62,15 @@ DWORD GetInteger(LPVOID* p)
    return dw;
 }
 
+/**
+   Handler for console events.
+*/
+void ConsoleHandleRoutine(DWORD dwCtrlType)
+{
+   // Ignore all events. They will also be dispatched to the child procress (Ruby) which should
+   // exit quickly, allowing us to clean up.
+}
+
 int main(int argc, char** argv)
 {
    CHAR TempPath[MAX_PATH];
@@ -70,6 +79,8 @@ int main(int argc, char** argv)
 #ifdef _DEBUG
    printf("Temporary directory: %s\n", InstDir);
 #endif
+
+   SetConsoleCtrlHandler(&ConsoleHandleRoutine, TRUE);
 
    /* Attempt to delete the temp file created by GetTempFileName.
       Ignore errors, i.e. if it doesn't exist. */
@@ -137,6 +148,9 @@ int main(int argc, char** argv)
    shop.pTo = NULL;
    shop.fFlags = FOF_NOCONFIRMATION;
    SHFileOperation(&shop);
+#ifdef _DEBUG
+   printf("Removing temporary files\n");
+#endif
 
    ExitProcess(ExitStatus);
 
