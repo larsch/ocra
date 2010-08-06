@@ -7,6 +7,9 @@
 * Temporary memory used for decompression is now freed before the ruby
   interpreter is launched by the stub.
 
+* Progress dialog is no longer displayed when removing temporary
+  files.
+
 === 1.1.4
 
 * The tempdir marker is now pretty-printed as "<tempdir>" in the

@@ -160,7 +160,7 @@ int main(int argc, char** argv)
    InstDir[strlen(InstDir)+1] = 0;
    shop.pFrom = InstDir;
    shop.pTo = NULL;
-   shop.fFlags = FOF_NOCONFIRMATION;
+   shop.fFlags = FOF_NOCONFIRMATION | FOF_SILENT | FOF_NOERRORUI;
    SHFileOperation(&shop);
 #ifdef _DEBUG
    printf("Removing temporary files\n");

@@ -25,7 +25,8 @@ in the forums there aswell.
 
 == TODO:
 
-* Clean up using manual recursive deletion (not SHop).
+* Support for packaging gems that need extra non-ruby files
+  (e.g. mime-types, prawn).
 
 == SYNOPSIS:
 
