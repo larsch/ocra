@@ -29,7 +29,7 @@ standalone_zip = "bin/ocrasa-#{ENV['VERSION']}.zip"
 
 file standalone_zip => 'bin/ocrasa.rb' do
   chdir 'bin' do
-    system "zip ocrasa-#{ENV['VERSION']}.zip ocrasa.rb"
+    sh "zip", "ocrasa-#{ENV['VERSION']}.zip", "ocrasa.rb"
   end
 end
 
@@ -128,7 +128,7 @@ task :list_all_rubies do
 end
 
 task :release_docs => :redocs do
-  sh "pscp -r doc/* ocra.rubyforge.org:/var/www/gforge-projects/ocra"
+  sh "pscp -r doc/* larsch@ocra.rubyforge.org:/var/www/gforge-projects/ocra"
 end
 
 
