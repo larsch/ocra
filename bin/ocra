@@ -311,15 +311,15 @@ EOF
       Ocra.extra_dlls.each do |dll|
         sb.createfile(File.join(bindir, dll), File.join("bin", dll).tr('/','\\'))
       end
-
+      require 'rubygems/format'
       # Add gemspecs
       gemspecs.each do |gemspec|
-        if subpath?(gemspec, exec_prefix)
+        if defined?(Gem) and gemhome = Gem.path.find { |pth| subpath?(gemspec, pth) }
+          sb.creategemspec(gemhome, gemspec)
+        elsif subpath?(gemspec, exec_prefix)
           path = gemspec[exec_prefix.size+1..-1]
           sb.createfile(gemspec, path.tr('/','\\'))
-        elsif defined?(Gem) and gemhome = Gem.path.find { |pth| subpath?(gemspec, pth) }
-          path = File.join('gemhome', relative_path(gemhome, gemspec))
-          sb.createfile(gemspec, path.tr('/','\\'))
+          sb.creategemspec(gemspec)
         else
           raise "#{gemspec} does not exist in the Ruby installation. Don't know where to put it."
         end
@@ -441,6 +441,20 @@ EOF
         mkdir(tgt)
       end
     end
+    def creategemspec(gemhome, gemspec)
+      path = File.join('gemhome', Ocra.relative_path(gemhome, gemspec))
+      createfile(gemspec, path.tr('/','\\'))
+      gemname = File.basename(gemspec, '.*') 
+      Gem::Specification.load(gemspec).files.each do |gemf|
+        next if %w(doc ext examples test tests benchmarks).include?(File.dirname(gemf).split('/')[0]) || ['.rdoc',  '.c','.h'].include?(File.extname(gemf))
+        next if File.basename(gemf) == '.autotest'
+        #puts gemf unless ['.rb'].include?(File.extname(gemf))
+        src = File.join(gemhome, 'gems', gemname, gemf)
+        tgt = File.join('gemhome', 'gems', gemname, gemf).tr('/','\\')
+         
+        createfile(src, tgt) 
+      end
+    end    
     def createfile(src, tgt)
       ensuremkdir(File.dirname(tgt))
       str = File.open(src, "rb") { |file| file.read }
