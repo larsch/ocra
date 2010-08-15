@@ -120,6 +120,15 @@ class TestOcra < Test::Unit::TestCase
     end
   end
 
+  # Should be able to build executables with LZMA compression
+  def test_lzma
+    with_fixture 'helloworld' do
+      assert system("ruby", ocra, "helloworld.rb", "--quiet", "--lzma")
+      assert File.exist?("helloworld.exe")
+      assert system("helloworld.exe")
+    end
+  end
+  
   # Test that executables can writing a file to the current working
   # directory.
   def test_writefile
