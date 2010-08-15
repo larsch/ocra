@@ -1,3 +1,4 @@
+
 /*
   Single Executable Bundle Stub
 
@@ -8,6 +9,7 @@
 #include <windows.h>
 #include <shellapi.h>
 #include <stdio.h>
+#include "buffer.h"
 
 const BYTE Signature[] = { 0x41, 0xb6, 0xba, 0x4e };
 
@@ -20,21 +22,226 @@ const BYTE Signature[] = { 0x41, 0xb6, 0xba, 0x4e };
 #define OP_POST_CREATE_PROCRESS 6
 #define OP_MAX 7
 
+/** Signature for function that reads data from source (file or decompressor) */
+typedef void *(*ReadDataFunc)(LPVOID*, DWORD);
+
 BOOL ProcessImage(LPVOID p, DWORD size);
-BOOL ProcessOpcodes(LPVOID* p);
+BOOL ProcessOpcodes(READER* reader);
 void CreateAndWaitForProcess(LPTSTR ApplicationName, LPTSTR CommandLine);
 
-BOOL OpEnd(LPVOID *p);
-BOOL OpCreateFile(LPVOID *p);
-BOOL OpCreateDirectory(LPVOID *p);
-BOOL OpCreateProcess(LPVOID *p);
-BOOL OpDecompressLzma(LPVOID *p);
-BOOL OpSetEnv(LPVOID *p);
-BOOL OpPostCreateProcess(LPVOID *p);
+void *ReadDataFile(LPVOID *handle, DWORD dwSize);
+void *ReadDataDecompress(LPVOID *handle, DWORD dwSize);
+
+BOOL OpEnd(READER* reader);
+BOOL OpCreateFile(READER* reader);
+BOOL OpCreateDirectory(READER* reader);
+BOOL OpCreateProcess(READER* reader);
+BOOL OpDecompressLzma(READER* reader);
+BOOL OpSetEnv(READER* reader);
+BOOL OpPostCreateProcess(READER* reader);
+
 
 #include <LzmaDec.h>
+#define LZMA_UNPACKSIZE_SIZE 8
+#define LZMA_HEADER_SIZE (LZMA_PROPS_SIZE + LZMA_UNPACKSIZE_SIZE)
+void *SzAlloc(void *p, size_t size) { p = p; return malloc(size); }
+void SzFree(void *p, void *address) { p = p; free(address); }
+ISzAlloc alloc = { SzAlloc, SzFree };
 
-typedef BOOL (*POpcodeHandler)(LPVOID*);
+
+void GetBytes(LPBYTE data, DWORD size, READER* reader);
+LPTSTR GetString(READER* reader);
+DWORD GetInteger(READER* reader);
+
+/** Decoder: Byte-array */
+void GetBytes(LPBYTE data, DWORD size, READER* reader)
+{
+   WaitForData(reader, size);
+   DWORD ByteCount = min(size, reader->buffer->TotalBytes - reader->ByteOffset);
+   CopyMemory(data, reader->buffer->Pages + reader->ByteOffset, ByteCount);
+   if (ByteCount < size)
+      CopyMemory(data + ByteCount, reader->buffer->Pages, size - ByteCount);
+   ReleaseData(reader, size);
+}
+
+/** Decoder: Zero-terminated string */
+LPTSTR GetString(READER* reader)
+{
+   DWORD StringLength = GetInteger(reader);
+   LPTSTR result = LocalAlloc(LMEM_FIXED, StringLength + 1);
+   GetBytes((LPBYTE)result, StringLength, reader);
+   result[StringLength] = 0;
+   return result;
+}
+
+/** Decoder: 32 bit unsigned integer */
+DWORD GetInteger(READER* reader)
+{
+   WaitForData(reader, 4);
+   DWORD offset = reader->ByteOffset;
+   DWORD result = 0;
+   int i;
+   LPBYTE data = (LPBYTE)reader->buffer->Pages;
+   for (i = 0; i < 4; i++)
+   {
+      DWORD ByteOffset = (offset + i) % reader->buffer->TotalBytes;
+      BYTE value = data[ByteOffset];
+      result += (DWORD)value << (i * 8);
+   }
+   ReleaseData(reader, 4);
+   return result;
+}
+
+typedef struct
+{
+   LPTSTR FileName;
+   DWORD dwOffset;
+   BUFFER* buffer;
+} FileReaderParam;
+
+DWORD FileReader(LPVOID param)
+{
+   FileReaderParam* arg = (FileReaderParam*)param;
+   HANDLE hImage = CreateFile(arg->FileName, GENERIC_READ,
+                              FILE_SHARE_READ | FILE_SHARE_WRITE,
+                              NULL, OPEN_EXISTING, 0, NULL);
+   if (hImage == INVALID_HANDLE_VALUE) {
+      fprintf(stderr, "Failed to open executable (%s)\n", arg->FileName);
+      return -1;
+   }
+
+   LONG offsetHigh = 0;
+   DWORD result = SetFilePointer(hImage, arg->dwOffset, &offsetHigh, FILE_BEGIN);
+   DWORD lastError = GetLastError();
+   if (result == INVALID_SET_FILE_POINTER && lastError != NO_ERROR)
+   {
+      return 0;
+   }
+
+   WRITER writer;
+   InitWriter(&writer, arg->buffer);
+
+   DWORD dwFileOffset = 0;
+   DWORD FileSize = GetFileSize(hImage, NULL);
+
+   while (dwFileOffset < FileSize)
+   {
+      DWORD WriteCapacity = 0;
+      LPVOID* page = GetWriteBuffer(&writer, &WriteCapacity);
+      DWORD BytesToRead = min(FileSize - dwFileOffset, WriteCapacity);
+      DWORD BytesRead = 0;
+      if (!ReadFile(hImage, page, BytesToRead, &BytesRead, NULL))
+      {
+         fprintf(stderr, "ReadFile failed: %ld\n", GetLastError());
+         return 0;
+      }
+      WriteComplete(&writer, BytesRead);
+   }
+}
+
+typedef struct
+{
+   READER* reader;
+   BUFFER* output;
+} DecompressorParam;
+
+DWORD Decompressor(LPVOID param)
+{
+   DecompressorParam* arg = (DecompressorParam*)param;
+   
+   // DWORD CompressedSize = GetInteger(arg->reader);
+   BYTE LzmaHeader[LZMA_HEADER_SIZE];
+   GetBytes(LzmaHeader, LZMA_HEADER_SIZE, arg->reader);
+
+   UInt64 DecompressedSize = 0;
+   int i;
+   for (i = 0; i < 8; i++)
+      DecompressedSize += (UInt64)LzmaHeader[LZMA_PROPS_SIZE + i] << (i * 8);
+   
+#ifdef _DEBUG
+   printf("LzmaDecode(%ld)\n", CompressedSize);
+#endif
+   
+   //SizeT lzmaDecompressedSize = DecompressedSize;
+   // SizeT inSizePure = CompressedSize - LZMA_HEADER_SIZE;
+
+   CLzmaDec state;
+   SRes res;
+   LzmaDec_Construct(&state);
+   res = LzmaDec_Allocate(&state, LzmaHeader, LZMA_PROPS_SIZE, &alloc);
+   if (res != SZ_OK)
+      return FALSE;
+
+   LzmaDec_Init(&state);
+
+   BYTE* outBuf = 0;
+   BYTE* inBuf = 0;
+   
+   LzmaDec_Init(&state);
+
+   WRITER writer;
+   writer.buffer = arg->output;
+   writer.ByteOffset = 0;
+   
+   for (;;)
+   {
+      SRes res;
+         
+      ELzmaFinishMode finishMode = LZMA_FINISH_ANY;
+      ELzmaStatus status;
+
+      /* Set up write buffer */
+      DWORD WriteBufferSize;
+      outBuf = (BYTE*)GetWriteBuffer(&writer, &WriteBufferSize);
+      SizeT outProcessed = min(DecompressedSize, WriteBufferSize);
+      /*
+      if (outProcessed > WriteBufferSize)
+      {
+         outProcessed = (SizeT)DecompressedSize;
+         finishMode = LZMA_FINISH_END;
+      }
+      */
+
+      /* Set up read buffer */
+      DWORD ReadBufferSize;
+      inBuf = (BYTE*)GetReadBuffer(arg->reader, &ReadBufferSize);
+      SizeT inProcessed = ReadBufferSize;
+         
+      res = LzmaDec_DecodeToBuf(&state, outBuf, &outProcessed,
+                                inBuf, &inProcessed, finishMode, &status);
+         
+      fprintf(stderr, "Decoded %u to %u %d %d\n", inProcessed, outProcessed, res, status);
+
+      /* Release the bytes read */
+      ReleaseData(arg->reader, inProcessed);
+      /* Notify completed write */
+      WriteComplete(&writer, outProcessed);
+
+      DecompressedSize -= outProcessed;
+         
+      if (res != SZ_OK || DecompressedSize == 0)
+         break;
+         
+      if (inProcessed == 0 && outProcessed == 0)
+      {
+         if (status != LZMA_STATUS_FINISHED_WITH_MARK)
+            return FALSE; // SZ_ERROR_DATA;
+         return res;
+      }
+   }
+
+   LzmaDec_Free(&state, &alloc);
+   
+   if (res != SZ_OK)
+   {
+      fprintf(stderr, "LZMA decompression failed.\n");
+   }
+   else
+   {
+   }
+}
+
+typedef BOOL (*POpcodeHandler)(READER* reader);
 
 LPTSTR PostCreateProcess_ApplicationName = NULL;
 LPTSTR PostCreateProcess_CommandLine = NULL;
@@ -53,22 +260,6 @@ POpcodeHandler OpcodeHandlers[OP_MAX] = {
 };
 
 CHAR InstDir[MAX_PATH];
-
-/** Decoder: Zero-terminated string */
-LPTSTR GetString(LPVOID* p)
-{
-   LPTSTR str = *p;
-   *p += strlen(str) + 1;
-   return str;
-}
-
-/** Decoder: 32 bit unsigned integer */
-DWORD GetInteger(LPVOID* p)
-{
-   DWORD dw = *(DWORD*)*p;
-   *p += 4;
-   return dw;
-}
 
 /**
    Handler for console events.
@@ -198,7 +389,7 @@ BOOL ProcessImage(LPVOID ptr, DWORD size)
 /**
    Process the opcodes in memory.
 */
-BOOL ProcessOpcodes(LPVOID* p)
+BOOL ProcessOpcodes(READER* reader)
 {
    while(!ExitCondition)
    {
@@ -258,7 +449,7 @@ LPTSTR SkipArg(LPTSTR str)
 /**
    Create a file (OP_CREATE_FILE opcode handler)
 */
-BOOL OpCreateFile(LPVOID *p)
+BOOL OpCreateFile(ReadDataFunc pReadData)
 {
    BOOL Result = TRUE;
    LPTSTR FileName = GetString(p);
@@ -302,7 +493,7 @@ BOOL OpCreateFile(LPVOID *p)
 /**
    Create a directory (OP_CREATE_DIRECTORY opcode handler)
 */
-BOOL OpCreateDirectory(LPVOID *p)
+BOOL OpCreateDirectory(ReadDataFunc pReadData)
 {
    LPTSTR DirectoryName = GetString(p);
 
@@ -347,7 +538,7 @@ void GetCreateProcessInfo(LPVOID* p, LPTSTR* pApplicationName, LPTSTR* pCommandL
    Create a new process and wait for it to complete (OP_CREATE_PROCESS
    opcode handler)
 */
-BOOL OpCreateProcess(LPVOID *p)
+BOOL OpCreateProcess(ReadDataFunc pReadData)
 {
    LPTSTR ApplicationName;
    LPTSTR CommandLine;
@@ -404,16 +595,9 @@ BOOL OpPostCreateProcess(LPVOID* p)
 }
 
 
-void *SzAlloc(void *p, size_t size) { p = p; return malloc(size); }
-void SzFree(void *p, void *address) { p = p; free(address); }
-ISzAlloc alloc = { SzAlloc, SzFree };
-
 #if WITH_LZMA
 
-#define LZMA_UNPACKSIZE_SIZE 8
-#define LZMA_HEADER_SIZE (LZMA_PROPS_SIZE + LZMA_UNPACKSIZE_SIZE)
-
-BOOL OpDecompressLzma(LPVOID *p)
+BOOL OpDecompressLzma(ReadDataFunc pReadData)
 {
    DWORD CompressedSize = GetInteger(p);
 #ifdef _DEBUG
@@ -423,18 +607,85 @@ BOOL OpDecompressLzma(LPVOID *p)
    Byte* src = (Byte*)*p;
    *p += CompressedSize;
 
-   UInt64 unpackSize = 0;
+   UInt64 DecompressedSize = 0;
    int i;
    for (i = 0; i < 8; i++)
-      unpackSize += (UInt64)src[LZMA_PROPS_SIZE + i] << (i * 8);
+      DecompressedSize += (UInt64)src[LZMA_PROPS_SIZE + i] << (i * 8);
 
-   Byte* DecompressedData = LocalAlloc(LMEM_FIXED, unpackSize);
-          
-   SizeT lzmaDecompressedSize = unpackSize;
+   // Byte* DecompressedData = LocalAlloc(LMEM_FIXED, DecompressedSize);
+   Byte* DecompressedData = VirtualAlloc(NULL, DecompressedSize, MEM_COMMIT, PAGE_READWRITE);
+
+   
+   
+   SizeT lzmaDecompressedSize = DecompressedSize;
    SizeT inSizePure = CompressedSize - LZMA_HEADER_SIZE;
    ELzmaStatus status;
-   SRes res = LzmaDecode(DecompressedData, &lzmaDecompressedSize, src + LZMA_HEADER_SIZE, &inSizePure,
-                         src, LZMA_PROPS_SIZE, LZMA_FINISH_ANY, &status, &alloc);
+
+   CLzmaDec state;
+   SRes res;
+   LzmaDec_Construct(&state);
+   res = LzmaDec_Allocate(&state, src, LZMA_PROPS_SIZE, &alloc);
+   if (res != SZ_OK)
+      return FALSE;
+
+   LzmaDec_Init(&state);
+   DWORD offset = 0;
+   DWORD BlockSize = 16384;
+   DWORD SrcOffset = 0;
+
+#define IN_BUF_SIZE (1 << 16)
+#define OUT_BUF_SIZE (1 << 16)   
+
+   BYTE* inBuf = src + LZMA_HEADER_SIZE;
+   BYTE* outBuf = DecompressedData;
+   
+   size_t inPos = 0, inSize = 0, outPos = 0;
+   inSize = inSizePure;
+   LzmaDec_Init(&state);
+   for (;;)
+   {
+     {
+        SRes res;
+        SizeT inProcessed = inSize - inPos;
+        SizeT outProcessed = OUT_BUF_SIZE - outPos;
+        ELzmaFinishMode finishMode = LZMA_FINISH_ANY;
+        ELzmaStatus status;
+        if (outProcessed > DecompressedSize)
+        {
+           outProcessed = (SizeT)DecompressedSize;
+           finishMode = LZMA_FINISH_END;
+        }
+        
+        res = LzmaDec_DecodeToBuf(&state, outBuf + outPos, &outProcessed,
+                                  inBuf + inPos, &inProcessed, finishMode, &status);
+
+        fprintf(stderr, "Decoded %u to %u %d %d\n", inProcessed, outProcessed, res, status);
+        inPos += inProcessed;
+        outPos += outProcessed;
+        DecompressedSize -= outProcessed;
+        outBuf += outProcessed;
+        outPos = 0;
+        
+        if (res != SZ_OK || DecompressedSize == 0)
+           break;
+        
+        if (inProcessed == 0 && outProcessed == 0)
+        {
+           if (status != LZMA_STATUS_FINISHED_WITH_MARK)
+              return FALSE; // SZ_ERROR_DATA;
+           return res;
+        }
+     }
+     if (inPos == inSize)
+     {
+        inBuf += IN_BUF_SIZE;
+        inSize = IN_BUF_SIZE;
+        inPos = 0;
+     }
+   }
+
+   LzmaDec_Free(&state, &alloc);
+   
    if (res != SZ_OK)
    {
       fprintf(stderr, "LZMA decompression failed.\n");
@@ -445,7 +696,10 @@ BOOL OpDecompressLzma(LPVOID *p)
       ProcessOpcodes(&decPtr);
    }
 
-   LocalFree(DecompressedData);
+   if (!VirtualFree(DecompressedData, DecompressedSize, MEM_DECOMMIT))
+      fprintf(stderr, "Virtual free.. %lx?\n", GetLastError());
+
+   // LocalFree(DecompressedData);
    return TRUE;
 }
 #endif
