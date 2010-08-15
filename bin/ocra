@@ -15,6 +15,19 @@ module Ocra
 
   IGNORE_MODULES = /^enumerator.so$/
 
+  IGNORE_GEMFILES = %r{(
+    # Auxiliary files in the root of the gem
+    ^(History|Install|Manifest|README|Licen[sc]e).(txt|rdoc)$ |
+    # Installation files in the root of the gem
+    ^(Rakefile|setup.rb|extconf.rb)$ |
+    # Documentation/test directories in the root of the gem
+    ^(doc|ext|examples|test|tests|benchmarks)\/ |
+    # Directories anywhere
+    (^|\/)(\.autotest|\.svn\.cvs)(\/|$) |
+    # Unlikely extensions
+    \.(rdoc)$/
+  )}xi
+
   PATH_SEPARATOR = /[\/\\]/
 
   TEMPDIR_MARKER = "\xFF"
@@ -30,6 +43,8 @@ module Ocra
     attr_accessor :quiet
     attr_accessor :autodll
     attr_accessor :show_warnings
+    attr_accessor :gem_filter
+    
     attr_reader :lzmapath
     attr_reader :ediconpath
     attr_reader :stubimage
@@ -72,6 +87,7 @@ module Ocra
     quiet = false
     autodll = true
     show_warnings = true
+    gem_filter = true
     
     usage = <<EOF
 ocra [options] script.rb
@@ -85,6 +101,7 @@ ocra [options] script.rb
 --no-autoload    Don't load/include script.rb's autoloads
 --icon <ico>     Replace icon with a custom one
 --version        Display version number
+--no-gem-filter  Don't filter uncommon files from gems (readme's, etc.)
 EOF
 
     while arg = argv.shift
@@ -111,6 +128,8 @@ EOF
         exit
       when /\A--no-warnings\z/
         show_warnings = false
+      when /\A--no-gem-filter\z/
+        gem_filter = false
       when /\A--help\z/, /\A--/
         puts usage
         exit
@@ -134,6 +153,7 @@ EOF
     @autodll = autodll
     @files = files
     @show_warnings = show_warnings
+    @gem_filter = gem_filter
   end
 
   def Ocra.init(argv)
@@ -224,6 +244,50 @@ EOF
     instsitelibdir = sitelibdir[exec_prefix.size+1..-1]
 
     load_path = []
+
+    # Detect loaded gems and add additional gem files to the
+    # executable. Ruby 1.8 provides Gem.loaded_specs to detect gems,
+    # but this is empty with Ruby 1.9. So instead, we look for any
+    # loaded file from a gem path.
+    if defined?(Gem)
+      gems = []
+      features_from_gems = []
+      features.each do |filename|
+        if filename !~ /^[a-z]:/i
+          filename = find_load_path($:, filename)
+          next if filename.nil? # Could be enumerator.so
+        end
+        Gem.path.each do |gempath|
+          geminstallpath = File.join(gempath, "gems")
+          if subpath?(filename, geminstallpath)
+            gemlocalpath = filename[geminstallpath.size+1..-1]
+            fullgemname = gemlocalpath.split('/')[0]
+            gems << [gempath, fullgemname]
+            features_from_gems << filename
+          end
+        end
+      end
+      gems.sort!.uniq!
+      gem_files = []
+      gems.each do |gempath, fullgemname|
+        gemspecpath = File.join(gempath, "specifications", fullgemname + ".gemspec")
+        gemspecs << gemspecpath
+        spec = Gem::Specification.load(gemspecpath)
+
+        # Get list of files
+        files = spec.files
+        # Filter out some unlikely files (Readme, etc.)
+        files = files.select { |filename| filename !~ IGNORE_GEMFILES } if Ocra.gem_filter
+        # Find the full path
+        files = files.map { |file| File.join(gempath, "gems", fullgemname, file) }
+        
+        gem_files += files
+      end
+      gem_files.sort!.uniq!
+      features -= features_from_gems
+    else
+      gem_files = []
+    end
     
     # Find loaded files
     libs = []
@@ -253,6 +317,18 @@ EOF
         end
       else
         puts "=== WARNING: Couldn't find #{filename}" unless filename =~ IGNORE_MODULES if Ocra.show_warnings
+      end
+    end
+
+    # Add files from Gems
+    gem_files.each do |gemfile|
+      if subpath?(gemfile, exec_prefix)
+        libs << [ gemfile, relative_path(exec_prefix, gemfile) ]
+      elsif defined?(Gem) and gemhome = Gem.path.find { |pth| subpath?(gemfile, pth) }
+        targetpath = File.join("gemhome", relative_path(gemhome, fullpath))
+        libs << [ gemfile, targetpath ]
+      else
+        raise "Don't know where to put #{gemfile}"
       end
     end
 
@@ -311,8 +387,8 @@ EOF
       Ocra.extra_dlls.each do |dll|
         sb.createfile(File.join(bindir, dll), File.join("bin", dll).tr('/','\\'))
       end
-
-      # Add gemspecs
+      
+      # Add gemspec files
       gemspecs.each do |gemspec|
         if subpath?(gemspec, exec_prefix)
           path = gemspec[exec_prefix.size+1..-1]
