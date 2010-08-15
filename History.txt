@@ -10,6 +10,13 @@
 * Progress dialog is no longer displayed when removing temporary
   files.
 
+* Now includes most files from any require'd Rubygem (Now works with
+  mime-types, oledb and other gems that load additional data files
+  from the Gem installation). Some files are still ignored
+  (e.g. Readme's). Use "--no-gem-filter" to make Ocra unconditionally
+  include all files listed in the Gem specification (Thanks to Jorge
+  L. Cangas for patch & ideas).
+
 === 1.1.4
 
 * The tempdir marker is now pretty-printed as "<tempdir>" in the
