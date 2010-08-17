@@ -101,7 +101,7 @@ ocra [options] script.rb
 --no-autoload    Don't load/include script.rb's autoloads
 --icon <ico>     Replace icon with a custom one
 --version        Display version number
---no-gem-filter  Don't filter uncommon files from gems (readme's, etc.)
+--no-gem-filter  Don't filter readme's, doc, C-source, etc. from gems
 EOF
 
     while arg = argv.shift
@@ -280,6 +280,8 @@ EOF
         files = files.select { |filename| filename !~ IGNORE_GEMFILES } if Ocra.gem_filter
         # Find the full path
         files = files.map { |file| File.join(gempath, "gems", fullgemname, file) }
+        # Filter out non-files
+        files = files.select { |file| File.file?(file) }
         
         gem_files += files
       end
