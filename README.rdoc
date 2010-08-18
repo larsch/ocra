@@ -114,11 +114,10 @@ your application will be put in the 'src' subdirectory.
 === Libraries
 
 Any code that is loaded through Kernel#require when your script is
-executed will be included in the OCRA executable. However, this also
-means that if you conditionally load code (if-statements around
-require calls), you must make sure that that code is actually loaded
-when OCRA runs your script. Otherwise, OCRA won't know about it and
-will not include the source files.
+executed will be included in the OCRA executable. Conditionally loaded
+code will not be loaded and included in the executable unless the code
+is actually run when OCRA invokes your script. Otherwise, OCRA won't
+know about it and will not include the source files.
 
 RubyGems are handled specially. Whenever a file from a Gem is
 detected, OCRA will attempt to include all the files from that
