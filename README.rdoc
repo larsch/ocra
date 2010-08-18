@@ -23,11 +23,6 @@ the tracker on the RubyForge project page
 http://rubyforge.org/projects/ocra/. You are welcome to ask questions
 in the forums there aswell.
 
-== TODO:
-
-* Support for packaging gems that need extra non-ruby files
-  (e.g. mime-types, prawn).
-
 == SYNOPSIS:
 
   ocra [option] script.rb
@@ -80,7 +75,6 @@ in the forums there aswell.
 
 * Avoid absolute paths in your code and when invoking OCRA.
 
-
 == REQUIREMENTS:
 
 * Windows
@@ -119,7 +113,19 @@ your application will be put in the 'src' subdirectory.
 
 === Libraries
 
-Rubygems will be automatically included in the OCRA executable.
+Any code that is loaded through Kernel#require when your script is
+executed will be included in the OCRA executable. However, this also
+means that if you conditionally load code (if-statements around
+require calls), you must make sure that that code is actually loaded
+when OCRA runs your script. Otherwise, OCRA won't know about it and
+will not include the source files.
+
+RubyGems are handled specially. Whenever a file from a Gem is
+detected, OCRA will attempt to include all the files from that
+specific Gem (all files listed in the manifest), expect some unlikely
+needed files such as readme's and other documentation. This can be
+overruled using the '--no-gem-filter' which will make OCRA include
+every file that is listed in the Gem's manifest.
 
 Libraries found in non-standard path (for example, if you invoke OCRA
 with "ruby -I some/path") will be placed into the site dir
@@ -128,13 +134,13 @@ with "ruby -I some/path") will be placed into the site dir
 tree, since OCRA may place the files elsewhere when extracted into the
 temporary directory.
 
-Autoloaded libraries (Kernel#autoload) will be attempted loaded when
-building the executable. Modules that doesn't exist will be ignore
-(but a warning will be logged).
+In case your script (or any of its dependencies) sets up autoloaded
+module using Kernel#autoload, OCRA will automatically try to load them
+to ensure that they are all included in the executable. Modules that
+doesn't exist will be ignored (a warning will be logged).
 
-Conditionally loaded code will not be loaded and included in the
-executable unless the code is actually run when OCRA invokes your
-script.
+Dynamic link libraries (.dll files, for example WxWidgets, or other
+source files) will be detected and included by OCRA.
 
 === Environment variables
 
@@ -154,13 +160,16 @@ executable, for example
 
 === Working directory
 
+The OCRA executable does not change the working directory when it is
+launched.
+
 You should not assume that the current working directory when invoking
 an executable built with .exe is the location of the source script. It
 can be the directory where the executable is placed (when invoked
 through the Windows Explorer), the users' current working directory
-(when invoking from the Command Prompt), or even <tt>C:\\WINDOWS\\SYSTEM32</tt>
-when the executable is invoked through a file association. You can
-optionally change the directory yourself:
+(when invoking from the Command Prompt), or even
+<tt>C:\\WINDOWS\\SYSTEM32</tt> when the executable is invoked through
+a file association. You can optionally change the directory yourself:
 
    Dir.chdir File.dirname($0)
 
@@ -213,6 +222,9 @@ of files, for example
    ocra script.rb assets/**/*.png
 
 === Window/Console
+
+By default, OCRA builds console application from .rb-files and
+windowed applications (without console window) from .rbw-files.
 
 Ruby on Windows provides two executables: ruby.exe is a console mode
 application and rubyw.exe is a windowed application which does not
