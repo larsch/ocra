@@ -1,3 +1,5 @@
 *.o
 *.exe
 bin/ocrasa.rb
+pkg
+README.txt
