@@ -34,6 +34,17 @@ class TestOcra < Test::Unit::TestCase
   # Path to test fixtures.
   FixturePath = File.expand_path(File.join(File.dirname(__FILE__), 'fixtures'))
 
+  # Create a pristine environment to test built executables. Files are
+  # copied and the PATH environment is set to the minimal. Yields to
+  # the block, then cleans up.
+  def pristine_env(*files)
+    with_tmpdir files do
+      with_env "PATH" => ENV["SystemRoot"] + ";" + ENV["SystemRoot"] + "\\SYSTEM32" do
+        yield
+      end
+    end
+  end
+
   attr_reader :ocra
 
   def initialize(*args)
@@ -48,13 +59,11 @@ class TestOcra < Test::Unit::TestCase
   # files located in test/fixtures.
   def with_fixture(name)
     path = File.join(FixturePath, name)
-    cp_r path, '.'
-    begin
+    with_tmpdir do
+      cp_r path, '.'
       cd name do
         yield
       end
-    ensure
-      rm_rf name
     end
   end
 
@@ -76,10 +85,11 @@ class TestOcra < Test::Unit::TestCase
     end
   end
 
-  def with_tmpdir
+  def with_tmpdir(files = [])
     tempdirname = File.join(ENV['TEMP'], ".ocratest-#{$$}-#{rand 2**32}").tr('\\','/')
     Dir.mkdir tempdirname
     begin
+      cp files, tempdirname
       FileUtils.cd tempdirname do
         yield
       end
@@ -88,35 +98,14 @@ class TestOcra < Test::Unit::TestCase
     end
   end
 
-  def with_exe(name)
-    orig_exe = File.expand_path(name)
-    with_tmpdir do
-      cp orig_exe, File.join('.', File.basename(name))
-      yield
-    end
-  end
-  
-  # Test setup method. Creates a tempory directory to work in and
-  # changes to it. 
-  def setup
-    @testnum += 1
-    @tempdirname = ".ocratest-#{$$}-#{@testnum}"
-    Dir.mkdir @tempdirname
-    Dir.chdir @tempdirname
-  end
-
-  # Test cleanup method. Exits the temporary directory and deletes it.
-  def teardown
-    Dir.chdir '..'
-    FileUtils.rm_rf @tempdirname
-  end
-
   # Hello world test. Test that we can build and run executables.
   def test_helloworld
     with_fixture 'helloworld' do
       assert system("ruby", ocra, "helloworld.rb", *DefaultArgs)
       assert File.exist?("helloworld.exe")
-      assert system("helloworld.exe")
+      pristine_env "helloworld.exe" do
+        assert system("helloworld.exe")
+      end
     end
   end
 
@@ -125,7 +114,9 @@ class TestOcra < Test::Unit::TestCase
     with_fixture 'helloworld' do
       assert system("ruby", ocra, "helloworld.rb", "--quiet", "--lzma")
       assert File.exist?("helloworld.exe")
-      assert system("helloworld.exe")
+      pristine_env "helloworld.exe" do
+        assert system("helloworld.exe")
+      end
     end
   end
   
@@ -134,10 +125,12 @@ class TestOcra < Test::Unit::TestCase
   def test_writefile
     with_fixture 'writefile' do
       assert system("ruby", ocra, "writefile.rb", *DefaultArgs)
-      assert File.exist?("writefile.exe")
-      assert system("writefile.exe")
-      assert File.exist?("output.txt")
-      assert "output", File.read("output.txt")
+      pristine_env "writefile.exe" do
+        assert File.exist?("writefile.exe")
+        assert system("writefile.exe")
+        assert File.exist?("output.txt")
+        assert "output", File.read("output.txt")
+      end
     end
   end
 
@@ -145,8 +138,10 @@ class TestOcra < Test::Unit::TestCase
   def test_exitstatus
     with_fixture 'exitstatus' do
       assert system("ruby", ocra, "exitstatus.rb", *DefaultArgs)
-      system("exitstatus.exe")
-      assert_equal 167, $?.exitstatus
+      pristine_env "exitstatus.exe" do
+        system("exitstatus.exe")
+        assert_equal 167, $?.exitstatus
+      end
     end
   end
 
@@ -155,8 +150,10 @@ class TestOcra < Test::Unit::TestCase
     with_fixture 'arguments' do
       assert system("ruby", ocra, "arguments.rb", *DefaultArgs)
       assert File.exist?("arguments.exe")
-      system("arguments.exe foo \"bar baz\"")
-      assert_equal 5, $?.exitstatus
+      pristine_env "arguments.exe" do
+        system("arguments.exe foo \"bar baz\"")
+        assert_equal 5, $?.exitstatus
+      end
     end
   end
 
@@ -166,9 +163,11 @@ class TestOcra < Test::Unit::TestCase
     with_fixture 'stdoutredir' do
       assert system("ruby", ocra, "stdoutredir.rb", *DefaultArgs)
       assert File.exist?("stdoutredir.exe")
-      system("stdoutredir.exe > output.txt")
-      assert File.exist?("output.txt")
-      assert_equal "Hello, World!\n", File.read("output.txt")
+      pristine_env "stdoutredir.exe" do
+        system("stdoutredir.exe > output.txt")
+        assert File.exist?("output.txt")
+        assert_equal "Hello, World!\n", File.read("output.txt")
+      end
     end
   end
 
@@ -178,8 +177,11 @@ class TestOcra < Test::Unit::TestCase
     with_fixture 'stdinredir' do
       assert system("ruby", ocra, "stdinredir.rb", *DefaultArgs)
       assert File.exist?("stdinredir.exe")
-      system("stdinredir.exe < input.txt")
-      assert 104, $?.exitstatus
+      # Kernel.system("ruby -e \"system 'stdinredir.exe<input.txt';p $?\"")
+      pristine_env "stdinredir.exe", "input.txt" do
+        system("stdinredir.exe < input.txt")
+      end
+      assert_equal 104, $?.exitstatus
     end
   end
 
@@ -197,8 +199,10 @@ class TestOcra < Test::Unit::TestCase
     with_fixture 'gdbmdll' do
       assert system("ruby", ocra, "gdbmdll.rb", *args)
       with_env 'PATH' => '.' do
-        system("gdbmdll.exe")
-        assert_equal 104, $?.exitstatus
+        pristine_env "gdbmdll.exe" do
+          system("gdbmdll.exe")
+          assert_equal 104, $?.exitstatus
+        end
       end
     end
   end
@@ -208,10 +212,12 @@ class TestOcra < Test::Unit::TestCase
   # executable.
   def test_relative_require
     with_fixture 'relativerequire' do
-      assert system("ruby", ocra, "relativerequire.rb", *DefaultArgs)
+      assert system("ruby", ocra, "relativerequire.rb")
       assert File.exist?("relativerequire.exe")
-      system("relativerequire.exe")
-      assert_equal 160, $?.exitstatus
+      pristine_env "relativerequire.exe" do
+        system("relativerequire.exe")
+        assert_equal 160, $?.exitstatus
+      end
     end
   end
 
@@ -222,8 +228,9 @@ class TestOcra < Test::Unit::TestCase
     with_fixture 'autoload' do
       assert system("ruby", ocra, "autoload.rb", *DefaultArgs)
       assert File.exist?("autoload.exe")
-      File.unlink('foo.rb')
-      assert system("autoload.exe")
+      pristine_env "autoload.exe" do
+        assert system("autoload.exe")
+      end
     end
   end
 
@@ -235,7 +242,9 @@ class TestOcra < Test::Unit::TestCase
       args.push '--no-warnings'
       assert system("ruby", ocra, "autoloadmissing.rb", *args)
       assert File.exist?("autoloadmissing.exe")
-      assert system("autoloadmissing.exe")
+      pristine_env "autoloadmissing.exe" do
+        assert system("autoloadmissing.exe")
+      end
     end
   end
 
@@ -244,8 +253,9 @@ class TestOcra < Test::Unit::TestCase
     with_fixture 'autoloadnested' do
       assert system("ruby", ocra, "autoloadnested.rb", *DefaultArgs)
       assert File.exist?("autoloadnested.exe")
-      File.unlink('foo.rb')
-      assert system("autoloadnested.exe")
+      pristine_env "autoloadnested.exe" do
+        assert system("autoloadnested.exe")
+      end
     end
   end
 
@@ -256,7 +266,9 @@ class TestOcra < Test::Unit::TestCase
     with_fixture 'relloadpath1' do
       assert system('ruby', '-I', 'lib', ocra, 'relloadpath1.rb', *DefaultArgs)
       assert File.exist?('relloadpath1.exe')
-      assert system('relloadpath1.exe')
+      pristine_env "relloadpath1.exe" do
+        assert system('relloadpath1.exe')
+      end
     end
   end
 
@@ -265,7 +277,9 @@ class TestOcra < Test::Unit::TestCase
     with_fixture 'relloadpath1' do
       assert system('ruby', '-I', './lib', ocra, 'relloadpath1.rb', *DefaultArgs)
       assert File.exist?('relloadpath1.exe')
-      assert system('relloadpath1.exe')
+      pristine_env "relloadpath1.exe" do
+        assert system('relloadpath1.exe')
+      end
     end
   end
 
@@ -277,7 +291,9 @@ class TestOcra < Test::Unit::TestCase
       with_env 'RUBYLIB' => 'lib' do
         assert system('ruby', ocra, 'relloadpath1.rb', *DefaultArgs)
         assert File.exist?('relloadpath1.exe')
-        assert system('relloadpath1.exe')
+        pristine_env "relloadpath1.exe" do
+          assert system('relloadpath1.exe')
+        end
       end
     end
   end
@@ -288,7 +304,9 @@ class TestOcra < Test::Unit::TestCase
       with_env 'RUBYLIB' => './lib' do
         assert system('ruby', ocra, 'relloadpath1.rb', *DefaultArgs)
         assert File.exist?('relloadpath1.exe')
-        assert system('relloadpath1.exe')
+        pristine_env "relloadpath1.exe" do
+          assert system('relloadpath1.exe')
+        end
       end
     end
   end
@@ -299,7 +317,9 @@ class TestOcra < Test::Unit::TestCase
       cd 'src' do
         assert system('ruby', '-I', '../lib', ocra, 'relloadpath2.rb', *DefaultArgs)
         assert File.exist?('relloadpath2.exe')
-        assert system('relloadpath2.exe')
+        pristine_env "relloadpath2.exe" do
+          assert system('relloadpath2.exe')
+        end
       end
     end
   end
@@ -310,7 +330,9 @@ class TestOcra < Test::Unit::TestCase
     with_fixture 'relloadpath3' do
       assert system('ruby', ocra, 'relloadpath3.rb', *DefaultArgs)
       assert File.exist?('relloadpath3.exe')
-      assert system('relloadpath3.exe')
+      pristine_env "relloadpath3.exe" do
+        assert system('relloadpath3.exe')
+      end
     end
   end
 
@@ -321,14 +343,16 @@ class TestOcra < Test::Unit::TestCase
       cd 'src' do
         assert system('ruby', ocra, 'relloadpath4.rb', *DefaultArgs)
         assert File.exist?('relloadpath4.exe')
-        assert system('relloadpath4.exe')
+        pristine_env "relloadpath4.exe" do
+          assert system('relloadpath4.exe')
+        end
       end
     end
   end
 
   # Test that ocra.rb accepts --version and outputs the version number.
   def test_version
-    assert_match(/^Ocra \d+(\.\d)+$/, `ruby \"#{ocra}\" --version`)
+    assert_match(/^Ocra \d+(\.\d)+(.pre\d+)?$/, `ruby \"#{ocra}\" --version`)
   end
 
   # Test that ocra.rb accepts --icon.
@@ -337,7 +361,9 @@ class TestOcra < Test::Unit::TestCase
       icofile = File.join(OcraRoot, 'src', 'vit-ruby.ico')
       assert system("ruby", ocra, '--icon', icofile, "helloworld.rb", *DefaultArgs)
       assert File.exist?("helloworld.exe")
-      assert system("helloworld.exe")
+      pristine_env "helloworld.exe" do
+        assert system("helloworld.exe")
+      end
     end
   end
 
@@ -347,7 +373,9 @@ class TestOcra < Test::Unit::TestCase
     with_fixture 'resource' do
       assert system("ruby", ocra, "resource.rb", "resource.txt", "res/resource.txt", *DefaultArgs)
       assert File.exist?("resource.exe")
-      assert system("resource.exe")
+      pristine_env "resource.exe" do
+        assert system("resource.exe")
+      end
     end
   end
 
@@ -365,9 +393,11 @@ class TestOcra < Test::Unit::TestCase
     with_fixture 'environment' do
       with_env "RUBYOPT" => "-rtime" do
         assert system("ruby", ocra, "environment.rb", *DefaultArgs)
-        assert system("environment.exe")
-        env = Marshal.load(File.open("environment", "rb") { |f| f.read })
-        assert_equal "-rtime", env['RUBYOPT']
+        pristine_env "environment.exe" do
+          assert system("environment.exe")
+          env = Marshal.load(File.open("environment", "rb") { |f| f.read })
+          assert_equal "-rtime", env['RUBYOPT']
+        end
       end
     end
   end
@@ -375,25 +405,29 @@ class TestOcra < Test::Unit::TestCase
   def test_exit
     with_fixture 'exit' do
       assert system("ruby", ocra, "exit.rb", *DefaultArgs)
-      assert File.exist?("exit.exe")
-      assert system("exit.exe")
+      pristine_env "exit.exe" do
+        assert File.exist?("exit.exe")
+        assert system("exit.exe")
+      end
     end
   end
 
   def test_ocra_executable_env
     with_fixture 'environment' do
       assert system("ruby", ocra, "environment.rb", *DefaultArgs)
-      assert system("environment.exe")
-      env = Marshal.load(File.open("environment", "rb") { |f| f.read })
-      expected_path = File.expand_path("environment.exe").tr('/','\\')
-      assert_equal expected_path, env['OCRA_EXECUTABLE']
+      pristine_env "environment.exe" do
+        assert system("environment.exe")
+        env = Marshal.load(File.open("environment", "rb") { |f| f.read })
+        expected_path = File.expand_path("environment.exe").tr('/','\\')
+        assert_equal expected_path, env['OCRA_EXECUTABLE']
+      end
     end
   end
 
   def test_hierarchy
     with_fixture 'hierarchy' do
       assert system("ruby", ocra, "hierarchy.rb", "assets/**/*", *DefaultArgs)
-      with_exe "hierarchy.exe" do
+      pristine_env "hierarchy.exe" do
         assert system("hierarchy.exe")
       end
     end
@@ -404,7 +438,7 @@ class TestOcra < Test::Unit::TestCase
       assert system("ruby", ocra, "helloworld.rb", *DefaultArgs)
       tempdir = File.expand_path("temporary directory")
       mkdir_p tempdir
-      with_exe "helloworld.exe" do
+      pristine_env "helloworld.exe" do
         with_env "TMP" => tempdir.tr('/','\\') do
           assert system("helloworld.exe")
         end
@@ -416,7 +450,9 @@ class TestOcra < Test::Unit::TestCase
     with_fixture "helloworld" do
       assert system("ruby", ocra, File.expand_path("helloworld.rb"), *DefaultArgs)
       assert File.exist?("helloworld.exe")
-      assert system("helloworld.exe")
+      pristine_env "helloworld.exe" do
+        assert system("helloworld.exe")
+      end
     end
   end
 
@@ -426,7 +462,9 @@ class TestOcra < Test::Unit::TestCase
       cd "build" do
         assert system("ruby", ocra, File.expand_path("../helloworld.rb"), *DefaultArgs)
         assert File.exist?("helloworld.exe")
-        assert system("helloworld.exe")
+        pristine_env "helloworld.exe" do
+          assert system("helloworld.exe")
+        end
       end
     end
   end
@@ -435,7 +473,9 @@ class TestOcra < Test::Unit::TestCase
     with_fixture "helloworld" do
       assert system("ruby", ocra, "./helloworld.rb", *DefaultArgs)
       assert File.exist?("helloworld.exe")
-      assert system("helloworld.exe")
+      pristine_env "helloworld.exe" do
+        assert system("helloworld.exe")
+      end
     end
   end
 
@@ -445,7 +485,9 @@ class TestOcra < Test::Unit::TestCase
       cd "build" do
         assert system("ruby", ocra, "../helloworld.rb", *DefaultArgs)
         assert File.exist?("helloworld.exe")
-        assert system("helloworld.exe")
+        pristine_env "helloworld.exe" do
+          assert system("helloworld.exe")
+        end
       end
     end
   end
