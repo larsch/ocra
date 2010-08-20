@@ -17,6 +17,9 @@
   include all files listed in the Gem specification (Thanks to Jorge
   L. Cangas for patch & ideas).
 
+* NameErrors are now rescued when attempting to load autoloadable
+  constants. Hopefully resolves issues with ActiveRecord [#28488].
+
 === 1.1.4
 
 * The tempdir marker is now pretty-printed as "<tempdir>" in the
