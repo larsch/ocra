@@ -212,7 +212,7 @@ class TestOcra < Test::Unit::TestCase
   # executable.
   def test_relative_require
     with_fixture 'relativerequire' do
-      assert system("ruby", ocra, "relativerequire.rb")
+      assert system("ruby", ocra, "relativerequire.rb", *DefaultArgs)
       assert File.exist?("relativerequire.exe")
       pristine_env "relativerequire.exe" do
         system("relativerequire.exe")
