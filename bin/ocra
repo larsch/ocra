@@ -53,10 +53,11 @@ module Ocra
     attr_reader :ediconpath
     attr_reader :stubimage
     attr_reader :stubwimage
-    
-    def get_next_embedded_image
-      DATA.read(DATA.readline.to_i).unpack("m")[0]
-    end
+  end
+
+  # Returns a binary blob store embedded in the current Ruby script.
+  def get_next_embedded_image
+    DATA.read(DATA.readline.to_i).unpack("m")[0]
   end
 
   def Ocra.dospath(path)
@@ -65,11 +66,6 @@ module Ocra
 
   def Ocra.posixpath(path)
     path.tr('\\','/')
-  end
-
-  def Ocra.initialize_ocra
-    save_environment
-    find_stubs
   end
 
   def Ocra.save_environment
@@ -164,7 +160,7 @@ EOF
   def Ocra.init(argv)
     save_environment
     parseargs(argv)
-    initialize_ocra
+    find_stubs
   end
 
   # Force loading autoloaded constants. Searches through all modules
@@ -195,6 +191,9 @@ EOF
     end
   end
 
+  # Compute the relative path from the 'src' path (directory) to 'tgt'
+  # (directory or file). Return the absolute path to 'tgt' if it can't
+  # be reached from 'src'.
   def Ocra.relative_path(src, tgt)
     a = src.split('/')
     b = tgt.split('/')
@@ -215,6 +214,9 @@ EOF
     src_normalized =~ /^#{Regexp.escape tgt_normalized}[\/\\]/i
   end
 
+  # Guess the load path (from 'paths') that was used to load
+  # 'path'. This is primarily relevant on Ruby 1.8 which stores
+  # "unqualified" paths in $LOADED_FEATURES.
   def Ocra.find_load_path(paths, path)
     if path[1,1] == ":"
       rps = paths.map {|p| relative_path(File.expand_path(p), path) }
@@ -492,7 +494,10 @@ EOF
       end
     end
   end
-  
+
+  # Utility class that produces the actual executable. Opcodes
+  # (createfile, mkdir etc) are added by invoking methods on an
+  # instance of OcraBuilder.
   class OcraBuilder
     def initialize(path, windowed)
       @paths = {}
@@ -541,11 +546,13 @@ EOF
         ocrafile.write(Signature.pack("C*"))
       end
     end
+
     def mkdir(path)
       @paths[path.downcase] = true
       puts "m #{showtempdir path}" unless Ocra.quiet
       @of << [OP_CREATE_DIRECTORY, Ocra.dospath(path)].pack("VZ*")
     end
+
     def ensuremkdir(tgt)
       return if tgt == "."
       if not @paths[Ocra.posixpath(tgt.downcase)]
@@ -553,24 +560,29 @@ EOF
         mkdir(tgt)
       end
     end
+
     def createfile(src, tgt)
       ensuremkdir(File.dirname(tgt))
       str = File.open(src, "rb") { |file| file.read }
       puts "a #{showtempdir tgt}" unless Ocra.quiet
       @of << [OP_CREATE_FILE, Ocra.dospath(tgt), str.size, str].pack("VZ*VA*")
     end
+
     def createprocess(image, cmdline)
       puts "l #{showtempdir image} #{showtempdir cmdline}" unless Ocra.quiet
       @of << [OP_CREATE_PROCESS, Ocra.dospath(image), cmdline].pack("VZ*Z*")
     end
+
     def postcreateprocess(image, cmdline)
       puts "p #{showtempdir image} #{showtempdir cmdline}" unless Ocra.quiet
       @of << [OP_POST_CREATE_PROCESS, Ocra.dospath(image), cmdline].pack("VZ*Z*")
     end
+
     def setenv(name, value)
       puts "e #{name} #{showtempdir value}" unless Ocra.quiet
       @of << [OP_SETENV, name, value].pack("VZ*Z*")
     end
+
     def close
       @of.close
     end
