@@ -261,6 +261,32 @@ EOF
     bindir = RbConfig::CONFIG['bindir']
     libruby_so = RbConfig::CONFIG['LIBRUBY_SO']
 
+    # Find the root of all files specified on the command line and use
+    # it as the "src" of the output. Adjust 'Ocra.files' to be
+    # relative to the resulting root.
+    files = Ocra.files.map { |file| Dir[file.tr('\\','/')] }.flatten
+    files = files.map { |file| File.expand_path(file) }
+    src_prefix = files.inject(File.dirname(files[0])) do |srcroot, path|
+      if subpath?(path, exec_prefix)
+        srcroot
+      else
+        loop do
+          relpath = relative_path(srcroot, path)
+          if relpath =~ /^[A-Z]:$/i
+            puts "ERROR: No common directory contains all specified files"
+          end
+          if relpath =~ /^\.\.\//
+            srcroot = File.dirname(srcroot)
+          else
+            break
+          end
+        end
+        srcroot
+      end
+    end
+    files = files.map { |file| relative_path(src_prefix, file) }
+    Ocra.files = files
+
     instsitelibdir = sitelibdir[exec_prefix.size+1..-1]
 
     load_path = []
@@ -364,8 +390,8 @@ EOF
     puts "=== Building #{executable}" unless Ocra.quiet
     OcraBuilder.new(executable, windowed) do |sb|
       # Add explicitly mentioned files
-      Ocra.files.each do |file|
-        file = File.expand_path(file)
+      files.each do |file|
+        file = File.join(src_prefix, file)
 
         if subpath?(file, exec_prefix)
           target = relative_path(exec_prefix, file)
@@ -578,14 +604,14 @@ if File.basename(__FILE__) == File.basename($0)
     exit
   end
   
-  # Confirm that the primary source file exists below the current
-  # directory.
-  main_script = File.expand_path(Ocra.files[0])
-  if !Ocra.subpath?(main_script, Dir.pwd)
-    puts "ERROR: #{Ocra.files[0]} does not exist below the current directory. Please change the\n" \
-    "current directory to the root of your source and resource files."
-    exit
-  end
+  # # Confirm that the primary source file exists below the current
+  # # directory.
+  # main_script = File.expand_path(Ocra.files[0])
+  # if !Ocra.subpath?(main_script, Dir.pwd)
+  #   puts "ERROR: #{Ocra.files[0]} does not exist below the current directory. Please change the\n" \
+  #   "current directory to the root of your source and resource files."
+  #   exit
+  # end
 
   at_exit do
     if $!.nil? or $!.kind_of?(SystemExit)

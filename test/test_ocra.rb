@@ -446,12 +446,17 @@ class TestOcra < Test::Unit::TestCase
     end
   end
 
+  # Should be able to build executable when specifying absolute path
+  # to the script from somewhere else.
   def test_abspath
     with_fixture "helloworld" do
-      assert system("ruby", ocra, File.expand_path("helloworld.rb"), *DefaultArgs)
-      assert File.exist?("helloworld.exe")
-      pristine_env "helloworld.exe" do
-        assert system("helloworld.exe")
+      script_path = File.expand_path("helloworld.rb")
+      with_tmpdir do
+        assert system("ruby", ocra, script_path, *DefaultArgs)
+        assert File.exist?("helloworld.exe")
+        pristine_env "helloworld.exe" do
+          assert system("helloworld.exe")
+        end
       end
     end
   end
@@ -492,31 +497,13 @@ class TestOcra < Test::Unit::TestCase
     end
   end
 
-  # Should accept hierachical source code layout (Case 1: Script
-  # mangles $LOAD_PATH)
+  # Should accept hierachical source code layout
   def test_srcroot
     with_fixture "srcroot" do
-      assert system("ruby", ocra, "bin/srcroot.rb")#, *DefaultArgs)
+      assert system("ruby", ocra, "bin/srcroot.rb", "share/data.txt", *DefaultArgs)
       assert File.exist?("srcroot.exe")
       pristine_env "srcroot.exe" do
         exe = File.expand_path("srcroot.exe")
-        cd ENV["SystemRoot"] do
-          assert system(exe)
-        end
-      end
-    end
-  end
-
-  # Should accept hierachical source code layout (Case 2: RUBYLIB
-  # environment is set)
-  def test_srcroot2
-    with_fixture "srcroot2" do
-      with_env "RUBYLIB" => File.join(Dir.pwd, 'lib') do
-        assert system("ruby", ocra, "bin/srcroot2.rb")#, *DefaultArgs)
-      end
-      assert File.exist?("srcroot2.exe")
-      pristine_env "srcroot2.exe" do
-        exe = File.expand_path("srcroot2.exe")
         cd ENV["SystemRoot"] do
           assert system(exe)
         end

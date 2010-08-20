@@ -23,6 +23,10 @@
 * Now works if the script changes environment or working directory
   while running.
 
+* Fixed a regression in 1.1.4 when resource files are specified;
+  directory layout would not be maintained, e.g. when running "ocra
+  bin/script share/data.dat".
+
 === 1.1.4
 
 * The tempdir marker is now pretty-printed as "<tempdir>" in the
