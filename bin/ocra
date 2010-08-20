@@ -55,6 +55,14 @@ module Ocra
     end
   end
 
+  def Ocra.dospath(path)
+    path.tr('/','\\')
+  end
+
+  def Ocra.posixpath(path)
+    path.tr('\\','/')
+  end
+
   def Ocra.initialize_ocra
     save_environment
     find_stubs
@@ -77,18 +85,20 @@ module Ocra
       @stubimage = get_next_embedded_image
       @stubwimage = get_next_embedded_image
       lzmaimage = get_next_embedded_image
-      @lzmapath = File.join(ENV['TEMP'], 'lzma.exe').tr('/','\\')
+      @lzmapath = File.join(ENV['TEMP'], 'lzma.exe')
       File.open(@lzmapath, "wb") { |file| file << lzmaimage }
       ediconimage = get_next_embedded_image
-      @ediconpath = File.join(ENV['TEMP'], 'edicon.exe').tr('/','\\')
+      @ediconpath = File.join(ENV['TEMP'], 'edicon.exe')
       File.open(@ediconpath, "wb") { |file| file << ediconimage }
     else
       ocrapath = File.dirname(__FILE__)
       @stubimage = File.open(File.join(ocrapath, '../share/ocra/stub.exe'), "rb") { |file| file.read }
       @stubwimage = File.open(File.join(ocrapath, '../share/ocra/stubw.exe'), "rb") { |file| file.read }
-      @lzmapath = File.expand_path('../share/ocra/lzma.exe', ocrapath).tr('/','\\')
-      @ediconpath = File.expand_path('../share/ocra/edicon.exe', ocrapath).tr('/','\\')
+      @lzmapath = File.expand_path('../share/ocra/lzma.exe', ocrapath)
+      @ediconpath = File.expand_path('../share/ocra/edicon.exe', ocrapath)
     end
+    @lzmapath = Ocra.dospath(@lzmapath)
+    @ediconpath = Ocra.dospath(@ediconpath)
   end
 
   def Ocra.parseargs(argv)
@@ -220,8 +230,8 @@ EOF
   # Determines if 'src' is contained in 'tgt' (i.e. it is a subpath of
   # 'tgt'). Both must be absolute paths and not contain '..'
   def Ocra.subpath?(src, tgt)
-    src_normalized = src.tr('/','\\')
-    tgt_normalized = tgt.tr('/','\\')
+    src_normalized = Ocra.dospath(src).downcase
+    tgt_normalized = Ocra.dospath(tgt).downcase
     src_normalized =~ /^#{Regexp.escape tgt_normalized}[\/\\]/i
   end
 
@@ -264,7 +274,7 @@ EOF
     # Find the root of all files specified on the command line and use
     # it as the "src" of the output. Adjust 'Ocra.files' to be
     # relative to the resulting root.
-    files = Ocra.files.map { |file| Dir[file.tr('\\','/')] }.flatten
+    files = Ocra.files.map { |file| Dir[Ocra.posixpath(file)] }.flatten
     files = files.map { |file| File.expand_path(file) }
     src_prefix = files.inject(File.dirname(files[0])) do |srcroot, path|
       if subpath?(path, exec_prefix)
@@ -401,8 +411,6 @@ EOF
           target = File.join('src', File.basename(file))
         end
 
-        target.tr!('/','\\')
-        
         if File.directory?(file)
           sb.ensuremkdir(target)
         else
@@ -416,14 +424,14 @@ EOF
       else
         rubyexe = (RbConfig::CONFIG['ruby_install_name'] || "ruby") + ".exe"
       end
-      sb.createfile(File.join(bindir, rubyexe), "bin\\" + rubyexe)
+      sb.createfile(File.join(bindir, rubyexe), File.join("bin", rubyexe))
       if libruby_so
-        sb.createfile(File.join(bindir, libruby_so), "bin\\#{libruby_so}")
+        sb.createfile(File.join(bindir, libruby_so), File.join("bin", libruby_so))
       end
 
       # Add detected DLLs
       dlls.each do |dll|
-        if subpath?(dll.tr('\\','/'), exec_prefix)
+        if subpath?(dll, exec_prefix)
           target = relative_path(exec_prefix, dll)
         else
           target = File.join('bin', File.basename(dll))
@@ -433,17 +441,17 @@ EOF
       
       # Add extra DLLs
       Ocra.extra_dlls.each do |dll|
-        sb.createfile(File.join(bindir, dll), File.join("bin", dll).tr('/','\\'))
+        sb.createfile(File.join(bindir, dll), File.join("bin", dll))
       end
       
       # Add gemspec files
       gemspecs.each do |gemspec|
         if subpath?(gemspec, exec_prefix)
           path = relative_path(exec_prefix, gemspec)
-          sb.createfile(gemspec, path.tr('/','\\'))
+          sb.createfile(gemspec, path)
         elsif defined?(Gem) and gemhome = Gem.path.find { |pth| subpath?(gemspec, pth) }
           path = File.join('gemhome', relative_path(gemhome, gemspec))
-          sb.createfile(gemspec, path.tr('/','\\'))
+          sb.createfile(gemspec, path)
         else
           raise "#{gemspec} does not exist in the Ruby installation. Don't know where to put it."
         end
@@ -451,7 +459,7 @@ EOF
 
       # Add loaded libraries
       libs.each do |path, target|
-        sb.createfile(path, target.tr('/', '\\'))
+        sb.createfile(path, target)
       end
 
       # Set environment variable
@@ -460,7 +468,7 @@ EOF
       sb.setenv('GEM_PATH', "#{TEMPDIR_MARKER}\\gemhome")
 
       # Launch the script
-      sb.postcreateprocess(TEMPDIR_MARKER + "\\bin\\" + rubyexe, "#{rubyexe} \"\xff\\src\\" + Ocra.files[0].tr('/','\\') + "\"")
+      sb.postcreateprocess(TEMPDIR_MARKER + "\\bin\\" + rubyexe, "#{rubyexe} \"\xff\\src\\" + Ocra.dospath(Ocra.files[0]) + "\"")
       
       puts "=== Compressing" unless Ocra.quiet or not Ocra.lzma_mode
     end
@@ -498,7 +506,7 @@ EOF
       loaded = loaded_dlls
       exec_prefix = RbConfig::CONFIG['exec_prefix']
       loaded.select do |path|
-        Ocra.subpath?(path.tr('\\','/'), exec_prefix) and
+        Ocra.subpath?(path, exec_prefix) and
           File.basename(path) =~ /\.dll$/i and
           File.basename(path).downcase != RbConfig::CONFIG['LIBRUBY_SO'].downcase
       end
@@ -556,11 +564,11 @@ EOF
     def mkdir(path)
       @paths[path.downcase] = true
       puts "m #{showtempdir path}" unless Ocra.quiet
-      @of << [OP_CREATE_DIRECTORY, path].pack("VZ*")
+      @of << [OP_CREATE_DIRECTORY, Ocra.dospath(path)].pack("VZ*")
     end
     def ensuremkdir(tgt)
       return if tgt == "."
-      if not @paths[tgt.downcase]
+      if not @paths[Ocra.posixpath(tgt.downcase)]
         ensuremkdir(File.dirname(tgt))
         mkdir(tgt)
       end
@@ -569,15 +577,15 @@ EOF
       ensuremkdir(File.dirname(tgt))
       str = File.open(src, "rb") { |file| file.read }
       puts "a #{showtempdir tgt}" unless Ocra.quiet
-      @of << [OP_CREATE_FILE, tgt, str.size, str].pack("VZ*VA*")
+      @of << [OP_CREATE_FILE, Ocra.dospath(tgt), str.size, str].pack("VZ*VA*")
     end
     def createprocess(image, cmdline)
       puts "l #{showtempdir image} #{showtempdir cmdline}" unless Ocra.quiet
-      @of << [OP_CREATE_PROCESS, image, cmdline].pack("VZ*Z*")
+      @of << [OP_CREATE_PROCESS, Ocra.dospath(image), cmdline].pack("VZ*Z*")
     end
     def postcreateprocess(image, cmdline)
       puts "p #{showtempdir image} #{showtempdir cmdline}" unless Ocra.quiet
-      @of << [OP_POST_CREATE_PROCESS, image, cmdline].pack("VZ*Z*")
+      @of << [OP_POST_CREATE_PROCESS, Ocra.dospath(image), cmdline].pack("VZ*Z*")
     end
     def setenv(name, value)
       puts "e #{name} #{showtempdir value}" unless Ocra.quiet
@@ -604,15 +612,6 @@ if File.basename(__FILE__) == File.basename($0)
     exit
   end
   
-  # # Confirm that the primary source file exists below the current
-  # # directory.
-  # main_script = File.expand_path(Ocra.files[0])
-  # if !Ocra.subpath?(main_script, Dir.pwd)
-  #   puts "ERROR: #{Ocra.files[0]} does not exist below the current directory. Please change the\n" \
-  #   "current directory to the root of your source and resource files."
-  #   exit
-  # end
-
   at_exit do
     if $!.nil? or $!.kind_of?(SystemExit)
       Ocra.build_exe
