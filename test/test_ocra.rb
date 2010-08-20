@@ -523,5 +523,19 @@ class TestOcra < Test::Unit::TestCase
       end
     end
   end
+
+  # Should be able to build executables when script changes directory.
+  def test_chdir
+    with_fixture "chdir" do
+      assert system("ruby", ocra, "chdir.rb", *DefaultArgs)
+      assert File.exist?("chdir.exe")
+      pristine_env "chdir.exe" do
+        exe = File.expand_path("chdir.exe")
+        cd ENV["SystemRoot"] do
+          assert system(exe)
+        end
+      end
+    end
+  end
   
 end

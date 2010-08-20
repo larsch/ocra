@@ -1,0 +1,1 @@
+Dir.chdir ENV["SystemRoot"]

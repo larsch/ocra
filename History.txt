@@ -20,6 +20,9 @@
 * NameErrors are now rescued when attempting to load autoloadable
   constants. Hopefully resolves issues with ActiveRecord [#28488].
 
+* Now works if the script changes environment or working directory
+  while running.
+
 === 1.1.4
 
 * The tempdir marker is now pretty-printed as "<tempdir>" in the

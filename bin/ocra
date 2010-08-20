@@ -56,8 +56,23 @@ module Ocra
   end
 
   def Ocra.initialize_ocra
+    save_environment
+    find_stubs
+  end
+
+  def Ocra.save_environment
     @load_path_before = $LOAD_PATH.dup
-    
+    @pwd_before = Dir.pwd
+    @env_before = {}; ENV.each { |key, value| @env_before[key] = value }
+  end
+
+  def Ocra.restore_environment
+    @env_before.each { |key, value| ENV[key] = value }
+    ENV.each_key { |key| ENV.delete(key) unless @env_before.has_key?(key) }
+    Dir.chdir @pwd_before
+  end
+
+  def Ocra.find_stubs
     if defined?(DATA)
       @stubimage = get_next_embedded_image
       @stubwimage = get_next_embedded_image
@@ -157,6 +172,7 @@ EOF
   end
 
   def Ocra.init(argv)
+    save_environment
     parseargs(argv)
     initialize_ocra
   end
@@ -221,6 +237,8 @@ EOF
   
   def Ocra.build_exe
     @added_load_paths = $LOAD_PATH - @load_path_before
+
+    restore_environment
     
     # Attempt to autoload libraries before doing anything else.
     attempt_load_autoload if Ocra.load_autoload
