@@ -287,7 +287,7 @@ EOF
     files = files.map { |file| relative_path(src_prefix, file) }
     Ocra.files = files
 
-    instsitelibdir = sitelibdir[exec_prefix.size+1..-1]
+    instsitelibdir = relative_path(exec_prefix, sitelibdir)
 
     load_path = []
 
@@ -306,7 +306,7 @@ EOF
         Gem.path.each do |gempath|
           geminstallpath = File.join(gempath, "gems")
           if subpath?(filename, geminstallpath)
-            gemlocalpath = filename[geminstallpath.size+1..-1]
+            gemlocalpath = relative_path(geminstallpath, filename)
             fullgemname = gemlocalpath.split('/')[0]
             gems << [gempath, fullgemname]
             features_from_gems << filename
@@ -350,9 +350,9 @@ EOF
         end
         fullpath = File.expand_path(filename, path)
         if subpath?(fullpath, exec_prefix)
-          libs << [ fullpath, fullpath[exec_prefix.size+1..-1] ]
+          libs << [ fullpath, relative_path(exec_prefix, fullpath) ]
         elsif subpath?(fullpath, src_prefix)
-          targetpath = "src/" + fullpath[src_prefix.size+1..-1]
+          targetpath = File.join("src", relative_path(src_prefix, fullpath))
           libs << [ fullpath, targetpath ]
           if not @added_load_paths.include?(path) and not load_path.include?(path)
             load_path << File.join(TEMPDIR_MARKER, File.dirname(targetpath))
@@ -424,7 +424,7 @@ EOF
       # Add detected DLLs
       dlls.each do |dll|
         if subpath?(dll.tr('\\','/'), exec_prefix)
-          target = dll[exec_prefix.size+1..-1]
+          target = relative_path(exec_prefix, dll)
         else
           target = File.join('bin', File.basename(dll))
         end
@@ -439,7 +439,7 @@ EOF
       # Add gemspec files
       gemspecs.each do |gemspec|
         if subpath?(gemspec, exec_prefix)
-          path = gemspec[exec_prefix.size+1..-1]
+          path = relative_path(exec_prefix, gemspec)
           sb.createfile(gemspec, path.tr('/','\\'))
         elsif defined?(Gem) and gemhome = Gem.path.find { |pth| subpath?(gemspec, pth) }
           path = File.join('gemhome', relative_path(gemhome, gemspec))
