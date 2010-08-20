@@ -238,7 +238,7 @@ EOF
 
     require 'rbconfig'
     exec_prefix = RbConfig::CONFIG['exec_prefix']
-    src_prefix = File.expand_path(File.dirname(Ocra.files[0]))
+    src_prefix = Dir.pwd
     sitelibdir = RbConfig::CONFIG['sitelibdir']
     bindir = RbConfig::CONFIG['bindir']
     libruby_so = RbConfig::CONFIG['LIBRUBY_SO']
@@ -416,7 +416,7 @@ EOF
       sb.setenv('GEM_PATH', "#{TEMPDIR_MARKER}\\gemhome")
 
       # Launch the script
-      sb.postcreateprocess(TEMPDIR_MARKER + "\\bin\\" + rubyexe, "#{rubyexe} \"\xff\\src\\" + File.basename(Ocra.files[0]) + "\"")
+      sb.postcreateprocess(TEMPDIR_MARKER + "\\bin\\" + rubyexe, "#{rubyexe} \"\xff\\src\\" + Ocra.files[0].tr('/','\\') + "\"")
       
       puts "=== Compressing" unless Ocra.quiet or not Ocra.lzma_mode
     end
@@ -554,7 +554,21 @@ end # module Ocra
 if File.basename(__FILE__) == File.basename($0)
   Ocra.init(ARGV)
   ARGV.clear
+
+  if !File.exist?(Ocra.files[0])
+    puts "ERROR: #{Ocra.files[0]} was not found!"
+    exit
+  end
   
+  # Confirm that the primary source file exists below the current
+  # directory.
+  main_script = File.expand_path(Ocra.files[0])
+  if !Ocra.subpath?(main_script, Dir.pwd)
+    puts "ERROR: #{Ocra.files[0]} does not exist below the current directory. Please change the\n" \
+    "current directory to the root of your source and resource files."
+    exit
+  end
+
   at_exit do
     if $!.nil? or $!.kind_of?(SystemExit)
       Ocra.build_exe

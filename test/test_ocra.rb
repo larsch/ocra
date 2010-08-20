@@ -492,5 +492,36 @@ class TestOcra < Test::Unit::TestCase
     end
   end
 
+  # Should accept hierachical source code layout (Case 1: Script
+  # mangles $LOAD_PATH)
+  def test_srcroot
+    with_fixture "srcroot" do
+      assert system("ruby", ocra, "bin/srcroot.rb")#, *DefaultArgs)
+      assert File.exist?("srcroot.exe")
+      pristine_env "srcroot.exe" do
+        exe = File.expand_path("srcroot.exe")
+        cd ENV["SystemRoot"] do
+          assert system(exe)
+        end
+      end
+    end
+  end
+
+  # Should accept hierachical source code layout (Case 2: RUBYLIB
+  # environment is set)
+  def test_srcroot2
+    with_fixture "srcroot2" do
+      with_env "RUBYLIB" => File.join(Dir.pwd, 'lib') do
+        assert system("ruby", ocra, "bin/srcroot2.rb")#, *DefaultArgs)
+      end
+      assert File.exist?("srcroot2.exe")
+      pristine_env "srcroot2.exe" do
+        exe = File.expand_path("srcroot2.exe")
+        cd ENV["SystemRoot"] do
+          assert system(exe)
+        end
+      end
+    end
+  end
   
 end
