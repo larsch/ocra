@@ -178,6 +178,8 @@ EOF
           if mod.autoload?(const)
             begin
               mod.const_get(const)
+            rescue NameError
+              puts "=== WARNING: #{mod}::#{const} was defined autoloadable, but caused NameError" if Ocra.show_warnings
             rescue LoadError
               puts "=== WARNING: #{mod}::#{const} was not loadable" if Ocra.show_warnings
             end
