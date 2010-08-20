@@ -32,19 +32,23 @@ module Ocra
 
   TEMPDIR_MARKER = "\xFF"
 
+  @options = {
+    :lzma_mode => true,
+    :extra_dlls => [],
+    :files => [],
+    :load_autoload => true,
+    :force_windows => false,
+    :force_console => false,
+    :icon_filename => nil,
+    :quiet => false,
+    :autodll => true,
+    :show_warnings => true,
+    :gem_filter => true
+  }
+
+  @options.each_key { |opt| eval("def self.#{opt}; @options[:#{opt}]; end") }
+
   class << self
-    attr_accessor :lzma_mode
-    attr_accessor :extra_dlls
-    attr_accessor :files
-    attr_accessor :load_autoload
-    attr_accessor :force_windows
-    attr_accessor :force_console
-    attr_accessor :icon_filename
-    attr_accessor :quiet
-    attr_accessor :autodll
-    attr_accessor :show_warnings
-    attr_accessor :gem_filter
-    
     attr_reader :lzmapath
     attr_reader :ediconpath
     attr_reader :stubimage
@@ -102,18 +106,6 @@ module Ocra
   end
 
   def Ocra.parseargs(argv)
-    lzma_mode = true
-    extra_dlls = []
-    files = []
-    load_autoload = true
-    force_windows = false
-    force_console = false
-    icon_filename = nil
-    quiet = false
-    autodll = true
-    show_warnings = true
-    gem_filter = true
-    
     usage = <<EOF
 ocra [options] script.rb
 
@@ -132,34 +124,34 @@ EOF
     while arg = argv.shift
       case arg
       when /\A--(no-)?lzma\z/
-        lzma_mode = !$1
+        @options[:lzma_mode] = !$1
       when /\A--dll\z/
-        extra_dlls << argv.shift
+        @options[:extra_dlls] << argv.shift
       when /\A--quiet\z/
-        quiet = true
+        @options[:quiet] = true
       when /\A--windows\z/
-        force_windows = true
+        @options[:force_windows] = true
       when /\A--console\z/
-        force_console = true
+        @options[:force_console] = true
       when /\A--no-autoload\z/
-        load_autoload = false
+        @options[:load_autoload] = false
       when /\A--icon\z/
-        icon_filename = argv.shift
+        @options[:icon_filename] = argv.shift
         raise "Icon file #{icon_filename} not found.\n" unless File.exist?(icon_filename)
       when /\A--no-autodll\z/
-        autodll = false
+        @options[:autodll] = false
       when /\A--version\z/
         puts "Ocra #{VERSION}"
         exit
       when /\A--no-warnings\z/
-        show_warnings = false
+        @options[:show_warnings] = false
       when /\A--no-gem-filter\z/
-        gem_filter = false
+        @options[:gem_filter] = false
       when /\A--help\z/, /\A--/
         puts usage
         exit
       else
-        files << arg
+        @options[:files] << arg
       end
     end
 
@@ -167,18 +159,6 @@ EOF
       puts usage
       exit
     end
-
-    @lzma_mode = lzma_mode
-    @extra_dlls = extra_dlls
-    @quiet = quiet
-    @force_windows = force_windows
-    @force_console = force_console
-    @load_autoload = load_autoload
-    @icon_filename = icon_filename
-    @autodll = autodll
-    @files = files
-    @show_warnings = show_warnings
-    @gem_filter = gem_filter
   end
 
   def Ocra.init(argv)
@@ -295,7 +275,7 @@ EOF
       end
     end
     files = files.map { |file| relative_path(src_prefix, file) }
-    Ocra.files = files
+    Ocra.files.replace(files)
 
     instsitelibdir = relative_path(exec_prefix, sitelibdir)
 
