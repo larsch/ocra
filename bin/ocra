@@ -145,7 +145,8 @@ EOF
       when /\A--no-gem-filter\z/
         @options[:gem_filter] = false
       when /\A--\z/
-        @options[:arg] = ARGV.shift(ARGV.size)
+        @options[:arg] = ARGV.dup
+        ARGV.clear
       when /\A--help\z/, /\A--./
         puts usage
         exit
