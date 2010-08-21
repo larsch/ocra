@@ -1,4 +1,4 @@
-=== 1.1.5
+=== 1.2.0
 
 * Ignore console events (Ctrl-C, Ctrl-Break). Ruby process handles
   them anyway and exist, allowing the stub to clean up temporary
@@ -26,6 +26,10 @@
 * Fixed a regression in 1.1.4 when resource files are specified;
   directory layout would not be maintained, e.g. when running "ocra
   bin/script share/data.dat".
+
+* Added support for passing arguments to script. Specify argument to
+  your script after a "--" marker. Arguments will be passed both at
+  compile time and run time. (#27815)
 
 === 1.1.4
 

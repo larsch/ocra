@@ -43,7 +43,8 @@ module Ocra
     :quiet => false,
     :autodll => true,
     :show_warnings => true,
-    :gem_filter => true
+    :gem_filter => true,
+    :arg => []
   }
 
   @options.each_key { |opt| eval("def self.#{opt}; @options[:#{opt}]; end") }
@@ -143,7 +144,9 @@ EOF
         @options[:show_warnings] = false
       when /\A--no-gem-filter\z/
         @options[:gem_filter] = false
-      when /\A--help\z/, /\A--/
+      when /\A--\z/
+        @options[:arg] = ARGV.shift(ARGV.size)
+      when /\A--help\z/, /\A--./
         puts usage
         exit
       else
@@ -450,7 +453,9 @@ EOF
       sb.setenv('GEM_PATH', "#{TEMPDIR_MARKER}\\gemhome")
 
       # Launch the script
-      sb.postcreateprocess(TEMPDIR_MARKER + "\\bin\\" + rubyexe, "#{rubyexe} \"\xff\\src\\" + Ocra.dospath(Ocra.files[0]) + "\"")
+      extra_arg = Ocra.arg.map { |a| ' "' + a.gsub(/\"/,'\\"') + '"' }.join
+      sb.postcreateprocess(TEMPDIR_MARKER + "\\bin\\" + rubyexe,
+        "#{rubyexe} \"\xff\\src\\" + Ocra.dospath(Ocra.files[0]) + "\"#{extra_arg}")
       
       puts "=== Compressing" unless Ocra.quiet or not Ocra.lzma_mode
     end
@@ -597,7 +602,7 @@ end # module Ocra
 
 if File.basename(__FILE__) == File.basename($0)
   Ocra.init(ARGV)
-  ARGV.clear
+  ARGV.replace(Ocra.arg)
 
   if !File.exist?(Ocra.files[0])
     puts "ERROR: #{Ocra.files[0]} was not found!"

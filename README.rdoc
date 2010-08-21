@@ -78,7 +78,11 @@ in the forums there aswell.
 == REQUIREMENTS:
 
 * Windows
-* Working Ruby installation
+
+* Working Ruby installation, tested with:
+    * One-Click Installer (187_27_rc2)
+    * RubyInstaller (1.8.7p299, 1.9.1p249, 1.9.2p0)
+
 * MinGW Installation (when working with the source code only)
 
 == INSTALL:
@@ -219,6 +223,19 @@ Paths on the command line can include ** globs to include a hierachy
 of files, for example
 
    ocra script.rb assets/**/*.png
+
+=== Command Line Arguments
+
+To pass command line argument to your script (both while building and
+when run from the resulting executable), specify them after a "--"
+marker. For example:
+
+   ocra script.rb -- --some-options=value
+
+This will pass "--some-options=value" to the script when build and
+when running the executable. Any extra argument specified by the user
+when invoking the executable will be appended after the compile-time
+arguments.
 
 === Window/Console
 

@@ -146,17 +146,57 @@ class TestOcra < Test::Unit::TestCase
   end
 
   # Test that arguments are passed correctly to scripts.
-  def test_arguments
+  def test_arguments1
     with_fixture 'arguments' do
       assert system("ruby", ocra, "arguments.rb", *DefaultArgs)
       assert File.exist?("arguments.exe")
       pristine_env "arguments.exe" do
-        system("arguments.exe foo \"bar baz\"")
+        system("arguments.exe foo \"bar baz \\\"quote\\\"\"")
         assert_equal 5, $?.exitstatus
       end
     end
   end
 
+  # Test that arguments are passed correctly to scripts (specified at
+  # compile time).
+  def test_arguments2
+    with_fixture 'arguments' do
+      args = DefaultArgs + ["--", "foo", "bar baz \"quote\"" ]
+      assert system("ruby", ocra, "arguments.rb", *args)
+      assert File.exist?("arguments.exe")
+      pristine_env "arguments.exe" do
+        system("arguments.exe")
+        assert_equal 5, $?.exitstatus
+      end
+    end
+  end
+
+  # Test that arguments are passed correctly to scripts (specified at
+  # compile time).
+  def test_arguments3
+    with_fixture 'arguments' do
+      args = DefaultArgs + ["--", "foo"]
+      assert system("ruby", ocra, "arguments.rb", *args)
+      assert File.exist?("arguments.exe")
+      pristine_env "arguments.exe" do
+        system("arguments.exe \"bar baz \\\"quote\\\"\"")
+        assert_equal 5, $?.exitstatus
+      end
+    end
+  end
+
+  # Test that arguments are passed correctly at build time.
+  def test_buildarg
+    with_fixture "buildarg" do
+      args = DefaultArgs + [ "--", "--some-option" ]
+      assert system("ruby", ocra, "buildarg.rb", *args)
+      assert File.exist?("buildarg.exe")
+      pristine_env "buildarg.exe" do
+        assert system("buildarg.exe")
+      end
+    end
+  end
+  
   # Test that the standard output from a script can be redirected to a
   # file.
   def test_stdout_redir
