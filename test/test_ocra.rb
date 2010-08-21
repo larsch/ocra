@@ -4,9 +4,6 @@ require "fileutils"
 require "rbconfig"
 
 require 'rbconfig'
-puts "Version: #{RUBY_VERSION}-p#{RUBY_PATCHLEVEL}"
-puts "Architecture: #{RbConfig::CONFIG['arch']}"
-puts "Host: #{RbConfig::CONFIG['host']}"
 
 begin
   require "rubygems"
