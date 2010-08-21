@@ -1,3 +1,1 @@
-if $0 == __FILE__
-  puts "Hello, World!"
-end
+puts "Hello, World!" unless defined?(Ocra)
