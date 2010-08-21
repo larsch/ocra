@@ -195,8 +195,8 @@ EOF
   # (directory or file). Return the absolute path to 'tgt' if it can't
   # be reached from 'src'.
   def Ocra.relative_path(src, tgt)
-    a = src.split('/')
-    b = tgt.split('/')
+    a = posixpath(src).split('/')
+    b = posixpath(tgt).split('/')
     while a.first && a.first.downcase == b.first.downcase
       a.shift
       b.shift
