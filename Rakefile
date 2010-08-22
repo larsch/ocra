@@ -66,11 +66,8 @@ file 'bin/ocrasa.rb' => [ 'bin/ocra', 'share/ocra/stub.exe', 'share/ocra/stubw.e
 end
 
 task :clean do
-  rm_rf Dir.glob("bin/*.exe")
+  rm_f Dir["{bin,samples,share/ocra}/*.exe"]
   sh "mingw32-make -C src clean"
-  rm_f 'share/ocra/stub.exe'
-  rm_f 'share/ocra/stubw.exe'
-  rm_f 'share/ocra/edicon.exe'
 end
 
 task :test_standalone => :standalone do
