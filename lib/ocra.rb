@@ -1,3 +1,3 @@
 class Ocra
-  VERSION = '1.1.5.pre3'
+  VERSION = '1.2.0.rc1'
 end
