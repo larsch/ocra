@@ -260,9 +260,9 @@ EOF
     # Find the root of all files specified on the command line and use
     # it as the "src" of the output. Adjust 'Ocra.files' to be
     # relative to the resulting root.
-    files = Ocra.files.map { |file| Dir[Ocra.posixpath(file)] }.flatten
-    files = files.map { |file| File.expand_path(file) }
-    src_prefix = files.inject(File.dirname(files[0])) do |srcroot, path|
+    src_files = Ocra.files.map { |file| Dir[Ocra.posixpath(file)] }.flatten
+    src_files = src_files.map { |file| File.expand_path(file) }
+    src_prefix = src_files.inject(File.dirname(src_files[0])) do |srcroot, path|
       if subpath?(path, exec_prefix)
         srcroot
       else
@@ -280,8 +280,8 @@ EOF
         srcroot
       end
     end
-    files = files.map { |file| relative_path(src_prefix, file) }
-    Ocra.files.replace(files)
+    src_files = src_files.map { |file| relative_path(src_prefix, file) }
+    Ocra.files.replace(src_files)
 
     instsitelibdir = relative_path(exec_prefix, sitelibdir)
 
@@ -332,7 +332,7 @@ EOF
     else
       gem_files = []
     end
-    
+
     # Find loaded files
     libs = []
     features.each do |filename|
@@ -386,7 +386,7 @@ EOF
     puts "=== Building #{executable}" unless Ocra.quiet
     OcraBuilder.new(executable, windowed) do |sb|
       # Add explicitly mentioned files
-      files.each do |file|
+      Ocra.files.each do |file|
         file = File.join(src_prefix, file)
 
         if subpath?(file, exec_prefix)
