@@ -205,7 +205,7 @@ EOF
       a.shift
       b.shift
     end
-    return tgt if b.first =~ /^[a-z]:/i
+    return tgt if abspath?(b.first)
     a.size.times { b.unshift '..' }
     return b.join('/')
   end
@@ -218,57 +218,38 @@ EOF
     src_normalized =~ /^#{Regexp.escape tgt_normalized}[\/\\]/i
   end
 
+  # Returns true if 'path' is absolute, false otherwise.
+  def Ocra.abspath?(path)
+    path =~ /\A[A-Z]:/i
+  end
+
   # Guess the load path (from 'paths') that was used to load
   # 'path'. This is primarily relevant on Ruby 1.8 which stores
   # "unqualified" paths in $LOADED_FEATURES.
   def Ocra.find_load_path(paths, path)
-    if path[1,1] == ":"
+    if abspath?(path)
+      # Find the shortest path in 'paths' that contain 'path'
       rps = paths.map {|p| relative_path(File.expand_path(p), path) }
       rps.zip(paths).sort_by {|x| x[0].size }.first[1]
     else
+      # Select the paths that contain 'path' and select the shortest
       candidates = paths.select { |p| File.exist?(File.expand_path(path, p)) }
       candidates.sort_by {|p| p.size}.last
     end
   end
-  
-  def Ocra.build_exe
-    @added_load_paths = $LOAD_PATH - @load_path_before
 
-    restore_environment
-    
-    # Attempt to autoload libraries before doing anything else.
-    attempt_load_autoload if Ocra.load_autoload
-
-    # Store the currently loaded files (before we require rbconfig for
-    # our own use).
-    features = $LOADED_FEATURES.dup
-
-    # Find gemspecs to include
-    if defined?(Gem)
-      gemspecs = Gem.loaded_specs.map { |name,info| info.loaded_from }
-    else
-      gemspecs = []
-    end
-
-    require 'rbconfig'
-    exec_prefix = RbConfig::CONFIG['exec_prefix']
-    src_prefix = Dir.pwd
-    sitelibdir = RbConfig::CONFIG['sitelibdir']
-    bindir = RbConfig::CONFIG['bindir']
-    libruby_so = RbConfig::CONFIG['LIBRUBY_SO']
-
-    # Find the root of all files specified on the command line and use
-    # it as the "src" of the output. Adjust 'Ocra.files' to be
-    # relative to the resulting root.
-    src_files = Ocra.files.map { |file| Dir[Ocra.posixpath(file)] }.flatten
+  # Find the root of all files specified on the command line and use
+  # it as the "src" of the output.
+  def Ocra.find_src_root(files)
+    src_files = files.map { |file| Dir[posixpath(file)] }.flatten
     src_files = src_files.map { |file| File.expand_path(file) }
     src_prefix = src_files.inject(File.dirname(src_files[0])) do |srcroot, path|
-      if subpath?(path, exec_prefix)
+      if subpath?(path, @ruby_exec_prefix)
         srcroot
       else
         loop do
           relpath = relative_path(srcroot, path)
-          if relpath =~ /^[A-Z]:$/i
+          if abspath?(relpath)
             puts "ERROR: No common directory contains all specified files"
           end
           if relpath =~ /^\.\.\//
@@ -281,19 +262,19 @@ EOF
       end
     end
     src_files = src_files.map { |file| relative_path(src_prefix, file) }
-    Ocra.files.replace(src_files)
+    return src_prefix, src_files
+  end
 
-    instsitelibdir = relative_path(exec_prefix, sitelibdir)
-
-    load_path = []
-
-    # Detect loaded gems and add additional gem files to the
-    # executable. Ruby 1.8 provides Gem.loaded_specs to detect gems,
-    # but this is empty with Ruby 1.9. So instead, we look for any
-    # loaded file from a gem path.
+  # Searches for features that are loaded from gems, then produces a
+  # list of files included in those gems' manifests. Also returns a
+  # list of original features that are caused gems to be
+  # included. Ruby 1.8 provides Gem.loaded_specs to detect gems, but
+  # this is empty with Ruby 1.9. So instead, we look for any loaded
+  # file from a gem path.
+  def Ocra.find_gem_files(features)
+    features_from_gems = []
     if defined?(Gem)
       gems = []
-      features_from_gems = []
       features.each do |filename|
         if filename !~ /^[a-z]:/i
           filename = find_load_path($:, filename)
@@ -313,7 +294,7 @@ EOF
       gem_files = []
       gems.each do |gempath, fullgemname|
         gemspecpath = File.join(gempath, "specifications", fullgemname + ".gemspec")
-        gemspecs << gemspecpath
+        @gemspecs << gemspecpath
         spec = Gem::Specification.load(gemspecpath)
 
         # Get list of files
@@ -332,21 +313,61 @@ EOF
     else
       gem_files = []
     end
+    return gem_files, features_from_gems
+  end
+  
+  def Ocra.build_exe
+    @added_load_paths = $LOAD_PATH - @load_path_before
 
-    # Find loaded files
+    restore_environment
+    
+    # Attempt to autoload libraries before doing anything else.
+    attempt_load_autoload if Ocra.load_autoload
+
+    # Store the currently loaded files (before we require rbconfig for
+    # our own use).
+    features = $LOADED_FEATURES.dup
+
+    # Find gemspecs to include
+    if defined?(Gem)
+      @gemspecs = Gem.loaded_specs.map { |name,info| info.loaded_from }
+    else
+      @gemspecs = []
+    end
+
+    require 'rbconfig'
+    @ruby_exec_prefix = RbConfig::CONFIG['exec_prefix']
+    src_prefix = Dir.pwd
+    sitelibdir = RbConfig::CONFIG['sitelibdir']
+    bindir = RbConfig::CONFIG['bindir']
+    libruby_so = RbConfig::CONFIG['LIBRUBY_SO']
+    instsitelibdir = relative_path(@ruby_exec_prefix, sitelibdir)
+
+    load_path = []
+
+    # Find the source root and adjust paths
+    src_prefix, src_files = find_src_root(Ocra.files)
+    Ocra.files.replace(src_files)
+
+    # Find gems files and remove them from features
+    gem_files, features_from_gems = find_gem_files(features)
+    features -= features_from_gems
+
+    # Find features and decide where to put them in the temporary
+    # directory layout.
     libs = []
     features.each do |filename|
       path = find_load_path($:, filename)
       if path
-        if filename[1,1] == ":"
+        if abspath?(filename)
           filename = relative_path(File.expand_path(path), filename)
         end
         if filename =~ /^\.\.\//
           puts "=== WARNING: Detected a relative require (#{filename}). This is not recommended." if Ocra.show_warnings
         end
         fullpath = File.expand_path(filename, path)
-        if subpath?(fullpath, exec_prefix)
-          libs << [ fullpath, relative_path(exec_prefix, fullpath) ]
+        if subpath?(fullpath, @ruby_exec_prefix)
+          libs << [ fullpath, relative_path(@ruby_exec_prefix, fullpath) ]
         elsif subpath?(fullpath, src_prefix)
           targetpath = File.join("src", relative_path(src_prefix, fullpath))
           libs << [ fullpath, targetpath ]
@@ -364,10 +385,11 @@ EOF
       end
     end
 
-    # Add files from Gems
+    # Decide where to put gem files, either the system gem folder, or
+    # GEMHOME.
     gem_files.each do |gemfile|
-      if subpath?(gemfile, exec_prefix)
-        libs << [ gemfile, relative_path(exec_prefix, gemfile) ]
+      if subpath?(gemfile, @ruby_exec_prefix)
+        libs << [ gemfile, relative_path(@ruby_exec_prefix, gemfile) ]
       elsif defined?(Gem) and gemhome = Gem.path.find { |pth| subpath?(gemfile, pth) }
         targetpath = File.join("gemhome", relative_path(gemhome, fullpath))
         libs << [ gemfile, targetpath ]
@@ -389,8 +411,8 @@ EOF
       Ocra.files.each do |file|
         file = File.join(src_prefix, file)
 
-        if subpath?(file, exec_prefix)
-          target = relative_path(exec_prefix, file)
+        if subpath?(file, @ruby_exec_prefix)
+          target = relative_path(@ruby_exec_prefix, file)
         elsif subpath?(file, src_prefix)
           target = File.join('src', relative_path(src_prefix, file))
         else
@@ -417,23 +439,23 @@ EOF
 
       # Add detected DLLs
       dlls.each do |dll|
-        if subpath?(dll, exec_prefix)
-          target = relative_path(exec_prefix, dll)
+        if subpath?(dll, @ruby_exec_prefix)
+          target = relative_path(@ruby_exec_prefix, dll)
         else
           target = File.join('bin', File.basename(dll))
         end
         sb.createfile(dll, target)
       end
       
-      # Add extra DLLs
+      # Add extra DLLs specified on the command line
       Ocra.extra_dlls.each do |dll|
         sb.createfile(File.join(bindir, dll), File.join("bin", dll))
       end
       
       # Add gemspec files
-      gemspecs.each do |gemspec|
-        if subpath?(gemspec, exec_prefix)
-          path = relative_path(exec_prefix, gemspec)
+      @gemspecs.each do |gemspec|
+        if subpath?(gemspec, @ruby_exec_prefix)
+          path = relative_path(@ruby_exec_prefix, gemspec)
           sb.createfile(gemspec, path)
         elsif defined?(Gem) and gemhome = Gem.path.find { |pth| subpath?(gemspec, pth) }
           path = File.join('gemhome', relative_path(gemhome, gemspec))
@@ -443,7 +465,7 @@ EOF
         end
       end
 
-      # Add loaded libraries
+      # Add loaded libraries (features, gems)
       libs.each do |path, target|
         sb.createfile(path, target)
       end
