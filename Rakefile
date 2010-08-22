@@ -79,54 +79,6 @@ task :test_standalone => :standalone do
   ENV['TESTED_OCRA'] = nil
 end
 
-def each_ruby_version
-  raise "Set RUBIES to point to where you have various versions of Ruby installed" if ENV['RUBIES'].nil?
-  root = ENV['RUBIES'].tr '\\', '/'
-  Dir.glob(File.join(root, 'ruby*','bin')).each do |path|
-    path.tr!('/','\\')
-    pathenv = ENV['PATH']
-    ENV['PATH'] = path
-    begin
-      yield
-    ensure
-      ENV['PATH'] = pathenv
-    end
-  end
-end
-
-task :setup_all_ruby do
-  ENV['RUBYOPT'] = nil
-  rubygemszip = "rubygems-1.3.4.zip"
-  rubygemsdir = rubygemszip.gsub(/\.zip$/,'')
-  sh "unzip rubygems-1.3.4.zip"
-  begin
-    cd "rubygems-1.3.4" do
-      each_ruby_version do
-        system("ruby -v")
-        system("ruby setup.rb")
-        system("gem install win32-api")
-      end
-    end
-  ensure
-    rm_rf "rubygems-1.3.4"
-  end
-end
-
-desc 'Run test suite with all version of Ruby found in ENV["RUBIES"]'
-task :test_all_rubies do
-  each_ruby_version do
-    system("ruby -v")
-    system("ruby test/test_ocra.rb")
-  end
-end
-
-desc 'List all version of Ruby found in ENV["RUBIES"]'
-task :list_all_rubies do
-  each_ruby_version do
-    system "ruby -v"
-  end
-end
-
 task :release_docs => :redocs do
   sh "pscp -r doc/* larsch@ocra.rubyforge.org:/var/www/gforge-projects/ocra"
 end
