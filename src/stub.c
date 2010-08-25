@@ -7,6 +7,8 @@
 
 #include <windows.h>
 #include <shellapi.h>
+#include <string.h>
+#include <tchar.h>
 #include <stdio.h>
 
 const BYTE Signature[] = { 0x41, 0xb6, 0xba, 0x4e };
@@ -32,7 +34,9 @@ BOOL OpDecompressLzma(LPVOID *p);
 BOOL OpSetEnv(LPVOID *p);
 BOOL OpPostCreateProcess(LPVOID *p);
 
+#if WITH_LZMA
 #include <LzmaDec.h>
+#endif
 
 typedef BOOL (*POpcodeHandler)(LPVOID*);
 
@@ -42,23 +46,38 @@ LPTSTR PostCreateProcess_CommandLine = NULL;
 DWORD ExitStatus = 0;
 BOOL ExitCondition = FALSE;
 
+#if _CONSOLE
+#define FATAL(...) { fprintf(stderr, __VA_ARGS__); }
+#else
+#define FATAL(...) { \
+   TCHAR TextBuffer[1024]; \
+   _sntprintf(TextBuffer, 1024, __VA_ARGS__); \
+   MessageBox(NULL, TextBuffer, _T("OCRA"), MB_OK | MB_ICONWARNING); \
+   }
+#endif
+#define DEBUG(...) {}
+
 POpcodeHandler OpcodeHandlers[OP_MAX] = {
    &OpEnd,
    &OpCreateDirectory,
    &OpCreateFile,
    &OpCreateProcess,
+#if WITH_LZMA
    &OpDecompressLzma,
+#else
+   NULL,
+#endif
    &OpSetEnv,
    &OpPostCreateProcess
 };
 
-CHAR InstDir[MAX_PATH];
+TCHAR InstDir[MAX_PATH];
 
 /** Decoder: Zero-terminated string */
 LPTSTR GetString(LPVOID* p)
 {
    LPTSTR str = *p;
-   *p += strlen(str) + 1;
+   *p += lstrlen(str) + sizeof(TCHAR);
    return str;
 }
 
@@ -80,14 +99,12 @@ BOOL WINAPI ConsoleHandleRoutine(DWORD dwCtrlType)
    return TRUE;
 }
 
-int main(int argc, char** argv)
+int CALLBACK _tWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPTSTR lpCmdLine, int nCmdShow)
 {
-   CHAR TempPath[MAX_PATH];
+   TCHAR TempPath[MAX_PATH];
    GetTempPath(MAX_PATH, TempPath);
-   GetTempFileName(TempPath, "ocrastub", 0, InstDir);
-#ifdef _DEBUG
-   printf("Temporary directory: %s\n", InstDir);
-#endif
+   GetTempFileName(TempPath, _T("ocrastub"), 0, InstDir);
+   DEBUG("Temporary directory: %s\n", InstDir);
 
    SetConsoleCtrlHandler(&ConsoleHandleRoutine, TRUE);
 
@@ -97,24 +114,24 @@ int main(int argc, char** argv)
 
    /* Create the temporary directory that will hold the extracted files */
    if (!CreateDirectory(InstDir, NULL)){
-      printf("Failed to create temporary directory.\n");
+      FATAL("Failed to create temporary directory.\n");
       return -1;
    }
 
    /* Find name of image */
    TCHAR ImageFileName[MAX_PATH];
    if (!GetModuleFileName(NULL, ImageFileName, MAX_PATH)) {
-      fprintf(stderr, "Failed to get executable name (error %lu).\n", GetLastError());
+      FATAL("Failed to get executable name (error %lu).\n", GetLastError());
       return -1;
    }
 
    /* Set up environment */
-   SetEnvironmentVariable("OCRA_EXECUTABLE", ImageFileName);
+   SetEnvironmentVariable(_T("OCRA_EXECUTABLE"), ImageFileName);
 
    /* Open the image (executable) */
    HANDLE hImage = CreateFile(ImageFileName, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, 0, NULL);
    if (hImage == INVALID_HANDLE_VALUE) {
-      fprintf(stderr, "Failed to open executable (%s)\n", ImageFileName);
+      FATAL("Failed to open executable (%s)\n", ImageFileName);
       return -1;
    }      
 
@@ -122,7 +139,7 @@ int main(int argc, char** argv)
    DWORD FileSize = GetFileSize(hImage, NULL);
    HANDLE hMem = CreateFileMapping(hImage, NULL, PAGE_READONLY, 0, FileSize, NULL);
    if (hMem == INVALID_HANDLE_VALUE) {
-      fprintf(stderr, "Failed to create file mapping (error %lu)\n", GetLastError());
+      FATAL("Failed to create file mapping (error %lu)\n", GetLastError());
       CloseHandle(hImage);
       return -1;
    }
@@ -131,7 +148,7 @@ int main(int argc, char** argv)
    LPVOID lpv = MapViewOfFile(hMem, FILE_MAP_READ, 0, 0, 0);
    if (lpv == NULL)
    {
-      fprintf(stderr, "Failed to map view of executable into memory (error %lu).\n", GetLastError());
+      FATAL("Failed to map view of executable into memory (error %lu).\n", GetLastError());
    }
    else
    {
@@ -139,14 +156,14 @@ int main(int argc, char** argv)
          ExitStatus = -1;
       
       if (!UnmapViewOfFile(lpv))
-         fprintf(stderr, "Failed to unmap view of executable.\n");
+         FATAL("Failed to unmap view of executable.\n");
    }
 
    if (!CloseHandle(hMem))
-      fprintf(stderr, "Failed to close file mapping.\n");
+      FATAL("Failed to close file mapping.\n");
 
    if (!CloseHandle(hImage))
-      fprintf(stderr, "Failed to close executable.\n");
+      FATAL("Failed to close executable.\n");
 
    if (PostCreateProcess_ApplicationName && PostCreateProcess_CommandLine)
    {
@@ -157,14 +174,12 @@ int main(int argc, char** argv)
    SHFILEOPSTRUCT shop;
    shop.hwnd = NULL;
    shop.wFunc = FO_DELETE;
-   InstDir[strlen(InstDir)+1] = 0;
+   InstDir[lstrlen(InstDir) + sizeof(TCHAR)] = 0;
    shop.pFrom = InstDir;
    shop.pTo = NULL;
    shop.fFlags = FOF_NOCONFIRMATION | FOF_SILENT | FOF_NOERRORUI;
    SHFileOperation(&shop);
-#ifdef _DEBUG
-   printf("Removing temporary files\n");
-#endif
+   DEBUG("Removing temporary files\n");
 
    ExitProcess(ExitStatus);
 
@@ -181,16 +196,14 @@ BOOL ProcessImage(LPVOID ptr, DWORD size)
    LPVOID pSig = ptr + size - 4;
    if (memcmp(pSig, Signature, 4) == 0)
    {
-#ifdef _DEBUG
-      printf("Good signature found.\n");
-#endif
+      DEBUG("Good signature found.\n");
       DWORD OpcodeOffset = *(DWORD*)(pSig - 4);
       LPVOID pSeg = ptr + OpcodeOffset;
       return ProcessOpcodes(&pSeg);
    }
    else
    {
-      fprintf(stderr, "Bad signature in executable.\n");
+      FATAL("Bad signature in executable.\n");
       return FALSE;
    }
 }
@@ -210,7 +223,7 @@ BOOL ProcessOpcodes(LPVOID* p)
       }
       else
       {
-         fprintf(stderr, "Invalid opcode '%lu'.\n", opcode);
+         FATAL("Invalid opcode '%lu'.\n", opcode);
          return FALSE;
       }
    }
@@ -223,18 +236,18 @@ BOOL ProcessOpcodes(LPVOID* p)
 */
 void ExpandPath(LPTSTR* out, LPTSTR str)
 {
-   DWORD OutSize = 1 + strlen(str);
+   DWORD OutSize = lstrlen(str) + sizeof(TCHAR);
    LPTSTR a = str;
-   while ((a = strchr(a, '\xFF')))
+   while ((a = _tcschr(a, L'\xFF')))
    {
-      OutSize += strlen(InstDir) - 1;
+      OutSize += lstrlen(InstDir) - sizeof(TCHAR);
       a++;
    }
 
    *out = LocalAlloc(LMEM_FIXED, OutSize);
    
    LPTSTR OutPtr = *out;
-   while ((a = strchr(str, '\xFF')))
+   while ((a = _tcschr(str, '\xFF')))
    {
       int l = a - str;
       if (l > 0) {
@@ -242,11 +255,11 @@ void ExpandPath(LPTSTR* out, LPTSTR str)
          OutPtr += l;
          str += l;
       }
-      str += 1;
-      strcpy(OutPtr, InstDir);
-      OutPtr += strlen(OutPtr);
+      str += sizeof(TCHAR);
+      lstrcpy(OutPtr, InstDir);
+      OutPtr += lstrlen(OutPtr);
    }
-   strcpy(OutPtr, str);
+   lstrcpy(OutPtr, str);
 }
 
 /**
@@ -276,33 +289,31 @@ BOOL OpCreateFile(LPVOID *p)
    LPVOID Data = *p;
    *p += FileSize;
 
-   CHAR Fn[MAX_PATH];
-   strcpy(Fn, InstDir);
-   strcat(Fn, "\\");
-   strcat(Fn, FileName);
+   TCHAR Fn[MAX_PATH];
+   lstrcpy(Fn, InstDir);
+   lstrcat(Fn, _T("\\"));
+   lstrcat(Fn, FileName);
    
-#ifdef _DEBUG
-   printf("CreateFile(%s, %lu)\n", Fn, FileSize);
-#endif
+   DEBUG("CreateFile(%s, %lu)\n", Fn, FileSize);
    HANDLE hFile = CreateFile(Fn, GENERIC_WRITE, 0, NULL, CREATE_ALWAYS, 0, NULL);
    if (hFile != INVALID_HANDLE_VALUE)
    {
       DWORD BytesWritten;
       if (!WriteFile(hFile, Data, FileSize, &BytesWritten, NULL))
       {
-         printf("Write failure\n");
+         FATAL("Write failure (%lu)\n", GetLastError());
          Result = FALSE;
       }
       if (BytesWritten != FileSize)
       {
-         fprintf(stderr, "Write size failure\n");
+         FATAL("Write size failure\n");
          Result = FALSE;
       }
       CloseHandle(hFile);
    }
    else
    {
-      fprintf(stderr, "Failed to create file '%s'\n", Fn);
+      FATAL("Failed to create file '%s'\n", Fn);
       Result = FALSE;
    }
 
@@ -316,17 +327,15 @@ BOOL OpCreateDirectory(LPVOID *p)
 {
    LPTSTR DirectoryName = GetString(p);
 
-   CHAR DirName[MAX_PATH];
-   strcpy(DirName, InstDir);
-   strcat(DirName, "\\");
-   strcat(DirName, DirectoryName);
+   TCHAR DirName[MAX_PATH];
+   lstrcpy(DirName, InstDir);
+   lstrcat(DirName, _T("\\"));
+   lstrcat(DirName, DirectoryName);
    
-#ifdef _DEBUG
-   printf("CreateDirectory(%s)\n", DirName);
-#endif
+   DEBUG("CreateDirectory(%s)\n", DirName);
    
    if (!CreateDirectory(DirName, NULL)){
-      printf("Failed to create directory '%s'.\n", DirName);
+      FATAL("Failed to create directory '%s'.\n", DirName);
       return FALSE;
    }
    
@@ -346,10 +355,10 @@ void GetCreateProcessInfo(LPVOID* p, LPTSTR* pApplicationName, LPTSTR* pCommandL
    LPTSTR MyCmdLine = GetCommandLine();
    LPTSTR MyArgs = SkipArg(MyCmdLine);
    
-   *pCommandLine = LocalAlloc(LMEM_FIXED, strlen(ExpandedCommandLine) + 1 + strlen(MyArgs) + 1);
-   strcpy(*pCommandLine, ExpandedCommandLine);
-   strcat(*pCommandLine, " ");
-   strcat(*pCommandLine, MyArgs);
+   *pCommandLine = LocalAlloc(LMEM_FIXED, lstrlen(ExpandedCommandLine) + sizeof(TCHAR) + lstrlen(MyArgs) + sizeof(TCHAR));
+   lstrcpy(*pCommandLine, ExpandedCommandLine);
+   lstrcat(*pCommandLine, _T(" "));
+   lstrcat(*pCommandLine, MyArgs);
    
    LocalFree(ExpandedCommandLine);
 }
@@ -380,13 +389,14 @@ void CreateAndWaitForProcess(LPTSTR ApplicationName, LPTSTR CommandLine)
 
    if (!r)
    {
-      printf("Failed to create process (%s): %lu\n", ApplicationName, GetLastError());
+      FATAL("Failed to create process (%s): %lu\n", ApplicationName, GetLastError());
+      return;
    }
 
    WaitForSingleObject(ProcessInformation.hProcess, INFINITE);
 
    if (!GetExitCodeProcess(ProcessInformation.hProcess, &ExitStatus))
-      fprintf(stderr, "Failed to get exit status (error %lu).\n", GetLastError());
+      FATAL("Failed to get exit status (error %lu).\n", GetLastError());
 
    CloseHandle(ProcessInformation.hProcess);
    CloseHandle(ProcessInformation.hThread);
@@ -409,12 +419,10 @@ BOOL OpPostCreateProcess(LPVOID* p)
    }
 }
 
-
-void *SzAlloc(void *p, size_t size) { p = p; return malloc(size); }
-void SzFree(void *p, void *address) { p = p; free(address); }
-ISzAlloc alloc = { SzAlloc, SzFree };
-
 #if WITH_LZMA
+void *SzAlloc(void *p, size_t size) { p = p; return LocalAlloc(LMEM_FIXED, size); }
+void SzFree(void *p, void *address) { p = p; LocalFree(address); }
+ISzAlloc alloc = { SzAlloc, SzFree };
 
 #define LZMA_UNPACKSIZE_SIZE 8
 #define LZMA_HEADER_SIZE (LZMA_PROPS_SIZE + LZMA_UNPACKSIZE_SIZE)
@@ -422,9 +430,7 @@ ISzAlloc alloc = { SzAlloc, SzFree };
 BOOL OpDecompressLzma(LPVOID *p)
 {
    DWORD CompressedSize = GetInteger(p);
-#ifdef _DEBUG
-   printf("LzmaDecode(%ld)\n", CompressedSize);
-#endif
+   DEBUG("LzmaDecode(%ld)\n", CompressedSize);
    
    Byte* src = (Byte*)*p;
    *p += CompressedSize;
@@ -443,7 +449,7 @@ BOOL OpDecompressLzma(LPVOID *p)
                          src, LZMA_PROPS_SIZE, LZMA_FINISH_ANY, &status, &alloc);
    if (res != SZ_OK)
    {
-      fprintf(stderr, "LZMA decompression failed.\n");
+      FATAL("LZMA decompression failed.\n");
    }
    else
    {
@@ -468,14 +474,12 @@ BOOL OpSetEnv(LPVOID* p)
    LPTSTR Value = GetString(p);
    LPTSTR ExpandedValue;
    ExpandPath(&ExpandedValue, Value);
-#ifdef _DEBUG
-   printf("SetEnv(%s, %s)\n", Name, ExpandedValue);
-#endif
+   DEBUG("SetEnv(%s, %s)\n", Name, ExpandedValue);
 
    BOOL Result = FALSE;
    if (!SetEnvironmentVariable(Name, ExpandedValue))
    {
-      fprintf(stderr, "Failed to set environment variable (error %lu).\n", GetLastError());
+      FATAL("Failed to set environment variable (error %lu).\n", GetLastError());
       Result = FALSE;
    }
    else
