@@ -472,7 +472,7 @@ EOF
 
       # Set environment variable
       sb.setenv('RUBYOPT', ENV['RUBYOPT'] || '')
-      sb.setenv('RUBYLIB', load_path.uniq.join(';'))
+      sb.setenv('RUBYLIB', load_path.map{|path| dospath(path)}.uniq.join(';'))
       sb.setenv('GEM_PATH', "#{TEMPDIR_MARKER}\\gemhome")
 
       # Launch the script
