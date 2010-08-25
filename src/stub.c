@@ -221,22 +221,32 @@ BOOL ProcessOpcodes(LPVOID* p)
    Expands a specially formatted string, replacing \xFF with the
    temporary installation directory.
 */
-void ExpandPath(LPTSTR out, LPTSTR str)
+void ExpandPath(LPTSTR* out, LPTSTR str)
 {
-   char* a;
+   DWORD OutSize = 1 + strlen(str);
+   LPTSTR a = str;
+   while ((a = strchr(a, '\xFF')))
+   {
+      OutSize += strlen(InstDir) - 1;
+      a++;
+   }
+
+   *out = LocalAlloc(LMEM_FIXED, OutSize);
+   
+   LPTSTR OutPtr = *out;
    while ((a = strchr(str, '\xFF')))
    {
       int l = a - str;
       if (l > 0) {
-         memcpy(out, str, l);
-         out += l;
+         memcpy(OutPtr, str, l);
+         OutPtr += l;
          str += l;
       }
       str += 1;
-      strcpy(out, InstDir);
-      out += strlen(out);
+      strcpy(OutPtr, InstDir);
+      OutPtr += strlen(OutPtr);
    }
-   strcpy(out, str);
+   strcpy(OutPtr, str);
 }
 
 /**
@@ -328,19 +338,20 @@ void GetCreateProcessInfo(LPVOID* p, LPTSTR* pApplicationName, LPTSTR* pCommandL
    LPTSTR ImageName = GetString(p);
    LPTSTR CmdLine = GetString(p);
 
-   *pApplicationName = LocalAlloc(LMEM_FIXED, MAX_PATH);
-   ExpandPath(*pApplicationName, ImageName);
+   ExpandPath(pApplicationName, ImageName);
 
-   CHAR CmdLine2[MAX_PATH];
-   ExpandPath(CmdLine2, CmdLine);
+   LPTSTR ExpandedCommandLine;
+   ExpandPath(&ExpandedCommandLine, CmdLine);
 
    LPTSTR MyCmdLine = GetCommandLine();
    LPTSTR MyArgs = SkipArg(MyCmdLine);
    
-   *pCommandLine = LocalAlloc(LMEM_FIXED, strlen(CmdLine2) + 1 + strlen(MyArgs) + 1);
-   strcpy(*pCommandLine, CmdLine2);
+   *pCommandLine = LocalAlloc(LMEM_FIXED, strlen(ExpandedCommandLine) + 1 + strlen(MyArgs) + 1);
+   strcpy(*pCommandLine, ExpandedCommandLine);
    strcat(*pCommandLine, " ");
    strcat(*pCommandLine, MyArgs);
+   
+   LocalFree(ExpandedCommandLine);
 }
 
 /**
@@ -360,11 +371,6 @@ BOOL OpCreateProcess(LPVOID *p)
 
 void CreateAndWaitForProcess(LPTSTR ApplicationName, LPTSTR CommandLine)
 {
-   
-#ifdef _DEBUG
-   printf("CreateProcess(%s, %s)\n", ApplicationName, CmdLine2);
-#endif
-
    PROCESS_INFORMATION ProcessInformation;
    STARTUPINFO StartupInfo;
    ZeroMemory(&StartupInfo, sizeof(StartupInfo));
@@ -460,19 +466,22 @@ BOOL OpSetEnv(LPVOID* p)
 {
    LPTSTR Name = GetString(p);
    LPTSTR Value = GetString(p);
-   CHAR ExpandedValue[MAX_PATH];
-   ExpandPath(ExpandedValue, Value);
+   LPTSTR ExpandedValue;
+   ExpandPath(&ExpandedValue, Value);
 #ifdef _DEBUG
    printf("SetEnv(%s, %s)\n", Name, ExpandedValue);
 #endif
+
+   BOOL Result = FALSE;
    if (!SetEnvironmentVariable(Name, ExpandedValue))
    {
       fprintf(stderr, "Failed to set environment variable (error %lu).\n", GetLastError());
-      return FALSE;
+      Result = FALSE;
    }
    else
    {
-      return TRUE;
+      Result = TRUE;
    }
+   LocalFree(ExpandedValue);
+   return Result;
 }
-
