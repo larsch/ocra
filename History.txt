@@ -31,6 +31,9 @@
   your script after a "--" marker. Arguments will be passed both at
   compile time and run time. (#27815)
 
+* Now works if the source files are located beneath Ruby's
+  exec_prefix. (#28505)
+
 === 1.1.4
 
 * The tempdir marker is now pretty-printed as "<tempdir>" in the
