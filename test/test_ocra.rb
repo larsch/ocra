@@ -3,8 +3,6 @@ require "tmpdir"
 require "fileutils"
 require "rbconfig"
 
-require 'rbconfig'
-
 begin
   require "rubygems"
   gem 'win32-api', '>=1.2.0'
@@ -19,7 +17,8 @@ include FileUtils
 class TestOcra < Test::Unit::TestCase
 
   # Default arguments for invoking OCRA when running tests.
-  DefaultArgs = [ '--quiet', '--no-lzma' ]
+  DefaultArgs = [ '--no-lzma' ]
+  DefaultArgs << "--quiet" unless ENV["OCRA_VERBOSE_TEST"]
   DefaultArgs.push '--no-autodll' if not $have_win32_api
 
   # Name of the tested ocra script.
@@ -54,9 +53,9 @@ class TestOcra < Test::Unit::TestCase
   # Sets up an directory with a copy of a fixture and yields to the
   # block, then cleans up everything. A fixture here is a hierachy of
   # files located in test/fixtures.
-  def with_fixture(name)
+  def with_fixture(name, target_path = nil)
     path = File.join(FixturePath, name)
-    with_tmpdir do
+    with_tmpdir([], target_path) do
       cp_r path, '.'
       cd name do
         yield
@@ -82,9 +81,9 @@ class TestOcra < Test::Unit::TestCase
     end
   end
 
-  def with_tmpdir(files = [])
-    tempdirname = File.join(ENV['TEMP'], ".ocratest-#{$$}-#{rand 2**32}").tr('\\','/')
-    Dir.mkdir tempdirname
+  def with_tmpdir(files = [], path = nil)
+    tempdirname = path || File.join(ENV['TEMP'], ".ocratest-#{$$}-#{rand 2**32}").tr('\\','/')
+    mkdir_p tempdirname
     begin
       cp files, tempdirname
       FileUtils.cd tempdirname do
@@ -558,6 +557,19 @@ class TestOcra < Test::Unit::TestCase
         cd ENV["SystemRoot"] do
           assert system(exe)
         end
+      end
+    end
+  end
+
+  # Would be nice if OCRA could build from source located beneath the
+  # Ruby installation too.
+  def test_exec_prefix
+    path = File.join(RbConfig::CONFIG["exec_prefix"], "ocratempsrc")
+    with_fixture "helloworld", path do
+      assert system("ruby", ocra, "helloworld.rb", *DefaultArgs)
+      assert File.exist?("helloworld.exe")
+      pristine_env "helloworld.exe" do
+        assert system("helloworld.exe")
       end
     end
   end

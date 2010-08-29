@@ -406,6 +406,7 @@ EOF
     windowed = (Ocra.files[0] =~ /\.rbw$/ || Ocra.force_windows) && !Ocra.force_console
 
     puts "=== Building #{executable}" unless Ocra.quiet
+    target_script = nil
     OcraBuilder.new(executable, windowed) do |sb|
       # Add explicitly mentioned files
       Ocra.files.each do |file|
@@ -418,6 +419,8 @@ EOF
         else
           target = File.join('src', File.basename(file))
         end
+
+        target_script ||= target
 
         if File.directory?(file)
           sb.ensuremkdir(target)
@@ -478,7 +481,7 @@ EOF
       # Launch the script
       extra_arg = Ocra.arg.map { |a| ' "' + a.gsub(/\"/,'\\"') + '"' }.join
       sb.postcreateprocess(TEMPDIR_MARKER + "\\bin\\" + rubyexe,
-        "#{rubyexe} \"\xff\\src\\" + Ocra.dospath(Ocra.files[0]) + "\"#{extra_arg}")
+        "#{rubyexe} \"\xff\\" + Ocra.dospath(target_script) + "\"#{extra_arg}")
       
       puts "=== Compressing" unless Ocra.quiet or not Ocra.lzma_mode
     end
