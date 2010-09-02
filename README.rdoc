@@ -1,8 +1,10 @@
 = ocra
 
-* http://ocra.rubyforge.org/
-* http://rubyforge.org/projects/ocra/
-* http://github.com/larsch/ocra/
+* Homepage: http://ocra.rubyforge.org/
+* RubyForge project page: http://rubyforge.org/projects/ocra/
+* GitHub: http://github.com/larsch/ocra/
+* Issue tracker: http://github.com/larsch/ocra/issues
+* Google Group: http://groups.google.com/group/ruby-ocra
 
 == DESCRIPTION:
 
@@ -19,9 +21,10 @@ any additionally needed ruby libraries or DLL.
 * Both windowed/console mode supported
 
 If you experience problems with OCRA or have found a bug, please use
-the tracker on the RubyForge project page
-http://rubyforge.org/projects/ocra/. You are welcome to ask questions
-in the forums there aswell.
+the issue tracker on GitHub
+(http://github.com/larsch/ocra/issues). You can also join the Google
+Group discussion forum to ask questions and get help
+(http://groups.google.com/group/ruby-ocra).
 
 == SYNOPSIS:
 
