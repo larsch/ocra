@@ -3,9 +3,12 @@
 require 'rubygems'
 require 'hoe'
 
-Hoe.spec 'ocra' do
-  developer "Lars Christensen", "larsch@belunktum.dk"
-  self.readme_file = 'README.rdoc'
+Hoe.spec 'ocra' do |spec|
+  spec.author = "Lars Christensen"
+  spec.email = "larsch@belunktum.dk"
+  spec.url = "http://ocra.rubyforge.org/"
+  spec.readme_file = 'README.rdoc'
+  spec.extra_rdoc_files = ['README.rdoc']
 end
 
 task :build_stub do
@@ -16,10 +19,6 @@ task :build_stub do
 end
 
 file 'share/ocra/stub.exe' => :build_stub
-
-file 'README.txt' => 'README.rdoc' do
-  cp 'README.rdoc', 'README.txt'
-end
 
 task :test => :build_stub
 
