@@ -11,7 +11,7 @@ module Ocra
   OP_SETENV = 5
   OP_POST_CREATE_PROCESS = 6
 
-  VERSION = "1.2.0.rc2"
+  VERSION = "1.2.0"
 
   IGNORE_MODULES = /^enumerator.so$/
 
