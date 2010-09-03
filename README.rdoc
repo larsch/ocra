@@ -28,15 +28,37 @@ Group discussion forum to ask questions and get help
 
 == SYNOPSIS:
 
-  ocra [option] script.rb
+=== Building an executable:
 
-* Will package "script.rb", the Ruby interpreter and all dependencies
-  (gems and DLLs) into an executable named "script.exe".
+  ocra script.rb
 
+Will package "<tt>script.rb</tt>", the Ruby interpreter and all
+dependencies (gems and DLLs) into an executable named
+"<tt>script.exe</tt>".
+
+=== Command line:
+  
+  ocra [options] script.rb [<other files> ...] [-- <script arguments> ...]
+
+=== Options:
+
+  ocra --help
+
+  --dll dllname    Include additional DLLs from the Ruby bindir.
+  --no-lzma        Disable LZMA compression of the executable.
+  --quiet          Suppress output.
+  --help           Display this information.
+  --windows        Force Windows application (rubyw.exe)
+  --console        Force console application (ruby.exe)
+  --no-autoload    Don't load/include script.rb's autoloads
+  --icon <ico>     Replace icon with a custom one
+  --version        Display version number
+  --no-gem-filter  Don't filter readme's, doc, C-source, etc. from gems    
+  
 === Compilation:
 
-* OCRA will load your script (using Kernel#load) and build the
-  executable when it exits.
+* OCRA will load your script (using <tt>Kernel#load</tt>) and build
+  the executable when it exits.
 
 * Your program should 'require' all necessary files when invoked without
   arguments, so OCRA can detect all dependencies.
@@ -46,8 +68,8 @@ Group discussion forum to ask questions and get help
 
 * .rb files will become console applications. .rbw files will become
   windowed application (without a console window popping
-  up). Alternatively, use the <tt>--console</tt> or <tt>--windows</tt>
-  options.
+  up). Alternatively, use the "<tt>--console</tt>" or
+  "<tt>--windows</tt>" options.
 
 === Running your application:
 
@@ -110,7 +132,8 @@ nothing but a working Ruby installation on Windows.
 == TECHNICAL DETAILS
 
 OCRA first runs the target script in order to detect any files that
-are loaded and used at runtime (Using Kernel#require and Kernel#load).
+are loaded and used at runtime (Using <tt>Kernel#require</tt> and
+<tt>Kernel#load</tt>).
 
 OCRA embeds everything needed to run a Ruby script into a single
 executable file. The file contains the .exe stub which is compiled
@@ -126,18 +149,19 @@ your application will be put in the 'src' subdirectory.
 
 === Libraries
 
-Any code that is loaded through Kernel#require when your script is
-executed will be included in the OCRA executable. Conditionally loaded
-code will not be loaded and included in the executable unless the code
-is actually run when OCRA invokes your script. Otherwise, OCRA won't
-know about it and will not include the source files.
+Any code that is loaded through <tt>Kernel#require</tt> when your
+script is executed will be included in the OCRA
+executable. Conditionally loaded code will not be loaded and included
+in the executable unless the code is actually run when OCRA invokes
+your script. Otherwise, OCRA won't know about it and will not include
+the source files.
 
 RubyGems are handled specially. Whenever a file from a Gem is
 detected, OCRA will attempt to include all the files from that
 specific Gem (all files listed in the manifest), expect some unlikely
-needed files such as readme's and other documentation. This can be
-overruled using the '--no-gem-filter' which will make OCRA include
-every file that is listed in the Gem's manifest.
+needed files such as readme's and other documentation. This latter can
+be overruled using the "<tt>--no-gem-filter</tt>" which will make OCRA
+include every file that is listed in the Gem's manifest.
 
 Libraries found in non-standard path (for example, if you invoke OCRA
 with "ruby -I some/path") will be placed into the site dir
@@ -147,9 +171,10 @@ tree, since OCRA may place the files elsewhere when extracted into the
 temporary directory.
 
 In case your script (or any of its dependencies) sets up autoloaded
-module using Kernel#autoload, OCRA will automatically try to load them
-to ensure that they are all included in the executable. Modules that
-doesn't exist will be ignored (a warning will be logged).
+module using <tt>Kernel#autoload</tt>, OCRA will automatically try to
+load them to ensure that they are all included in the
+executable. Modules that doesn't exist will be ignored (a warning will
+be logged).
 
 Dynamic link libraries (.dll files, for example WxWidgets, or other
 source files) will be detected and included by OCRA.
@@ -183,13 +208,13 @@ through the Windows Explorer), the users' current working directory
 <tt>C:\\WINDOWS\\SYSTEM32</tt> when the executable is invoked through
 a file association. You can optionally change the directory yourself:
 
-   Dir.chdir File.dirname($0)
+  Dir.chdir File.dirname($0)
 
 If you wish to maintain the user's working directory, but need to
 'require' additional Ruby scripts from the source directory, you can
 add the following line to your script:
 
-   $LOAD_PATH.unshift File.dirname($0)
+  $LOAD_PATH.unshift File.dirname($0)
 
 === Load path mangling
 
@@ -199,7 +224,7 @@ directory being the same as where the script is located (See
 above). If you have additional library files in directories below the
 directory containing your source script you can use this idiom:
 
-   $LOAD_PATH.unshift File.join(File.dirname($0), 'path/to/script')
+  $LOAD_PATH.unshift File.join(File.dirname($0), 'path/to/script')
 
 === Detecting OCRA
 
@@ -208,10 +233,10 @@ looking for the 'Ocra' constant. If it is defined, OCRA is currenly
 building the executable from your script. For example, you can use
 this to avoid opening a GUI window when compiling executables:
 
-   app = MyApp.new
-   if not defined?(Ocra)
-     app.main_loop
-   end
+  app = MyApp.new
+  if not defined?(Ocra)
+    app.main_loop
+  end
 
 === Additional files and resources
 
@@ -219,32 +244,32 @@ You can add additional files to the OCRA executable (for example
 images) by appending them to the command line. They should be placed
 in the source directory with your main script (or a subdirectory).
 
-   ocra mainscript.rb someimage.jpeg docs/document.txt
+  ocra mainscript.rb someimage.jpeg docs/document.txt
 
 This will create the following layout in the temporary directory when
 your program is executed:
 
-   src/mainscript.rb
-   src/someimage.jpeg
-   src/docs/document.txt
+  src/mainscript.rb
+  src/someimage.jpeg
+  src/docs/document.txt
 
 Paths on the command line can include ** globs to include a hierachy
 of files, for example
 
-   ocra script.rb assets/**/*.png
+  ocra script.rb assets/**/*.png
 
 === Command Line Arguments
 
 To pass command line argument to your script (both while building and
-when run from the resulting executable), specify them after a "--"
-marker. For example:
+when run from the resulting executable), specify them after a
+"<tt>--</tt>" marker. For example:
 
-   ocra script.rb -- --some-options=value
+  ocra script.rb -- --some-options=value
 
-This will pass "--some-options=value" to the script when build and
-when running the executable. Any extra argument specified by the user
-when invoking the executable will be appended after the compile-time
-arguments.
+This will pass "<tt>--some-options=value</tt>" to the script when
+build and when running the executable. Any extra argument specified by
+the user when invoking the executable will be appended after the
+compile-time arguments.
 
 === Window/Console
 
@@ -254,10 +279,10 @@ windowed applications (without console window) from .rbw-files.
 Ruby on Windows provides two executables: ruby.exe is a console mode
 application and rubyw.exe is a windowed application which does not
 bring up a console window when launched using the Windows Explorer.
-By default, or if the <tt>--console</tt> option is used, OCRA will use
+By default, or if the "<tt>--console</tt>" option is used, OCRA will use
 the console runtime (rubyw.exe). OCRA will automatically select the
 windowed runtime when your script has the ".rbw" extension, or if you
-specify the <tt>--windows</tt> command line option.
+specify the "<tt>--windows</tt>" command line option.
 
 If your application works in console mode but not in windowed mode,
 first check if your script works without OCRA using rubyw.exe. A
@@ -268,14 +293,14 @@ buffers run full).
 You can also try wrapping your script in an exception handler that
 logs any errors to a file:
 
-   begin
-     # your script here
-   rescue Exception => e
-     File.open("except.log") do |f|
-       f.puts e.inspect
-       f.puts e.backtrace
-     end
-   end
+  begin
+    # your script here
+  rescue Exception => e
+    File.open("except.log") do |f|
+      f.puts e.inspect
+      f.puts e.backtrace
+    end
+  end
 
 == CREDITS:
 
