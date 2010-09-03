@@ -429,6 +429,8 @@ ISzAlloc alloc = { SzAlloc, SzFree };
 
 BOOL OpDecompressLzma(LPVOID *p)
 {
+   BOOL Success = TRUE;
+   
    DWORD CompressedSize = GetInteger(p);
    DEBUG("LzmaDecode(%ld)\n", CompressedSize);
    
@@ -450,15 +452,17 @@ BOOL OpDecompressLzma(LPVOID *p)
    if (res != SZ_OK)
    {
       FATAL("LZMA decompression failed.\n");
+      Success = FALSE;
    }
    else
    {
       LPVOID decPtr = DecompressedData;
-      ProcessOpcodes(&decPtr);
+      if (!ProcessOpcodes(&decPtr))
+         Success = FALSE;
    }
 
    LocalFree(DecompressedData);
-   return TRUE;
+   return Success;
 }
 #endif
 
