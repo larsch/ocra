@@ -1,3 +1,9 @@
+=== 1.2.1
+
+* Fixed some additional corner cases with absolute and relative
+  require & load paths. Extended test suite to cover a lot more
+  cases.
+  
 === 1.2.0
 
 * Ignore console events (Ctrl-C, Ctrl-Break). Ruby process handles

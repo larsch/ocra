@@ -159,6 +159,12 @@ EOF
       puts usage
       exit
     end
+
+    @options[:files].map! { |glob|
+      files = Dir[posixpath(glob)]
+      raise "#{glob} not found!" if files.empty?
+      files.map { |path| File.expand_path(path) }
+    }.flatten!
   end
 
   def Ocra.init(argv)
@@ -228,9 +234,16 @@ EOF
   # "unqualified" paths in $LOADED_FEATURES.
   def Ocra.find_load_path(paths, path)
     if abspath?(path)
-      # Find the shortest path in 'paths' that contain 'path'
-      rps = paths.map {|p| relative_path(File.expand_path(p), path) }
-      rps.zip(paths).sort_by {|x| x[0].size }.first[1]
+      # Choose those paths which contain the feature
+      candidate_paths = paths.select { |p| subpath?(path, File.expand_path(p)) }
+      # Guess the require'd path
+      path_pairs = candidate_paths.map { |p| [p, relative_path(File.expand_path(p), path)] }
+      # Select the shortest possible require-path (longest load-path)
+      if path_pairs.empty?
+        nil
+      else
+        path_pairs.sort_by {|x| x[1].size }.first[0]
+      end
     else
       # Select the paths that contain 'path' and select the shortest
       candidates = paths.select { |p| File.exist?(File.expand_path(path, p)) }
@@ -241,8 +254,7 @@ EOF
   # Find the root of all files specified on the command line and use
   # it as the "src" of the output.
   def Ocra.find_src_root(files)
-    src_files = files.map { |file| Dir[posixpath(file)] }.flatten
-    src_files = src_files.map { |file| File.expand_path(file) }
+    src_files = files.map { |file| posixpath(File.expand_path(file)) }
     src_prefix = src_files.inject(File.dirname(src_files[0])) do |srcroot, path|
       if subpath?(path, @ruby_exec_prefix)
         srcroot
@@ -317,7 +329,9 @@ EOF
   end
   
   def Ocra.build_exe
-    @added_load_paths = $LOAD_PATH - @load_path_before
+    all_load_paths = $LOAD_PATH.map { |p| File.expand_path(p) }
+    @added_load_paths = ($LOAD_PATH - @load_path_before).map { |p| File.expand_path(p) }
+    working_directory = File.expand_path(Dir.pwd)
 
     restore_environment
     
@@ -327,6 +341,7 @@ EOF
     # Store the currently loaded files (before we require rbconfig for
     # our own use).
     features = $LOADED_FEATURES.dup
+    features.delete_if { |f| f =~ IGNORE_MODULES }
 
     # Find gemspecs to include
     if defined?(Gem)
@@ -344,46 +359,69 @@ EOF
     instsitelibdir = relative_path(@ruby_exec_prefix, sitelibdir)
 
     load_path = []
-
-    # Find the source root and adjust paths
-    src_prefix, src_files = find_src_root(Ocra.files)
-    Ocra.files.replace(src_files)
+    src_load_path = []
 
     # Find gems files and remove them from features
     gem_files, features_from_gems = find_gem_files(features)
     features -= features_from_gems
 
+    # Find the source root and adjust paths
+    src_prefix, src_files = find_src_root(Ocra.files)
+
     # Find features and decide where to put them in the temporary
     # directory layout.
     libs = []
     features.each do |filename|
-      path = find_load_path($:, filename)
-      if path
+      path = find_load_path(all_load_paths, filename)
+      if path.nil? || File.expand_path(path).downcase == Dir.pwd.downcase 
+        Ocra.files << filename
+      else
         if abspath?(filename)
           filename = relative_path(File.expand_path(path), filename)
         end
-        if filename =~ /^\.\.\//
-          puts "=== WARNING: Detected a relative require (#{filename}). This is not recommended." if Ocra.show_warnings
-        end
         fullpath = File.expand_path(filename, path)
+        
         if subpath?(fullpath, @ruby_exec_prefix)
+          # Features found in the Ruby installation are put in the
+          # temporary Ruby installation.
           libs << [ fullpath, relative_path(@ruby_exec_prefix, fullpath) ]
-        elsif subpath?(fullpath, src_prefix)
-          targetpath = File.join("src", relative_path(src_prefix, fullpath))
-          libs << [ fullpath, targetpath ]
-          if not @added_load_paths.include?(path) and not load_path.include?(path)
-            load_path << File.join(TEMPDIR_MARKER, File.dirname(targetpath))
-          end
         elsif defined?(Gem) and gemhome = Gem.path.find { |pth| subpath?(fullpath, pth) }
+          # Features found in any other Gem path (e.g. ~/.gems) is put
+          # in a special 'gemhome' folder.
           targetpath = File.join("gemhome", relative_path(gemhome, fullpath))
           libs << [ fullpath, targetpath ]
+        elsif subpath?(fullpath, src_prefix) || path == working_directory
+          # Any feature found inside the src_prefix automatically gets
+          # added as a source file (to go in 'src').
+          Ocra.files << fullpath
+          # Add the load path unless it was added by the script while
+          # running (or we assume that the script can also set it up
+          # correctly when running from the resulting executable).
+          src_load_path << path unless @added_load_paths.include?(path)
+        elsif @added_load_paths.include?(path)
+          # Any feature that exist in a load path added by the script
+          # itself is added as a file to go into the 'src' (src_prefix
+          # will be adjusted below to point to the common parent).
+          Ocra.files << fullpath
         else
+          # All other feature that can not be resolved go in the the
+          # Ruby site dir. This is automatically in the load path when
+          # Ruby starts.
           libs << [ fullpath, File.join(instsitelibdir, filename) ]
         end
-      else
-        puts "=== WARNING: Couldn't find #{filename}" unless filename =~ IGNORE_MODULES if Ocra.show_warnings
       end
     end
+
+    # Recompute the src_prefix. Files may have been added implicitely
+    # while scanning through features.
+    src_prefix, src_files = find_src_root(Ocra.files)
+    Ocra.files.replace(src_files)
+
+    # Add the load path that are required with the correct path after
+    # src_prefix was adjusted.
+    load_path += src_load_path.map { |p|
+      File.join(TEMPDIR_MARKER, "src", relative_path(src_prefix, p))
+    }
 
     # Decide where to put gem files, either the system gem folder, or
     # GEMHOME.

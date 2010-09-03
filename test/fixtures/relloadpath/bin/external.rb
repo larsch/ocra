@@ -1,0 +1,2 @@
+require "somelib"
+require "sublib"

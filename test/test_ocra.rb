@@ -2,6 +2,7 @@ require "test/unit"
 require "tmpdir"
 require "fileutils"
 require "rbconfig"
+require "pathname"
 
 begin
   require "rubygems"
@@ -94,13 +95,37 @@ class TestOcra < Test::Unit::TestCase
     end
   end
 
+  def each_path_combo(*files)
+    # In same directory as first file
+    basedir = Pathname.new(files[0]).realpath.parent
+    args = files.map{|p|Pathname.new(p).realpath.relative_path_from(basedir).to_s}
+    cd basedir do
+      yield(*args)
+    end
+
+    # In parent directory of first file
+    basedir = basedir.parent
+    args = files.map{|p|Pathname.new(p).realpath.relative_path_from(basedir).to_s}
+    cd basedir do
+      yield(*args)
+    end
+
+    # In a completely different directory
+    args = files.map{|p|Pathname.new(p).realpath.to_s}
+    with_tmpdir do
+      yield(*args)
+    end
+  end
+
   # Hello world test. Test that we can build and run executables.
   def test_helloworld
     with_fixture 'helloworld' do
-      assert system("ruby", ocra, "helloworld.rb", *DefaultArgs)
-      assert File.exist?("helloworld.exe")
-      pristine_env "helloworld.exe" do
-        assert system("helloworld.exe")
+      each_path_combo "helloworld.rb" do |script|
+        assert system("ruby", ocra, script, *DefaultArgs)
+        assert File.exist?("helloworld.exe")
+        pristine_env "helloworld.exe" do
+          assert system("helloworld.exe")
+        end
       end
     end
   end
@@ -295,97 +320,122 @@ class TestOcra < Test::Unit::TestCase
     end
   end
 
-  # Test that we can use custom include paths when invoking Ocra (ruby
-  # -I somepath). In this case the lib scripts are put in the src/
-  # directory.
-  def test_relative_loadpath1_ilib
-    with_fixture 'relloadpath1' do
-      assert system('ruby', '-I', 'lib', ocra, 'relloadpath1.rb', *DefaultArgs)
-      assert File.exist?('relloadpath1.exe')
-      pristine_env "relloadpath1.exe" do
-        assert system('relloadpath1.exe')
-      end
-    end
-  end
-
-  # Same as above with './lib'
-  def test_relative_loadpath_idotlib
-    with_fixture 'relloadpath1' do
-      assert system('ruby', '-I', './lib', ocra, 'relloadpath1.rb', *DefaultArgs)
-      assert File.exist?('relloadpath1.exe')
-      pristine_env "relloadpath1.exe" do
-        assert system('relloadpath1.exe')
-      end
-    end
-  end
-
-  # Test that we can use custom include paths when invoking Ocra (env
-  # RUBYLIB=lib). In this case the lib scripts are put in the src/
-  # directory.
-  def test_relative_loadpath_rubyliblib
-    with_fixture 'relloadpath1' do
-      with_env 'RUBYLIB' => 'lib' do
-        assert system('ruby', ocra, 'relloadpath1.rb', *DefaultArgs)
-        assert File.exist?('relloadpath1.exe')
-        pristine_env "relloadpath1.exe" do
-          assert system('relloadpath1.exe')
+  # Should find features via relative require paths, after script
+  # changes to the right directory (Only valid for Ruby < 1.9.2).
+  def test_relative_require_chdir_path
+    with_fixture "relloadpath" do
+      each_path_combo "bin/chdir1.rb" do |script|
+        assert system('ruby', ocra, script, *DefaultArgs)
+        assert File.exist?('chdir1.exe')
+        pristine_env "chdir1.exe" do
+          assert system('chdir1.exe')
         end
       end
     end
   end
 
-  # Same as above with './lib'
-  def test_relative_loadpath_rubylibdotlib
-    with_fixture 'relloadpath1' do
-      with_env 'RUBYLIB' => './lib' do
-        assert system('ruby', ocra, 'relloadpath1.rb', *DefaultArgs)
-        assert File.exist?('relloadpath1.exe')
-        pristine_env "relloadpath1.exe" do
-          assert system('relloadpath1.exe')
+  # Should find features via relative require paths prefixed with
+  # './', after script changes to the right directory.
+  def test_relative_require_chdir_dotpath
+    with_fixture "relloadpath" do
+      each_path_combo "bin/chdir2.rb" do |script|
+        assert system('ruby', ocra, script, *DefaultArgs)
+        assert File.exist?('chdir2.exe')
+        pristine_env "chdir2.exe" do
+          assert system('chdir2.exe')
         end
       end
     end
   end
 
-  # Relative path with .. prefix (../lib).
-  def test_relative_loadpath2_idotdotlib
-    with_fixture 'relloadpath2' do
-      cd 'src' do
-        assert system('ruby', '-I', '../lib', ocra, 'relloadpath2.rb', *DefaultArgs)
-        assert File.exist?('relloadpath2.exe')
-        pristine_env "relloadpath2.exe" do
-          assert system('relloadpath2.exe')
+  # Should pick up files from relative load paths specified using the
+  # -I option when invoking Ocra, and invoking from same directory as
+  # script.
+  def test_relative_require_i
+    with_fixture 'relloadpath' do
+      each_path_combo "bin/external.rb", "lib", "bin/sub" do |script, *loadpaths|
+        assert system('ruby', '-I', loadpaths[0], '-I', loadpaths[1], ocra, script, *DefaultArgs)
+        assert File.exist?('external.exe')
+        pristine_env "external.exe" do
+          assert system('external.exe')
         end
       end
     end
   end
 
-  # Test that scripts which modify $LOAD_PATH with a relative path
-  # (./lib) work correctly.
-  def test_relloadpath3
-    with_fixture 'relloadpath3' do
-      assert system('ruby', ocra, 'relloadpath3.rb', *DefaultArgs)
-      assert File.exist?('relloadpath3.exe')
-      pristine_env "relloadpath3.exe" do
-        assert system('relloadpath3.exe')
+  # Should pick up files from relative load path specified using the
+  # RUBYLIB environment variable.
+  def test_relative_require_rubylib
+    with_fixture 'relloadpath' do
+      each_path_combo "bin/external.rb", "lib", "bin/sub" do |script, *loadpaths|
+        with_env 'RUBYLIB' => loadpaths.join(';') do
+          assert system('ruby', ocra, script, *DefaultArgs)
+        end
+        assert File.exist?('external.exe')
+        pristine_env "external.exe" do
+          assert system('external.exe')
+        end
       end
     end
   end
-
-  # Test that scripts which modify $LOAD_PATH with a relative path
-  # (../lib) work correctly.
-  def test_relloadpath4
-    with_fixture 'relloadpath4' do
-      cd 'src' do
-        assert system('ruby', ocra, 'relloadpath4.rb', *DefaultArgs)
-        assert File.exist?('relloadpath4.exe')
-        pristine_env "relloadpath4.exe" do
-          assert system('relloadpath4.exe')
+  
+  # Should pick up file when script modifies $LOAD_PATH by adding
+  # dirname of script.
+  def test_loadpath_mangling_dirname
+    with_fixture 'relloadpath' do
+      each_path_combo "bin/loadpath0.rb" do |script|
+        assert system('ruby', ocra, script, *DefaultArgs)
+        assert File.exist?('loadpath0.exe')
+        pristine_env "loadpath0.exe" do
+          assert system('loadpath0.exe')
         end
       end
     end
   end
 
+  # Should pick up file when script modifies $LOAD_PATH by adding
+  # relative paths, and invoking from same directory.
+  def test_loadpath_mangling_path
+    with_fixture 'relloadpath' do
+      each_path_combo "bin/loadpath1.rb" do |script|
+        # p [Dir.pwd, script]
+        assert system('ruby', ocra, script, *DefaultArgs)
+        assert File.exist?('loadpath1.exe')
+        pristine_env "loadpath1.exe" do
+          assert system('loadpath1.exe')
+        end
+      end
+    end
+  end
+
+  # Should pick up file when script modifies $LOAD_PATH by adding
+  # relative paths with './'-prefix
+  def test_loadpath_mangling_dotpath
+    with_fixture 'relloadpath' do
+      each_path_combo "bin/loadpath2.rb" do |script|
+        assert system('ruby', ocra, script, *DefaultArgs)
+        assert File.exist?('loadpath2.exe')
+        pristine_env "loadpath2.exe" do
+          assert system('loadpath2.exe')
+        end
+      end
+    end
+  end
+
+  # Should pick up file when script modifies $LOAD_PATH by adding
+  # absolute paths.
+  def test_loadpath_mangling_abspath
+    with_fixture 'relloadpath' do
+      each_path_combo "bin/loadpath3.rb" do |script|
+        assert system('ruby', ocra, script, *DefaultArgs)
+        assert File.exist?('loadpath3.exe')
+        pristine_env "loadpath3.exe" do
+          assert system('loadpath3.exe')
+        end
+      end
+    end
+  end
+  
   # Test that ocra.rb accepts --version and outputs the version number.
   def test_version
     assert_match(/^Ocra \d+(\.\d)+(.[a-z]+\d+)?$/, `ruby \"#{ocra}\" --version`)
