@@ -2,6 +2,101 @@
 # -*- ruby -*-
 
 module Ocra
+  # Path handling class. Ruby's Pathname class is not used because it
+  # is case sensitive and doesn't handle paths with mixed path
+  # separators.
+  class Pathname
+    def Pathname.pwd
+      Pathname.new(Dir.pwd)
+    end
+
+    def Pathname.pathequal(a, b)
+      a.downcase == b.downcase
+    end
+
+    attr_reader :path
+    SEPARATOR_PAT = /[#{Regexp.quote File::ALT_SEPARATOR}#{Regexp.quote File::SEPARATOR}]/
+    ABSOLUTE_PAT = /\A([A-Z]:)?#{SEPARATOR_PAT}/i
+      
+    def initialize(path)
+      @path = path
+    end
+    
+    def to_native
+      @path.tr File::SEPARATOR, File::ALT_SEPARATOR
+    end
+    
+    def to_posix
+      @path.tr File::ALT_SEPARATOR, File::SEPARATOR
+    end
+
+    # Compute the relative path from the 'src' path (directory) to 'tgt'
+    # (directory or file). Return the absolute path to 'tgt' if it can't
+    # be reached from 'src'.
+    def relative_path_from(other)
+      a = @path.split(SEPARATOR_PAT)
+      b = other.path.split(SEPARATOR_PAT)
+      while a.first && b.first && Pathname.pathequal(a.first, b.first)
+        a.shift
+        b.shift
+      end
+      return other if Pathname.new(b.first).absolute?
+      b.size.times { a.unshift '..' }
+      return Pathname.new(a.join('/'))
+    end
+
+    # Determines if 'src' is contained in 'tgt' (i.e. it is a subpath of
+    # 'tgt'). Both must be absolute paths and not contain '..'
+    def subpath?(other)
+      other = Ocra.Pathname(other)
+      src_normalized = to_posix.downcase
+      tgt_normalized = other.to_posix.downcase
+      src_normalized =~ /^#{Regexp.escape tgt_normalized}#{SEPARATOR_PAT}/i
+    end
+
+    def /(other)
+      Ocra.Pathname(@path + '/' + Ocra.Pathname(other).path)
+    end
+
+    def ext(new_ext = nil)
+      if new_ext
+        Pathname.new(@path.sub(/\.[^.]*$/) { new_ext })
+      else
+        File.extname(@path)
+      end
+    end
+
+    def ext?(expected_ext)
+      Pathname.pathequal(ext, expected_ext)
+    end
+
+    def ==(other); to_posix.downcase == other.to_posix.downcase; end
+    def =~(o); @path =~ o; end
+    def exist?; File.exist?(@path); end
+    def file?; File.file?(@path); end
+    def directory?; File.directory?(@path); end
+    def absolute?; @path =~ ABSOLUTE_PAT; end
+    def dirname; Pathname.new(File.dirname(@path)); end
+    def basename; Pathname.new(File.basename(@path)); end
+    def expand(dir = nil); Pathname.new(File.expand_path(@path, dir && Ocra.Pathname(dir))); end
+
+    alias to_s to_posix
+    alias to_str to_posix
+  end
+
+  def self.Pathname(obj)
+    case obj
+    when Pathname
+      obj
+    when Array
+      obj.map { |x| Pathname(x) }
+    when String
+      Pathname.new(obj)
+    else
+      raise ArgumentError, obj
+    end
+  end
+  
   Signature = [0x41, 0xb6, 0xba, 0x4e]
   OP_END = 0
   OP_CREATE_DIRECTORY = 1
@@ -28,9 +123,14 @@ module Ocra
     \.(rdoc)$/
   )}xi
 
-  PATH_SEPARATOR = /[\/\\]/
-
-  TEMPDIR_MARKER = "\xFF"
+  # Alias for the temporary directory where files are extracted.
+  TEMPDIR_ROOT = Pathname.new("\xFF")
+  # Directory for source files in temporary directory.
+  SRCDIR = Pathname.new('src')
+  # Directory for Ruby binaries in temporary directory.
+  BINDIR = Pathname.new('bin')
+  # Directory for GEMHOME files in temporary directory.
+  GEMHOMEDIR = Pathname.new('gemhome')
 
   @options = {
     :lzma_mode => true,
@@ -61,14 +161,6 @@ module Ocra
     DATA.read(DATA.readline.to_i).unpack("m")[0]
   end
 
-  def Ocra.dospath(path)
-    path.tr('/','\\')
-  end
-
-  def Ocra.posixpath(path)
-    path.tr('\\','/')
-  end
-
   def Ocra.save_environment
     @load_path_before = $LOAD_PATH.dup
     @pwd_before = Dir.pwd
@@ -83,23 +175,22 @@ module Ocra
 
   def Ocra.find_stubs
     if defined?(DATA)
+      tempdir = Pathname(ENV['TEMP'])
       @stubimage = get_next_embedded_image
       @stubwimage = get_next_embedded_image
       lzmaimage = get_next_embedded_image
-      @lzmapath = File.join(ENV['TEMP'], 'lzma.exe')
+      @lzmapath = tempdir / 'lzma.exe'
       File.open(@lzmapath, "wb") { |file| file << lzmaimage }
       ediconimage = get_next_embedded_image
-      @ediconpath = File.join(ENV['TEMP'], 'edicon.exe')
+      @ediconpath = tempdir / 'edicon.exe'
       File.open(@ediconpath, "wb") { |file| file << ediconimage }
     else
-      ocrapath = File.dirname(__FILE__)
-      @stubimage = File.open(File.join(ocrapath, '../share/ocra/stub.exe'), "rb") { |file| file.read }
-      @stubwimage = File.open(File.join(ocrapath, '../share/ocra/stubw.exe'), "rb") { |file| file.read }
-      @lzmapath = File.expand_path('../share/ocra/lzma.exe', ocrapath)
-      @ediconpath = File.expand_path('../share/ocra/edicon.exe', ocrapath)
+      ocrapath = Pathname(File.dirname(__FILE__))
+      @stubimage = File.open(ocrapath / '../share/ocra/stub.exe', "rb") { |file| file.read }
+      @stubwimage = File.open(ocrapath / '../share/ocra/stubw.exe', "rb") { |file| file.read }
+      @lzmapath = (ocrapath / '../share/ocra/lzma.exe').expand
+      @ediconpath = (ocrapath / '../share/ocra/edicon.exe').expand
     end
-    @lzmapath = Ocra.dospath(@lzmapath)
-    @ediconpath = Ocra.dospath(@ediconpath)
   end
 
   def Ocra.parseargs(argv)
@@ -133,8 +224,8 @@ EOF
       when /\A--no-autoload\z/
         @options[:load_autoload] = false
       when /\A--icon\z/
-        @options[:icon_filename] = argv.shift
-        raise "Icon file #{icon_filename} not found.\n" unless File.exist?(icon_filename)
+        @options[:icon_filename] = Pathname(argv.shift)
+        raise "Icon file #{icon_filename} not found.\n" unless icon_filename.exist?
       when /\A--no-autodll\z/
         @options[:autodll] = false
       when /\A--version\z/
@@ -161,9 +252,9 @@ EOF
     end
 
     @options[:files].map! { |glob|
-      files = Dir[posixpath(glob)]
+      files = Dir[glob.tr('\\','/')]
       raise "#{glob} not found!" if files.empty?
-      files.map { |path| File.expand_path(path) }
+      files.map { |path| Pathname(path).expand }
     }.flatten!
   end
 
@@ -201,71 +292,43 @@ EOF
     end
   end
 
-  # Compute the relative path from the 'src' path (directory) to 'tgt'
-  # (directory or file). Return the absolute path to 'tgt' if it can't
-  # be reached from 'src'.
-  def Ocra.relative_path(src, tgt)
-    a = posixpath(src).split('/')
-    b = posixpath(tgt).split('/')
-    while a.first && a.first.downcase == b.first.downcase
-      a.shift
-      b.shift
-    end
-    return tgt if abspath?(b.first)
-    a.size.times { b.unshift '..' }
-    return b.join('/')
-  end
-
-  # Determines if 'src' is contained in 'tgt' (i.e. it is a subpath of
-  # 'tgt'). Both must be absolute paths and not contain '..'
-  def Ocra.subpath?(src, tgt)
-    src_normalized = Ocra.dospath(src).downcase
-    tgt_normalized = Ocra.dospath(tgt).downcase
-    src_normalized =~ /^#{Regexp.escape tgt_normalized}[\/\\]/i
-  end
-
-  # Returns true if 'path' is absolute, false otherwise.
-  def Ocra.abspath?(path)
-    path =~ /\A[A-Z]:/i
-  end
-
   # Guess the load path (from 'paths') that was used to load
   # 'path'. This is primarily relevant on Ruby 1.8 which stores
   # "unqualified" paths in $LOADED_FEATURES.
-  def Ocra.find_load_path(paths, path)
-    if abspath?(path)
-      # Choose those paths which contain the feature
-      candidate_paths = paths.select { |p| subpath?(path, File.expand_path(p)) }
-      # Guess the require'd path
-      path_pairs = candidate_paths.map { |p| [p, relative_path(File.expand_path(p), path)] }
+  def Ocra.find_load_path(loadpaths, feature)
+    if feature.absolute?
+      # Choose those loadpaths which contain the feature
+      candidate_loadpaths = loadpaths.select { |loadpath| feature.subpath?(loadpath.expand) }
+      # Guess the require'd feature
+      feature_pairs = candidate_loadpaths.map { |loadpath| [loadpath, feature.relative_path_from(loadpath.expand)] }
       # Select the shortest possible require-path (longest load-path)
-      if path_pairs.empty?
+      if feature_pairs.empty?
         nil
       else
-        path_pairs.sort_by {|x| x[1].size }.first[0]
+        feature_pairs.sort_by { |loadpath, feature| feature.path.size }.first[0]
       end
     else
-      # Select the paths that contain 'path' and select the shortest
-      candidates = paths.select { |p| File.exist?(File.expand_path(path, p)) }
-      candidates.sort_by {|p| p.size}.last
+      # Select the loadpaths that contain 'feature' and select the shortest
+      candidates = loadpaths.select { |loadpath| feature.expand(loadpath).exist? }
+      candidates.sort_by { |loadpath| loadpath.path.size }.last
     end
   end
-
+  
   # Find the root of all files specified on the command line and use
   # it as the "src" of the output.
   def Ocra.find_src_root(files)
-    src_files = files.map { |file| posixpath(File.expand_path(file)) }
-    src_prefix = src_files.inject(File.dirname(src_files[0])) do |srcroot, path|
-      if subpath?(path, @ruby_exec_prefix)
+    src_files = files.map { |file| file.expand }
+    src_prefix = src_files.inject(src_files.first.dirname) do |srcroot, path|
+      if path.subpath?(@ruby_exec_prefix)
         srcroot
       else
         loop do
-          relpath = relative_path(srcroot, path)
-          if abspath?(relpath)
+          relpath = path.relative_path_from(srcroot)
+          if relpath.absolute?
             puts "ERROR: No common directory contains all specified files"
           end
-          if relpath =~ /^\.\.\//
-            srcroot = File.dirname(srcroot)
+          if relpath.to_s =~ /^\.\.\//
+            srcroot = srcroot.dirname
           else
             break
           end
@@ -273,7 +336,7 @@ EOF
         srcroot
       end
     end
-    src_files = src_files.map { |file| relative_path(src_prefix, file) }
+    src_files = src_files.map { |file| file.relative_path_from(src_prefix) }
     return src_prefix, src_files
   end
 
@@ -287,25 +350,26 @@ EOF
     features_from_gems = []
     if defined?(Gem)
       gems = []
-      features.each do |filename|
-        if filename !~ /^[a-z]:/i
-          filename = find_load_path($:, filename)
-          next if filename.nil? # Could be enumerator.so
+      features.each do |feature|
+        if not feature.absolute?
+          feature = find_load_path(Pathname($:), feature)
+          next if feature.nil? # Could be enumerator.so
         end
-        Gem.path.each do |gempath|
-          geminstallpath = File.join(gempath, "gems")
-          if subpath?(filename, geminstallpath)
-            gemlocalpath = relative_path(geminstallpath, filename)
+        gempaths = Pathname(Gem.path)
+        gempaths.each do |gempath|
+          geminstallpath = Pathname(gempath) / "gems"
+          if feature.subpath?(geminstallpath)
+            gemlocalpath = feature.relative_path_from(geminstallpath)
             fullgemname = gemlocalpath.split('/')[0]
             gems << [gempath, fullgemname]
-            features_from_gems << filename
+            features_from_gems << feature
           end
         end
       end
       gems.sort!.uniq!
       gem_files = []
       gems.each do |gempath, fullgemname|
-        gemspecpath = File.join(gempath, "specifications", fullgemname + ".gemspec")
+        gemspecpath = gempath / 'specifications' / "#{fullgemname}.gemspec"
         @gemspecs << gemspecpath
         spec = Gem::Specification.load(gemspecpath)
 
@@ -314,9 +378,9 @@ EOF
         # Filter out some unlikely files (Readme, etc.)
         files = files.select { |filename| filename !~ IGNORE_GEMFILES } if Ocra.gem_filter
         # Find the full path
-        files = files.map { |file| File.join(gempath, "gems", fullgemname, file) }
+        files = files.map { |file| gempath / "gems" / fullgemname / file }
         # Filter out non-files
-        files = files.select { |file| File.file?(file) }
+        files = files.select { |file| file.file? }
         
         gem_files += files
       end
@@ -329,9 +393,9 @@ EOF
   end
   
   def Ocra.build_exe
-    all_load_paths = $LOAD_PATH.map { |p| File.expand_path(p) }
-    @added_load_paths = ($LOAD_PATH - @load_path_before).map { |p| File.expand_path(p) }
-    working_directory = File.expand_path(Dir.pwd)
+    all_load_paths = $LOAD_PATH.map { |loadpath| Pathname(loadpath).expand }
+    @added_load_paths = ($LOAD_PATH - @load_path_before).map { |loadpath| Pathname(loadpath).expand }
+    working_directory = Pathname.pwd.expand
 
     restore_environment
     
@@ -340,8 +404,8 @@ EOF
 
     # Store the currently loaded files (before we require rbconfig for
     # our own use).
-    features = $LOADED_FEATURES.dup
-    features.delete_if { |f| f =~ IGNORE_MODULES }
+    features = $LOADED_FEATURES.map { |feature| Pathname(feature) }
+    features.delete_if { |feature| feature =~ IGNORE_MODULES }
 
     # Find gemspecs to include
     if defined?(Gem)
@@ -351,12 +415,12 @@ EOF
     end
 
     require 'rbconfig'
-    @ruby_exec_prefix = RbConfig::CONFIG['exec_prefix']
+    @ruby_exec_prefix = Pathname(RbConfig::CONFIG['exec_prefix'])
     src_prefix = Dir.pwd
-    sitelibdir = RbConfig::CONFIG['sitelibdir']
-    bindir = RbConfig::CONFIG['bindir']
-    libruby_so = RbConfig::CONFIG['LIBRUBY_SO']
-    instsitelibdir = relative_path(@ruby_exec_prefix, sitelibdir)
+    sitelibdir = Pathname(RbConfig::CONFIG['sitelibdir'])
+    bindir = Pathname(RbConfig::CONFIG['bindir'])
+    libruby_so = Pathname(RbConfig::CONFIG['LIBRUBY_SO'])
+    instsitelibdir = sitelibdir.relative_path_from(@ruby_exec_prefix)
 
     load_path = []
     src_load_path = []
@@ -371,26 +435,26 @@ EOF
     # Find features and decide where to put them in the temporary
     # directory layout.
     libs = []
-    features.each do |filename|
-      path = find_load_path(all_load_paths, filename)
-      if path.nil? || File.expand_path(path).downcase == Dir.pwd.downcase 
-        Ocra.files << filename
+    features.each do |feature|
+      path = find_load_path(all_load_paths, feature)
+      if path.nil? || path.expand == Pathname.pwd
+        Ocra.files << feature
       else
-        if abspath?(filename)
-          filename = relative_path(File.expand_path(path), filename)
+        if feature.absolute?
+          feature = feature.relative_path_from(path.expand)
         end
-        fullpath = File.expand_path(filename, path)
+        fullpath = feature.expand(path)
         
-        if subpath?(fullpath, @ruby_exec_prefix)
+        if fullpath.subpath?(@ruby_exec_prefix)
           # Features found in the Ruby installation are put in the
           # temporary Ruby installation.
-          libs << [ fullpath, relative_path(@ruby_exec_prefix, fullpath) ]
-        elsif defined?(Gem) and gemhome = Gem.path.find { |pth| subpath?(fullpath, pth) }
+          libs << [ fullpath, fullpath.relative_path_from(@ruby_exec_prefix) ]
+        elsif defined?(Gem) and gemhome = Gem.path.find { |pth| fullpath.subpath?(pth) }
           # Features found in any other Gem path (e.g. ~/.gems) is put
           # in a special 'gemhome' folder.
-          targetpath = File.join("gemhome", relative_path(gemhome, fullpath))
+          targetpath = GEMHOMEDIR / fullpath.relative_path_from(gemhome)
           libs << [ fullpath, targetpath ]
-        elsif subpath?(fullpath, src_prefix) || path == working_directory
+        elsif fullpath.subpath?(src_prefix) || path == working_directory
           # Any feature found inside the src_prefix automatically gets
           # added as a source file (to go in 'src').
           Ocra.files << fullpath
@@ -407,7 +471,7 @@ EOF
           # All other feature that can not be resolved go in the the
           # Ruby site dir. This is automatically in the load path when
           # Ruby starts.
-          libs << [ fullpath, File.join(instsitelibdir, filename) ]
+          libs << [ fullpath, instsitelibdir / feature ]
         end
       end
     end
@@ -419,17 +483,15 @@ EOF
 
     # Add the load path that are required with the correct path after
     # src_prefix was adjusted.
-    load_path += src_load_path.map { |p|
-      File.join(TEMPDIR_MARKER, "src", relative_path(src_prefix, p))
-    }
+    load_path += src_load_path.map { |loadpath| TEMPDIR_ROOT / SRCDIR / loadpath.relative_path_from(src_prefix) }
 
     # Decide where to put gem files, either the system gem folder, or
     # GEMHOME.
     gem_files.each do |gemfile|
-      if subpath?(gemfile, @ruby_exec_prefix)
-        libs << [ gemfile, relative_path(@ruby_exec_prefix, gemfile) ]
-      elsif defined?(Gem) and gemhome = Gem.path.find { |pth| subpath?(gemfile, pth) }
-        targetpath = File.join("gemhome", relative_path(gemhome, fullpath))
+      if gemfile.subpath?(@ruby_exec_prefix)
+        libs << [ gemfile, gemfile.relative_path(@ruby_exec_prefix) ]
+      elsif defined?(Gem) and gemhome = Gem.path.find { |pth| gemfile.subpath?(pth) }
+        targetpath = GEMHOMEDIR / fullpath.relative_path_from(gemhome)
         libs << [ gemfile, targetpath ]
       else
         raise "Don't know where to put #{gemfile}"
@@ -439,28 +501,27 @@ EOF
     # Detect additional DLLs
     dlls = Ocra.autodll ? LibraryDetector.detect_dlls : []
 
-    executable = File.basename(Ocra.files[0].sub(/(\.rbw?)?$/, '.exe'))
+    executable = Ocra.files.first.basename.ext('.exe')
 
-    windowed = (Ocra.files[0] =~ /\.rbw$/ || Ocra.force_windows) && !Ocra.force_console
+    windowed = (Ocra.files.first.ext?('.rbw') || Ocra.force_windows) && !Ocra.force_console
 
     puts "=== Building #{executable}" unless Ocra.quiet
     target_script = nil
     OcraBuilder.new(executable, windowed) do |sb|
       # Add explicitly mentioned files
       Ocra.files.each do |file|
-        file = File.join(src_prefix, file)
-
-        if subpath?(file, @ruby_exec_prefix)
-          target = relative_path(@ruby_exec_prefix, file)
-        elsif subpath?(file, src_prefix)
-          target = File.join('src', relative_path(src_prefix, file))
+        file = src_prefix / file
+        if file.subpath?(@ruby_exec_prefix)
+          target = file.relative_path_from(@ruby_exec_prefix)
+        elsif file.subpath?(src_prefix)
+          target = SRCDIR / file.relative_path_from(src_prefix)
         else
-          target = File.join('src', File.basename(file))
+          target = SRCDIR / file.basename
         end
 
         target_script ||= target
 
-        if File.directory?(file)
+        if file.directory?
           sb.ensuremkdir(target)
         else
           sb.createfile(file, target)
@@ -473,33 +534,33 @@ EOF
       else
         rubyexe = (RbConfig::CONFIG['ruby_install_name'] || "ruby") + ".exe"
       end
-      sb.createfile(File.join(bindir, rubyexe), File.join("bin", rubyexe))
+      sb.createfile(bindir / rubyexe, BINDIR / rubyexe)
       if libruby_so
-        sb.createfile(File.join(bindir, libruby_so), File.join("bin", libruby_so))
+        sb.createfile(bindir / libruby_so, BINDIR / libruby_so)
       end
 
       # Add detected DLLs
       dlls.each do |dll|
-        if subpath?(dll, @ruby_exec_prefix)
-          target = relative_path(@ruby_exec_prefix, dll)
+        if dll.subpath?(@ruby_exec_prefix)
+          target = dll.relative_path_from(@ruby_exec_prefix)
         else
-          target = File.join('bin', File.basename(dll))
+          target = BINDIR / File.basename(dll)
         end
         sb.createfile(dll, target)
       end
       
       # Add extra DLLs specified on the command line
       Ocra.extra_dlls.each do |dll|
-        sb.createfile(File.join(bindir, dll), File.join("bin", dll))
+        sb.createfile(bindir / dll, BINDIR / dll)
       end
       
       # Add gemspec files
       @gemspecs.each do |gemspec|
-        if subpath?(gemspec, @ruby_exec_prefix)
-          path = relative_path(@ruby_exec_prefix, gemspec)
+        if gemspec.subpath?(@ruby_exec_prefix)
+          path = gemspec.relative_path_from(@ruby_exec_prefix)
           sb.createfile(gemspec, path)
-        elsif defined?(Gem) and gemhome = Gem.path.find { |pth| subpath?(gemspec, pth) }
-          path = File.join('gemhome', relative_path(gemhome, gemspec))
+        elsif defined?(Gem) and gemhome = Gem.path.find { |pth| gemspec.subpath?(pth) }
+          path = GEMHOMEDIR / gemspec.relative_path_from(gemhome)
           sb.createfile(gemspec, path)
         else
           raise "#{gemspec} does not exist in the Ruby installation. Don't know where to put it."
@@ -513,13 +574,15 @@ EOF
 
       # Set environment variable
       sb.setenv('RUBYOPT', ENV['RUBYOPT'] || '')
-      sb.setenv('RUBYLIB', load_path.map{|path| dospath(path)}.uniq.join(';'))
-      sb.setenv('GEM_PATH', "#{TEMPDIR_MARKER}\\gemhome")
+      sb.setenv('RUBYLIB', load_path.map{|path| path.to_native}.uniq.join(';'))
+      sb.setenv('GEM_PATH', (TEMPDIR_ROOT / GEMHOMEDIR).to_native)
 
       # Launch the script
-      extra_arg = Ocra.arg.map { |a| ' "' + a.gsub(/\"/,'\\"') + '"' }.join
-      sb.postcreateprocess(TEMPDIR_MARKER + "\\bin\\" + rubyexe,
-        "#{rubyexe} \"\xff\\" + Ocra.dospath(target_script) + "\"#{extra_arg}")
+      extra_arg = Ocra.arg.map { |arg| ' "' + arg.gsub(/\"/,'\\"') + '"' }.join
+      installed_ruby_exe = TEMPDIR_ROOT / BINDIR / rubyexe
+      launch_script = (TEMPDIR_ROOT / target_script).to_native
+      sb.postcreateprocess(installed_ruby_exe,
+        "#{rubyexe} \"#{launch_script}\"#{extra_arg}")
       
       puts "=== Compressing" unless Ocra.quiet or not Ocra.lzma_mode
     end
@@ -546,20 +609,20 @@ EOF
       end
       
       handles = module_handle_buffer.unpack("I*")
-      handles.select{|x|x>0}.map do |h|
+      handles.select { |handle| handle > 0 }.map do |handle|
         str = "\x00" * 256
-        r = getmodulefilename.call(h, str, str.size)
-        str[0,r]
+        modulefilename_length = getmodulefilename.call(handle, str, str.size)
+        Ocra.Pathname(str[0,modulefilename_length])
       end
     end
 
     def LibraryDetector.detect_dlls
       loaded = loaded_dlls
-      exec_prefix = RbConfig::CONFIG['exec_prefix']
+      exec_prefix = Ocra.Pathname(RbConfig::CONFIG['exec_prefix'])
       loaded.select do |path|
-        Ocra.subpath?(path, exec_prefix) and
-          File.basename(path) =~ /\.dll$/i and
-          File.basename(path).downcase != RbConfig::CONFIG['LIBRUBY_SO'].downcase
+        path.subpath?(exec_prefix) and
+          path.basename.ext?('.dll') and
+          path.basename.to_s.downcase != RbConfig::CONFIG['LIBRUBY_SO'].downcase
       end
     end
   end
@@ -571,7 +634,6 @@ EOF
     def initialize(path, windowed)
       @paths = {}
       File.open(path, "wb") do |ocrafile|
-
         if windowed
           ocrafile.write(Ocra.stubwimage)
         else
@@ -617,34 +679,36 @@ EOF
     end
 
     def mkdir(path)
-      @paths[path.downcase] = true
+      @paths[path.path.downcase] = true
       puts "m #{showtempdir path}" unless Ocra.quiet
-      @of << [OP_CREATE_DIRECTORY, Ocra.dospath(path)].pack("VZ*")
+      @of << [OP_CREATE_DIRECTORY, path.to_native].pack("VZ*")
     end
 
     def ensuremkdir(tgt)
-      return if tgt == "."
-      if not @paths[Ocra.posixpath(tgt.downcase)]
-        ensuremkdir(File.dirname(tgt))
+      tgt = Ocra.Pathname(tgt)
+      return if tgt.path == "."
+      if not @paths[tgt.to_posix.downcase]
+        ensuremkdir(tgt.dirname)
         mkdir(tgt)
       end
     end
 
     def createfile(src, tgt)
-      ensuremkdir(File.dirname(tgt))
+      src, tgt = Ocra.Pathname(src), Ocra.Pathname(tgt)
+      ensuremkdir(tgt.dirname)
       str = File.open(src, "rb") { |file| file.read }
       puts "a #{showtempdir tgt}" unless Ocra.quiet
-      @of << [OP_CREATE_FILE, Ocra.dospath(tgt), str.size, str].pack("VZ*VA*")
+      @of << [OP_CREATE_FILE, tgt.to_native, str.size, str].pack("VZ*VA*")
     end
 
     def createprocess(image, cmdline)
       puts "l #{showtempdir image} #{showtempdir cmdline}" unless Ocra.quiet
-      @of << [OP_CREATE_PROCESS, Ocra.dospath(image), cmdline].pack("VZ*Z*")
+      @of << [OP_CREATE_PROCESS, image.to_native, cmdline].pack("VZ*Z*")
     end
 
     def postcreateprocess(image, cmdline)
       puts "p #{showtempdir image} #{showtempdir cmdline}" unless Ocra.quiet
-      @of << [OP_POST_CREATE_PROCESS, Ocra.dospath(image), cmdline].pack("VZ*Z*")
+      @of << [OP_POST_CREATE_PROCESS, image.to_native, cmdline].pack("VZ*Z*")
     end
 
     def setenv(name, value)
@@ -657,7 +721,7 @@ EOF
     end
 
     def showtempdir(x)
-      x.gsub(TEMPDIR_MARKER, "<tempdir>")
+      x.to_s.gsub(TEMPDIR_ROOT, "<tempdir>")
     end
       
   end # class OcraBuilder
@@ -668,7 +732,7 @@ if File.basename(__FILE__) == File.basename($0)
   Ocra.init(ARGV)
   ARGV.replace(Ocra.arg)
 
-  if !File.exist?(Ocra.files[0])
+  if not Ocra.files.first.exist?
     puts "ERROR: #{Ocra.files[0]} was not found!"
     exit
   end
@@ -681,6 +745,6 @@ if File.basename(__FILE__) == File.basename($0)
   end
 
   puts "=== Loading script to check dependencies" unless Ocra.quiet
-  $0 = Ocra.files[0]
-  load Ocra.files[0]
+  $0 = Ocra.files.first
+  load Ocra.files.first
 end
