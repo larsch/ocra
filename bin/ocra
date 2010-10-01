@@ -15,9 +15,9 @@ module Ocra
     end
 
     attr_reader :path
-    SEPARATOR_PAT = /[#{Regexp.quote File::ALT_SEPARATOR}#{Regexp.quote File::SEPARATOR}]/
+    SEPARATOR_PAT = /[#{Regexp.quote File::ALT_SEPARATOR}#{Regexp.quote File::SEPARATOR}]/ # }
     ABSOLUTE_PAT = /\A([A-Z]:)?#{SEPARATOR_PAT}/i
-      
+    
     def initialize(path)
       @path = path
     end
@@ -84,6 +84,8 @@ module Ocra
     alias to_str to_posix
   end
 
+  # Type conversion for the Pathname class. Works with Pathname,
+  # String, NilClass and arrays of any of these.
   def self.Pathname(obj)
     case obj
     when Pathname
@@ -92,20 +94,43 @@ module Ocra
       obj.map { |x| Pathname(x) }
     when String
       Pathname.new(obj)
+    when NilClass
+      nil
     else
       raise ArgumentError, obj
     end
   end
   
-  Signature = [0x41, 0xb6, 0xba, 0x4e]
-  OP_END = 0
-  OP_CREATE_DIRECTORY = 1
-  OP_CREATE_FILE = 2
-  OP_CREATE_PROCESS = 3
-  OP_DECOMPRESS_LZMA = 4
-  OP_SETENV = 5
-  OP_POST_CREATE_PROCESS = 6
-
+  # Variables describing the host's build environment.
+  module Host
+    class << self
+      def exec_prefix
+        @exec_prefix ||= Ocra.Pathname(RbConfig::CONFIG['exec_prefix'])
+      end
+      def sitelibdir
+        @sitelibdir ||= Ocra.Pathname(RbConfig::CONFIG['sitelibdir'])
+      end
+      def bindir
+        @bindir ||= Ocra.Pathname(RbConfig::CONFIG['bindir'])
+      end
+      def libruby_so
+        @libruby_so ||= Ocra.Pathname(RbConfig::CONFIG['LIBRUBY_SO'])
+      end
+      def exeext
+        RbConfig::CONFIG['EXEEXT'] || ".exe"
+      end
+      def rubyw_exe
+        @rubyw_exe ||= (RbConfig::CONFIG['rubyw_install_name'] || "rubyw") + exeext
+      end
+      def ruby_exe
+        @ruby_exe ||= (RbConfig::CONFIG['ruby_install_name'] || "ruby") + exeext     
+      end
+      def tempdir
+        @tempdir ||= Ocra.Pathname(ENV['TEMP'])
+      end
+    end
+  end
+  
   VERSION = "1.2.0"
 
   IGNORE_MODULES = /^enumerator.so$/
@@ -175,14 +200,13 @@ module Ocra
 
   def Ocra.find_stubs
     if defined?(DATA)
-      tempdir = Pathname(ENV['TEMP'])
       @stubimage = get_next_embedded_image
       @stubwimage = get_next_embedded_image
       lzmaimage = get_next_embedded_image
-      @lzmapath = tempdir / 'lzma.exe'
+      @lzmapath = Host.tempdir / 'lzma.exe'
       File.open(@lzmapath, "wb") { |file| file << lzmaimage }
       ediconimage = get_next_embedded_image
-      @ediconpath = tempdir / 'edicon.exe'
+      @ediconpath = Host.tempdir / 'edicon.exe'
       File.open(@ediconpath, "wb") { |file| file << ediconimage }
     else
       ocrapath = Pathname(File.dirname(__FILE__))
@@ -319,7 +343,7 @@ EOF
   def Ocra.find_src_root(files)
     src_files = files.map { |file| file.expand }
     src_prefix = src_files.inject(src_files.first.dirname) do |srcroot, path|
-      if path.subpath?(@ruby_exec_prefix)
+      if path.subpath?(Host.exec_prefix)
         srcroot
       else
         loop do
@@ -415,12 +439,7 @@ EOF
     end
 
     require 'rbconfig'
-    @ruby_exec_prefix = Pathname(RbConfig::CONFIG['exec_prefix'])
-    src_prefix = Dir.pwd
-    sitelibdir = Pathname(RbConfig::CONFIG['sitelibdir'])
-    bindir = Pathname(RbConfig::CONFIG['bindir'])
-    libruby_so = Pathname(RbConfig::CONFIG['LIBRUBY_SO'])
-    instsitelibdir = sitelibdir.relative_path_from(@ruby_exec_prefix)
+    instsitelibdir = Host.sitelibdir.relative_path_from(Host.exec_prefix)
 
     load_path = []
     src_load_path = []
@@ -445,10 +464,10 @@ EOF
         end
         fullpath = feature.expand(path)
         
-        if fullpath.subpath?(@ruby_exec_prefix)
+        if fullpath.subpath?(Host.exec_prefix)
           # Features found in the Ruby installation are put in the
           # temporary Ruby installation.
-          libs << [ fullpath, fullpath.relative_path_from(@ruby_exec_prefix) ]
+          libs << [ fullpath, fullpath.relative_path_from(Host.exec_prefix) ]
         elsif defined?(Gem) and gemhome = Gem.path.find { |pth| fullpath.subpath?(pth) }
           # Features found in any other Gem path (e.g. ~/.gems) is put
           # in a special 'gemhome' folder.
@@ -469,8 +488,8 @@ EOF
           Ocra.files << fullpath
         else
           # All other feature that can not be resolved go in the the
-          # Ruby site dir. This is automatically in the load path when
-          # Ruby starts.
+          # Ruby sitelibdir. This is automatically in the load path
+          # when Ruby starts.
           libs << [ fullpath, instsitelibdir / feature ]
         end
       end
@@ -488,8 +507,8 @@ EOF
     # Decide where to put gem files, either the system gem folder, or
     # GEMHOME.
     gem_files.each do |gemfile|
-      if gemfile.subpath?(@ruby_exec_prefix)
-        libs << [ gemfile, gemfile.relative_path(@ruby_exec_prefix) ]
+      if gemfile.subpath?(Host.exec_prefix)
+        libs << [ gemfile, gemfile.relative_path(Host.exec_prefix) ]
       elsif defined?(Gem) and gemhome = Gem.path.find { |pth| gemfile.subpath?(pth) }
         targetpath = GEMHOMEDIR / fullpath.relative_path_from(gemhome)
         libs << [ gemfile, targetpath ]
@@ -511,8 +530,8 @@ EOF
       # Add explicitly mentioned files
       Ocra.files.each do |file|
         file = src_prefix / file
-        if file.subpath?(@ruby_exec_prefix)
-          target = file.relative_path_from(@ruby_exec_prefix)
+        if file.subpath?(Host.exec_prefix)
+          target = file.relative_path_from(Host.exec_prefix)
         elsif file.subpath?(src_prefix)
           target = SRCDIR / file.relative_path_from(src_prefix)
         else
@@ -530,19 +549,19 @@ EOF
 
       # Add the ruby executable and DLL
       if windowed
-        rubyexe = (RbConfig::CONFIG['rubyw_install_name'] || "rubyw") + ".exe"
+        rubyexe = Host.rubyw_exe
       else
-        rubyexe = (RbConfig::CONFIG['ruby_install_name'] || "ruby") + ".exe"
+        rubyexe = Host.ruby_exe
       end
-      sb.createfile(bindir / rubyexe, BINDIR / rubyexe)
-      if libruby_so
-        sb.createfile(bindir / libruby_so, BINDIR / libruby_so)
+      sb.createfile(Host.bindir / rubyexe, BINDIR / rubyexe)
+      if Host.libruby_so
+        sb.createfile(Host.bindir / Host.libruby_so, BINDIR / Host.libruby_so)
       end
 
       # Add detected DLLs
       dlls.each do |dll|
-        if dll.subpath?(@ruby_exec_prefix)
-          target = dll.relative_path_from(@ruby_exec_prefix)
+        if dll.subpath?(Host.exec_prefix)
+          target = dll.relative_path_from(Host.exec_prefix)
         else
           target = BINDIR / File.basename(dll)
         end
@@ -551,13 +570,13 @@ EOF
       
       # Add extra DLLs specified on the command line
       Ocra.extra_dlls.each do |dll|
-        sb.createfile(bindir / dll, BINDIR / dll)
+        sb.createfile(Host.bindir / dll, BINDIR / dll)
       end
       
       # Add gemspec files
       @gemspecs.each do |gemspec|
-        if gemspec.subpath?(@ruby_exec_prefix)
-          path = gemspec.relative_path_from(@ruby_exec_prefix)
+        if gemspec.subpath?(Host.exec_prefix)
+          path = gemspec.relative_path_from(Host.exec_prefix)
           sb.createfile(gemspec, path)
         elsif defined?(Gem) and gemhome = Gem.path.find { |pth| gemspec.subpath?(pth) }
           path = GEMHOMEDIR / gemspec.relative_path_from(gemhome)
@@ -618,12 +637,8 @@ EOF
 
     def LibraryDetector.detect_dlls
       loaded = loaded_dlls
-      exec_prefix = Ocra.Pathname(RbConfig::CONFIG['exec_prefix'])
-      loaded.select do |path|
-        path.subpath?(exec_prefix) and
-          path.basename.ext?('.dll') and
-          path.basename.to_s.downcase != RbConfig::CONFIG['LIBRUBY_SO'].downcase
-      end
+      exec_prefix = Host.exec_prefix
+      loaded.select { |path| path.subpath?(exec_prefix) && path.basename.ext?('.dll') && path.basename != Host.libruby_so }
     end
   end
 
@@ -631,6 +646,15 @@ EOF
   # (createfile, mkdir etc) are added by invoking methods on an
   # instance of OcraBuilder.
   class OcraBuilder
+    Signature = [0x41, 0xb6, 0xba, 0x4e]
+    OP_END = 0
+    OP_CREATE_DIRECTORY = 1
+    OP_CREATE_FILE = 2
+    OP_CREATE_PROCESS = 3
+    OP_DECOMPRESS_LZMA = 4
+    OP_SETENV = 5
+    OP_POST_CREATE_PROCESS = 6
+
     def initialize(path, windowed)
       @paths = {}
       File.open(path, "wb") do |ocrafile|
@@ -723,7 +747,7 @@ EOF
     def showtempdir(x)
       x.to_s.gsub(TEMPDIR_ROOT, "<tempdir>")
     end
-      
+    
   end # class OcraBuilder
   
 end # module Ocra
