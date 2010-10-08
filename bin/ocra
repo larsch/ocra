@@ -292,7 +292,7 @@ EOF
   # (and hence classes), and checks their constants for autoloaded
   # ones, then attempts to load them.
   def Ocra.attempt_load_autoload
-    modules_checked = []
+    modules_checked = {}
     loop do
       modules_to_check = []
       ObjectSpace.each_object(Module) do |mod|
@@ -300,7 +300,7 @@ EOF
       end
       break if modules_to_check.empty?
       modules_to_check.each do |mod|
-        modules_checked << mod
+        modules_checked[mod] = true
         mod.constants.each do |const|
           if mod.autoload?(const)
             begin
