@@ -72,6 +72,7 @@ module Ocra
 
     def ==(other); to_posix.downcase == other.to_posix.downcase; end
     def =~(o); @path =~ o; end
+    def <=>(other); @path.casecmp(other.path); end
     def exist?; File.exist?(@path); end
     def file?; File.file?(@path); end
     def directory?; File.directory?(@path); end
@@ -130,6 +131,12 @@ module Ocra
       end
     end
   end
+
+  # Sorts and returns an array without duplicates. Works with complex
+  # objects (such as Pathname), in contrast to Array#uniq.
+  def self.sort_uniq(a)
+    a.sort.inject([]) { |r, e| r.last == e ? r : r << e }
+  end
   
   VERSION = "1.2.0"
 
@@ -137,11 +144,11 @@ module Ocra
 
   IGNORE_GEMFILES = %r{(
     # Auxiliary files in the root of the gem
-    ^(History|Install|Manifest|README|Licen[sc]e).(txt|rdoc)$ |
+    ^(\.\/)?(History|Install|Manifest|README|Licen[sc]e|Contributors|ChangeLog|BSD|GPL).*$ |
     # Installation files in the root of the gem
-    ^(Rakefile|setup.rb|extconf.rb)$ |
+    ^(\.\/)?(Rakefile|setup.rb|extconf.rb)$ |
     # Documentation/test directories in the root of the gem
-    ^(doc|ext|examples|test|tests|benchmarks)\/ |
+    ^(\.\/)?(doc|ext|examples|test|tests|benchmarks)\/ |
     # Directories anywhere
     (^|\/)(\.autotest|\.svn\.cvs)(\/|$) |
     # Unlikely extensions
@@ -384,13 +391,13 @@ EOF
           geminstallpath = Pathname(gempath) / "gems"
           if feature.subpath?(geminstallpath)
             gemlocalpath = feature.relative_path_from(geminstallpath)
-            fullgemname = gemlocalpath.split('/')[0]
+            fullgemname = gemlocalpath.path.split('/').first
             gems << [gempath, fullgemname]
             features_from_gems << feature
           end
         end
       end
-      gems.sort!.uniq!
+      gems = sort_uniq(gems)
       gem_files = []
       gems.each do |gempath, fullgemname|
         gemspecpath = gempath / 'specifications' / "#{fullgemname}.gemspec"
@@ -398,17 +405,17 @@ EOF
         spec = Gem::Specification.load(gemspecpath)
 
         # Get list of files
-        files = spec.files
+        files = Pathname(spec.files)
         # Filter out some unlikely files (Readme, etc.)
-        files = files.select { |filename| filename !~ IGNORE_GEMFILES } if Ocra.gem_filter
+        files = files.select { |filename| filename.basename !~ IGNORE_GEMFILES } if Ocra.gem_filter
         # Find the full path
-        files = files.map { |file| gempath / "gems" / fullgemname / file }
+        files = files.map { |file| (gempath / "gems" / fullgemname / file).expand }
         # Filter out non-files
         files = files.select { |file| file.file? }
         
         gem_files += files
       end
-      gem_files.sort!.uniq!
+      gem_files = sort_uniq(gem_files)
       features -= features_from_gems
     else
       gem_files = []
@@ -433,7 +440,7 @@ EOF
 
     # Find gemspecs to include
     if defined?(Gem)
-      @gemspecs = Gem.loaded_specs.map { |name,info| info.loaded_from }
+      @gemspecs = Gem.loaded_specs.map { |name,info| Pathname(info.loaded_from) }
     else
       @gemspecs = []
     end
@@ -508,7 +515,7 @@ EOF
     # GEMHOME.
     gem_files.each do |gemfile|
       if gemfile.subpath?(Host.exec_prefix)
-        libs << [ gemfile, gemfile.relative_path(Host.exec_prefix) ]
+        libs << [ gemfile, gemfile.relative_path_from(Host.exec_prefix) ]
       elsif defined?(Gem) and gemhome = Gem.path.find { |pth| gemfile.subpath?(pth) }
         targetpath = GEMHOMEDIR / fullpath.relative_path_from(gemhome)
         libs << [ gemfile, targetpath ]
@@ -574,6 +581,7 @@ EOF
       end
       
       # Add gemspec files
+      @gemspecs = sort_uniq(@gemspecs)
       @gemspecs.each do |gemspec|
         if gemspec.subpath?(Host.exec_prefix)
           path = gemspec.relative_path_from(Host.exec_prefix)
