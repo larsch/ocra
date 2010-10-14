@@ -115,7 +115,7 @@ int CALLBACK _tWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPTSTR lpCm
 
    /* Attempt to delete the temp file created by GetTempFileName.
       Ignore errors, i.e. if it doesn't exist. */
-   (void)DeleteFile(InstDir);
+   DeleteFile(InstDir);
 
    /* Create the temporary directory that will hold the extracted files */
    if (!CreateDirectory(InstDir, NULL)){
