@@ -55,7 +55,12 @@ BOOL ExitCondition = FALSE;
    MessageBox(NULL, TextBuffer, _T("OCRA"), MB_OK | MB_ICONWARNING); \
    }
 #endif
-#define DEBUG(...) {}
+
+#if _DEBUG && _CONSOLE
+#define DEBUG(...) { fprintf(stderr, __VA_ARGS__); }
+#else
+#define DEBUG(...)
+#endif
 
 POpcodeHandler OpcodeHandlers[OP_MAX] = {
    &OpEnd,
