@@ -340,8 +340,12 @@ BOOL OpCreateDirectory(LPVOID *p)
    DEBUG("CreateDirectory(%s)\n", DirName);
    
    if (!CreateDirectory(DirName, NULL)){
-      FATAL("Failed to create directory '%s'.\n", DirName);
-      return FALSE;
+      if (GetLastError() == ERROR_ALREADY_EXISTS) {
+        DEBUG("Directory already exists");
+      } else {
+        FATAL("Failed to create directory '%s'.\n", DirName);
+        return FALSE;
+      }
    }
    
    return TRUE;
