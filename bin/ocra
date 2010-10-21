@@ -282,9 +282,14 @@ EOF
       exit
     end
 
-    @options[:files].map! { |glob|
-      files = Dir[glob.tr('\\','/')]
-      raise "#{glob} not found!" if files.empty?
+    @options[:files].map! { |path|
+      path = path.tr('\\','/')
+      if File.directory?(path)
+        # If a directory is passed, we want all files under that directory
+        path = "#{path}/**/*"
+      end
+      files = Dir[path]
+      raise "#{path} not found!" if files.empty?
       files.map { |path| Pathname(path).expand }
     }.flatten!
   end
