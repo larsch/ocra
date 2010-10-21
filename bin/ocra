@@ -60,7 +60,7 @@ module Ocra
 
     def ext(new_ext = nil)
       if new_ext
-        Pathname.new(@path.sub(/\.[^.]*$/) { new_ext })
+        Pathname.new(@path.sub(/\.[^.]*?$/) { new_ext })
       else
         File.extname(@path)
       end
