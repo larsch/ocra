@@ -57,6 +57,10 @@ module Ocra
     def /(other)
       Ocra.Pathname(@path + '/' + Ocra.Pathname(other).path)
     end
+    
+    def append_to_filename!(s)
+      @path.sub!(/(\.[^.]*?|)$/) { s.to_s + $1 }
+    end
 
     def ext(new_ext = nil)
       if new_ext
@@ -175,6 +179,7 @@ module Ocra
     :quiet => false,
     :autodll => true,
     :show_warnings => true,
+    :debug => false,
     :gem_filter => true,
     :arg => []
   }
@@ -186,6 +191,8 @@ module Ocra
     attr_reader :ediconpath
     attr_reader :stubimage
     attr_reader :stubwimage
+    attr_reader :stubdimage
+    attr_reader :stubdwimage
   end
 
   # Returns a binary blob store embedded in the current Ruby script.
@@ -209,6 +216,9 @@ module Ocra
     if defined?(DATA)
       @stubimage = get_next_embedded_image
       @stubwimage = get_next_embedded_image
+      # FIXME - Not sure how to arrange to embed stubd and stubdw
+      @stubdimage = nil
+      @stubdwimage = nil
       lzmaimage = get_next_embedded_image
       @lzmapath = Host.tempdir / 'lzma.exe'
       File.open(@lzmapath, "wb") { |file| file << lzmaimage }
@@ -219,6 +229,8 @@ module Ocra
       ocrapath = Pathname(File.dirname(__FILE__))
       @stubimage = File.open(ocrapath / '../share/ocra/stub.exe', "rb") { |file| file.read }
       @stubwimage = File.open(ocrapath / '../share/ocra/stubw.exe', "rb") { |file| file.read }
+      @stubdimage = File.open(ocrapath / '../share/ocra/stubd.exe', "rb") { |file| file.read }
+      @stubdwimage = File.open(ocrapath / '../share/ocra/stubdw.exe', "rb") { |file| file.read }
       @lzmapath = (ocrapath / '../share/ocra/lzma.exe').expand
       @ediconpath = (ocrapath / '../share/ocra/edicon.exe').expand
     end
@@ -231,6 +243,7 @@ ocra [options] script.rb
 --dll dllname    Include additional DLLs from the Ruby bindir.
 --no-lzma        Disable LZMA compression of the executable.
 --quiet          Suppress output.
+--debug          Executable will be verbose and leave its temp dir around.
 --help           Display this information.
 --windows        Force Windows application (rubyw.exe)
 --console        Force console application (ruby.exe)
@@ -264,6 +277,8 @@ EOF
         exit 0
       when /\A--no-warnings\z/
         @options[:show_warnings] = false
+      when /\A--debug\z/
+        @options[:debug] = true
       when /\A--no-gem-filter\z/
         @options[:gem_filter] = false
       when /\A--\z/
@@ -534,6 +549,7 @@ EOF
     dlls = Ocra.autodll ? LibraryDetector.detect_dlls : []
 
     executable = Ocra.files.first.basename.ext('.exe')
+    executable.append_to_filename!("-debug") if Ocra.debug
 
     windowed = (Ocra.files.first.ext?('.rbw') || Ocra.force_windows) && !Ocra.force_console
 
@@ -672,11 +688,26 @@ EOF
     def initialize(path, windowed)
       @paths = {}
       File.open(path, "wb") do |ocrafile|
+        image = nil
         if windowed
-          ocrafile.write(Ocra.stubwimage)
+          if Ocra.debug
+            image = Ocra.stubdwimage
+          else
+            image = Ocra.stubwimage
+          end
         else
-          ocrafile.write(Ocra.stubimage)
+          if Ocra.debug
+            image = Ocra.stubdimage
+          else
+            image = Ocra.stubimage
+          end
         end
+        
+        unless image
+          puts "ERROR: Stub image not available"
+          exit
+        end
+        ocrafile.write(image)
       end
 
       if Ocra.icon_filename
