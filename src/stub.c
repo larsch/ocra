@@ -47,7 +47,7 @@ DWORD ExitStatus = 0;
 BOOL ExitCondition = FALSE;
 
 #if _CONSOLE
-#define FATAL(...) { fprintf(stderr, __VA_ARGS__); }
+#define FATAL(...) { fprintf(stderr, __VA_ARGS__); fprintf(stderr, "\n"); }
 #else
 #define FATAL(...) { \
    TCHAR TextBuffer[1024]; \
@@ -57,7 +57,7 @@ BOOL ExitCondition = FALSE;
 #endif
 
 #if _DEBUG && _CONSOLE
-#define DEBUG(...) { fprintf(stderr, __VA_ARGS__); }
+#define DEBUG(...) { fprintf(stderr, __VA_ARGS__); fprintf(stderr, "\n"); }
 #else
 #define DEBUG(...)
 #endif
@@ -108,7 +108,7 @@ void DeleteTemporaryDirectory()
 {
 #if _DEBUG
    DEBUG("**********");
-   DEBUG("** Leaving temporary directory: %s\n", InstDir);
+   DEBUG("** Temporary directory not deleted: %s", InstDir);
    DEBUG("**********");
 #else
    SHFILEOPSTRUCT shop;
@@ -127,9 +127,9 @@ int CALLBACK _tWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPTSTR lpCm
    TCHAR TempPath[MAX_PATH];
    GetTempPath(MAX_PATH, TempPath);
    GetTempFileName(TempPath, _T("ocrastub"), 0, InstDir);
-   DEBUG("Temporary directory: %s\n", InstDir);
 
    SetConsoleCtrlHandler(&ConsoleHandleRoutine, TRUE);
+   DEBUG("Temporary directory: %s", InstDir);
 
    /* Attempt to delete the temp file created by GetTempFileName.
       Ignore errors, i.e. if it doesn't exist. */
@@ -154,7 +154,7 @@ int CALLBACK _tWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPTSTR lpCm
    /* Open the image (executable) */
    HANDLE hImage = CreateFile(ImageFileName, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, 0, NULL);
    if (hImage == INVALID_HANDLE_VALUE) {
-      FATAL("Failed to open executable (%s)\n", ImageFileName);
+      FATAL("Failed to open executable (%s)", ImageFileName);
       return -1;
    }      
 
@@ -162,7 +162,7 @@ int CALLBACK _tWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPTSTR lpCm
    DWORD FileSize = GetFileSize(hImage, NULL);
    HANDLE hMem = CreateFileMapping(hImage, NULL, PAGE_READONLY, 0, FileSize, NULL);
    if (hMem == INVALID_HANDLE_VALUE) {
-      FATAL("Failed to create file mapping (error %lu)\n", GetLastError());
+      FATAL("Failed to create file mapping (error %lu)", GetLastError());
       CloseHandle(hImage);
       return -1;
    }
@@ -171,7 +171,7 @@ int CALLBACK _tWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPTSTR lpCm
    LPVOID lpv = MapViewOfFile(hMem, FILE_MAP_READ, 0, 0, 0);
    if (lpv == NULL)
    {
-      FATAL("Failed to map view of executable into memory (error %lu).\n", GetLastError());
+      FATAL("Failed to map view of executable into memory (error %lu).", GetLastError());
    }
    else
    {
@@ -179,14 +179,14 @@ int CALLBACK _tWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPTSTR lpCm
          ExitStatus = -1;
       
       if (!UnmapViewOfFile(lpv))
-         FATAL("Failed to unmap view of executable.\n");
+         FATAL("Failed to unmap view of executable.");
    }
 
    if (!CloseHandle(hMem))
-      FATAL("Failed to close file mapping.\n");
+      FATAL("Failed to close file mapping.");
 
    if (!CloseHandle(hImage))
-      FATAL("Failed to close executable.\n");
+      FATAL("Failed to close executable.");
 
    if (PostCreateProcess_ApplicationName && PostCreateProcess_CommandLine)
    {
@@ -210,14 +210,14 @@ BOOL ProcessImage(LPVOID ptr, DWORD size)
    LPVOID pSig = ptr + size - 4;
    if (memcmp(pSig, Signature, 4) == 0)
    {
-      DEBUG("Good signature found.\n");
+      DEBUG("Good signature found.");
       DWORD OpcodeOffset = *(DWORD*)(pSig - 4);
       LPVOID pSeg = ptr + OpcodeOffset;
       return ProcessOpcodes(&pSeg);
    }
    else
    {
-      FATAL("Bad signature in executable.\n");
+      FATAL("Bad signature in executable.");
       return FALSE;
    }
 }
@@ -237,7 +237,7 @@ BOOL ProcessOpcodes(LPVOID* p)
       }
       else
       {
-         FATAL("Invalid opcode '%lu'.\n", opcode);
+         FATAL("Invalid opcode '%lu'.", opcode);
          return FALSE;
       }
    }
@@ -308,26 +308,26 @@ BOOL OpCreateFile(LPVOID *p)
    lstrcat(Fn, _T("\\"));
    lstrcat(Fn, FileName);
    
-   DEBUG("CreateFile(%s, %lu)\n", Fn, FileSize);
+   DEBUG("CreateFile(%s, %lu)", Fn, FileSize);
    HANDLE hFile = CreateFile(Fn, GENERIC_WRITE, 0, NULL, CREATE_ALWAYS, 0, NULL);
    if (hFile != INVALID_HANDLE_VALUE)
    {
       DWORD BytesWritten;
       if (!WriteFile(hFile, Data, FileSize, &BytesWritten, NULL))
       {
-         FATAL("Write failure (%lu)\n", GetLastError());
+         FATAL("Write failure (%lu)", GetLastError());
          Result = FALSE;
       }
       if (BytesWritten != FileSize)
       {
-         FATAL("Write size failure\n");
+         FATAL("Write size failure");
          Result = FALSE;
       }
       CloseHandle(hFile);
    }
    else
    {
-      FATAL("Failed to create file '%s'\n", Fn);
+      FATAL("Failed to create file '%s'", Fn);
       Result = FALSE;
    }
 
@@ -346,13 +346,13 @@ BOOL OpCreateDirectory(LPVOID *p)
    lstrcat(DirName, _T("\\"));
    lstrcat(DirName, DirectoryName);
    
-   DEBUG("CreateDirectory(%s)\n", DirName);
+   DEBUG("CreateDirectory(%s)", DirName);
    
    if (!CreateDirectory(DirName, NULL)){
       if (GetLastError() == ERROR_ALREADY_EXISTS) {
         DEBUG("Directory already exists");
       } else {
-        FATAL("Failed to create directory '%s'.\n", DirName);
+        FATAL("Failed to create directory '%s'.", DirName);
         return FALSE;
       }
    }
@@ -407,14 +407,14 @@ void CreateAndWaitForProcess(LPTSTR ApplicationName, LPTSTR CommandLine)
 
    if (!r)
    {
-      FATAL("Failed to create process (%s): %lu\n", ApplicationName, GetLastError());
+      FATAL("Failed to create process (%s): %lu", ApplicationName, GetLastError());
       return;
    }
 
    WaitForSingleObject(ProcessInformation.hProcess, INFINITE);
 
    if (!GetExitCodeProcess(ProcessInformation.hProcess, &ExitStatus))
-      FATAL("Failed to get exit status (error %lu).\n", GetLastError());
+      FATAL("Failed to get exit status (error %lu).", GetLastError());
 
    CloseHandle(ProcessInformation.hProcess);
    CloseHandle(ProcessInformation.hThread);
@@ -450,7 +450,7 @@ BOOL OpDecompressLzma(LPVOID *p)
    BOOL Success = TRUE;
    
    DWORD CompressedSize = GetInteger(p);
-   DEBUG("LzmaDecode(%ld)\n", CompressedSize);
+   DEBUG("LzmaDecode(%ld)", CompressedSize);
    
    Byte* src = (Byte*)*p;
    *p += CompressedSize;
@@ -469,7 +469,7 @@ BOOL OpDecompressLzma(LPVOID *p)
                          src, LZMA_PROPS_SIZE, LZMA_FINISH_ANY, &status, &alloc);
    if (res != SZ_OK)
    {
-      FATAL("LZMA decompression failed.\n");
+      FATAL("LZMA decompression failed.");
       Success = FALSE;
    }
    else
@@ -496,12 +496,12 @@ BOOL OpSetEnv(LPVOID* p)
    LPTSTR Value = GetString(p);
    LPTSTR ExpandedValue;
    ExpandPath(&ExpandedValue, Value);
-   DEBUG("SetEnv(%s, %s)\n", Name, ExpandedValue);
+   DEBUG("SetEnv(%s, %s)", Name, ExpandedValue);
 
    BOOL Result = FALSE;
    if (!SetEnvironmentVariable(Name, ExpandedValue))
    {
-      FATAL("Failed to set environment variable (error %lu).\n", GetLastError());
+      FATAL("Failed to set environment variable (error %lu).", GetLastError());
       Result = FALSE;
    }
    else
