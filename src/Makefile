@@ -1,6 +1,7 @@
 SRCS = lzma/lzmadec.c
 OBJS = $(SRCS:.c=.o) stubicon.o
 CC = gcc
+BINDIR = $(CURDIR)/../share/ocra
 
 CFLAGS = -Wall -O2 -DWITH_LZMA -Ilzma -s
 # CFLAGS += -D_DEBUG
@@ -31,3 +32,7 @@ clean:
 edicon.exe: edicon.o
 	$(CC) $(CFLAGS) edicon.o -o edicon
 
+install: stub.exe stubw.exe edicon.exe
+	cp -f stub.exe $(BINDIR)/stub.exe
+	cp -f stubw.exe $(BINDIR)/stubw.exe
+	cp -f edicon.exe $(BINDIR)/edicon.exe
