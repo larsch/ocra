@@ -13,12 +13,14 @@ source code. The executable is a self-extracting, self-running
 executable that contains the Ruby interpreter, your source code and
 any additionally needed ruby libraries or DLL.
 
-== FEATURES/PROBLEMS:
+== FEATURES
 
 * LZMA Compression (optional, default on)
 * Windows support only
 * Ruby 1.9 support
 * Both windowed/console mode supported
+
+== PROBLEMS & BUG REPORTING:
 
 If you experience problems with OCRA or have found a bug, please use
 the issue tracker on GitHub
