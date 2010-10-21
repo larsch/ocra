@@ -357,6 +357,7 @@ EOF
           relpath = path.relative_path_from(srcroot)
           if relpath.absolute?
             puts "ERROR: No common directory contains all specified files"
+            exit
           end
           if relpath.to_s =~ /^\.\.\//
             srcroot = srcroot.dirname
