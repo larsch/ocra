@@ -16,11 +16,12 @@ any additionally needed ruby libraries or DLL.
 == FEATURES
 
 * LZMA Compression (optional, default on)
-* Windows support only
 * Ruby 1.9 support
 * Both windowed/console mode supported
 
 == PROBLEMS & BUG REPORTING:
+
+* Windows support only
 
 If you experience problems with OCRA or have found a bug, please use
 the issue tracker on GitHub (http://github.com/larsch/ocra/issues).
