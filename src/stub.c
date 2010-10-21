@@ -108,7 +108,7 @@ void DeleteTemporaryDirectory()
 {
 #if _DEBUG
    DEBUG("**********");
-   DEBUG("** Temporary directory not deleted: %s", InstDir);
+   DEBUG("Temp dir not deleted: %s", InstDir);
    DEBUG("**********");
 #else
    SHFILEOPSTRUCT shop;
@@ -124,12 +124,33 @@ void DeleteTemporaryDirectory()
 
 int CALLBACK _tWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPTSTR lpCmdLine, int nCmdShow)
 {
-   TCHAR TempPath[MAX_PATH];
-   GetTempPath(MAX_PATH, TempPath);
-   GetTempFileName(TempPath, _T("ocrastub"), 0, InstDir);
+   /* Find name of image */
+   TCHAR ImageFileName[MAX_PATH];
+   if (!GetModuleFileName(NULL, ImageFileName, MAX_PATH)) {
+      FATAL("Failed to get executable name (error %lu).", GetLastError());
+      return -1;
+   }
 
-   SetConsoleCtrlHandler(&ConsoleHandleRoutine, TRUE);
-   DEBUG("Temporary directory: %s", InstDir);
+   TCHAR TempPath[MAX_PATH];
+#if _DEBUG
+   // In debug mode, create the temp directory next to the exe
+   strncpy(TempPath, ImageFileName, MAX_PATH);
+   unsigned int i;
+   for (i = strlen(TempPath)-1; i >= 0; --i) {
+     if (TempPath[i] == '\\') {
+       TempPath[i] = 0;
+       break;
+     }
+   }
+   if (strlen(TempPath) == 0) {
+     FATAL("Unable to find directory containing exe");
+     return -1;
+   }
+#else
+   GetTempPath(MAX_PATH, TempPath);
+#endif
+   GetTempFileName(TempPath, _T("ocrastub"), 0, InstDir);
+   DEBUG("Temporary directory: '%s'", InstDir);
 
    /* Attempt to delete the temp file created by GetTempFileName.
       Ignore errors, i.e. if it doesn't exist. */
@@ -137,19 +158,14 @@ int CALLBACK _tWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPTSTR lpCm
 
    /* Create the temporary directory that will hold the extracted files */
    if (!CreateDirectory(InstDir, NULL)){
-      FATAL("Failed to create temporary directory.\n");
-      return -1;
-   }
-
-   /* Find name of image */
-   TCHAR ImageFileName[MAX_PATH];
-   if (!GetModuleFileName(NULL, ImageFileName, MAX_PATH)) {
-      FATAL("Failed to get executable name (error %lu).\n", GetLastError());
+      FATAL("Failed to create temporary directory.");
       return -1;
    }
 
    /* Set up environment */
    SetEnvironmentVariable(_T("OCRA_EXECUTABLE"), ImageFileName);
+   
+   SetConsoleCtrlHandler(&ConsoleHandleRoutine, TRUE);
 
    /* Open the image (executable) */
    HANDLE hImage = CreateFile(ImageFileName, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, 0, NULL);
@@ -190,6 +206,9 @@ int CALLBACK _tWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPTSTR lpCm
 
    if (PostCreateProcess_ApplicationName && PostCreateProcess_CommandLine)
    {
+      DEBUG("**********");
+      DEBUG("Starting app in: %s", InstDir);
+      DEBUG("**********");
       CreateAndWaitForProcess(PostCreateProcess_ApplicationName, PostCreateProcess_CommandLine);
    }
 
