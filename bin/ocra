@@ -150,7 +150,7 @@ module Ocra
     # Documentation/test directories in the root of the gem
     ^(\.\/)?(doc|ext|examples|test|tests|benchmarks)\/ |
     # Directories anywhere
-    (^|\/)(\.autotest|\.svn|\.cvs)(\/|$) |
+    (^|\/)(\.autotest|\.svn|\.cvs|\.git)(\/|$) |
     # Unlikely extensions
     \.(rdoc)$/
   )}xi
