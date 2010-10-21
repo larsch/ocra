@@ -104,6 +104,24 @@ BOOL WINAPI ConsoleHandleRoutine(DWORD dwCtrlType)
    return TRUE;
 }
 
+void DeleteTemporaryDirectory()
+{
+#if _DEBUG
+   DEBUG("**********");
+   DEBUG("** Leaving temporary directory: %s\n", InstDir);
+   DEBUG("**********");
+#else
+   SHFILEOPSTRUCT shop;
+   shop.hwnd = NULL;
+   shop.wFunc = FO_DELETE;
+   InstDir[lstrlen(InstDir) + sizeof(TCHAR)] = 0;
+   shop.pFrom = InstDir;
+   shop.pTo = NULL;
+   shop.fFlags = FOF_NOCONFIRMATION | FOF_SILENT | FOF_NOERRORUI;
+   SHFileOperation(&shop);
+#endif
+}
+
 int CALLBACK _tWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPTSTR lpCmdLine, int nCmdShow)
 {
    TCHAR TempPath[MAX_PATH];
@@ -175,17 +193,8 @@ int CALLBACK _tWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPTSTR lpCm
       CreateAndWaitForProcess(PostCreateProcess_ApplicationName, PostCreateProcess_CommandLine);
    }
 
-   /* Remove the temporary directory */
-   SHFILEOPSTRUCT shop;
-   shop.hwnd = NULL;
-   shop.wFunc = FO_DELETE;
-   InstDir[lstrlen(InstDir) + sizeof(TCHAR)] = 0;
-   shop.pFrom = InstDir;
-   shop.pTo = NULL;
-   shop.fFlags = FOF_NOCONFIRMATION | FOF_SILENT | FOF_NOERRORUI;
-   SHFileOperation(&shop);
-   DEBUG("Removing temporary files\n");
-
+   /* Remove the temporary directory and exit */
+   DeleteTemporaryDirectory();
    ExitProcess(ExitStatus);
 
    /* Never gets here */
