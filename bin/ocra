@@ -172,6 +172,7 @@ module Ocra
     :lzma_mode => true,
     :extra_dlls => [],
     :files => [],
+    :run_script => true,
     :load_autoload => true,
     :force_windows => false,
     :force_console => false,
@@ -242,6 +243,7 @@ ocra [options] script.rb
 
 --dll dllname    Include additional DLLs from the Ruby bindir.
 --no-lzma        Disable LZMA compression of the executable.
+--no-dep-run     Don't run script.rb to check for dependencies
 --quiet          Suppress output.
 --debug          Executable will be verbose and leave its temp dir around.
 --help           Display this information.
@@ -257,6 +259,8 @@ EOF
       case arg
       when /\A--(no-)?lzma\z/
         @options[:lzma_mode] = !$1
+      when /\A--no-dep-run\z/
+        @options[:run_script] = false
       when /\A--dll\z/
         @options[:extra_dlls] << argv.shift
       when /\A--quiet\z/
@@ -813,7 +817,9 @@ if File.basename(__FILE__) == File.basename($0)
     end
   end
 
-  puts "=== Loading script to check dependencies" unless Ocra.quiet
-  $0 = Ocra.files.first
-  load Ocra.files.first
+  if Ocra.run_script
+    puts "=== Loading script to check dependencies" unless Ocra.quiet
+    $0 = Ocra.files.first
+    load Ocra.files.first
+  end
 end
