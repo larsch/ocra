@@ -173,6 +173,7 @@ module Ocra
     :extra_dlls => [],
     :files => [],
     :run_script => true,
+    :add_all_core => false,
     :load_autoload => true,
     :force_windows => false,
     :force_console => false,
@@ -243,7 +244,8 @@ ocra [options] script.rb
 
 --dll dllname    Include additional DLLs from the Ruby bindir.
 --no-lzma        Disable LZMA compression of the executable.
---no-dep-run     Don't run script.rb to check for dependencies
+--no-dep-run     Don't run script.rb to check for dependencies.
+--add-all-core   Add all core ruby libraries to the executable.
 --quiet          Suppress output.
 --debug          Executable will be verbose and leave its temp dir around.
 --help           Display this information.
@@ -261,6 +263,8 @@ EOF
         @options[:lzma_mode] = !$1
       when /\A--no-dep-run\z/
         @options[:run_script] = false
+      when /\A--add-all-core\z/
+        @options[:add_all_core] = true
       when /\A--dll\z/
         @options[:extra_dlls] << argv.shift
       when /\A--quiet\z/
@@ -441,7 +445,7 @@ EOF
         gem_files += files
       end
       gem_files = sort_uniq(gem_files)
-      features -= features_from_gems
+      features -= features_from_gems # FIXME Isn't this duplicated by caller?
     else
       gem_files = []
     end
@@ -454,14 +458,18 @@ EOF
     working_directory = Pathname.pwd.expand
 
     restore_environment
-    
-    # Attempt to autoload libraries before doing anything else.
-    attempt_load_autoload if Ocra.load_autoload
+      
+    features = []
+    # If the script was ran, then detect the features it used 
+    if Ocra.run_script
+      # Attempt to autoload libraries before doing anything else.
+      attempt_load_autoload if Ocra.load_autoload
 
-    # Store the currently loaded files (before we require rbconfig for
-    # our own use).
-    features = $LOADED_FEATURES.map { |feature| Pathname(feature) }
-    features.delete_if { |feature| feature =~ IGNORE_MODULES }
+      # Store the currently loaded files (before we require rbconfig for
+      # our own use).
+      features = $LOADED_FEATURES.map { |feature| Pathname(feature) }
+      features.delete_if { |feature| feature =~ IGNORE_MODULES }
+    end
 
     # Find gemspecs to include
     if defined?(Gem)
@@ -527,7 +535,7 @@ EOF
       end
     end
 
-    # Recompute the src_prefix. Files may have been added implicitely
+    # Recompute the src_prefix. Files may have been added implicitly
     # while scanning through features.
     src_prefix, src_files = find_src_root(Ocra.files)
     Ocra.files.replace(src_files)
@@ -625,12 +633,27 @@ EOF
         sb.createfile(path, target)
       end
 
+      # If requested, add all ruby standard libraries
+      if Ocra.add_all_core
+        @load_path_before.each do |lp|
+          path = Pathname.new(lp)
+          next unless path.to_posix =~ /\/(ruby\/(?:site_ruby\/|vendor_ruby\/)?[0-9.]+)\/?$/i
+          subdir = $1
+          Dir["#{lp}/**/*"].each do |f|
+            fpath = Pathname.new(f)
+            next if fpath.directory?
+            tgt = "lib/#{subdir}/#{fpath.relative_path_from(path).to_posix}"
+            sb.createfile(f, tgt)
+          end
+        end
+      end
+
       # Set environment variable
       sb.setenv('RUBYOPT', ENV['RUBYOPT'] || '')
       sb.setenv('RUBYLIB', load_path.map{|path| path.to_native}.uniq.join(';'))
       sb.setenv('GEM_PATH', (TEMPDIR_ROOT / GEMHOMEDIR).to_native)
 
-      # Launch the script
+      # Add the opcode to launch the script
       extra_arg = Ocra.arg.map { |arg| ' "' + arg.gsub(/\"/,'\\"') + '"' }.join
       installed_ruby_exe = TEMPDIR_ROOT / BINDIR / rubyexe
       launch_script = (TEMPDIR_ROOT / target_script).to_native
@@ -691,6 +714,7 @@ EOF
 
     def initialize(path, windowed)
       @paths = {}
+      @files = {}
       File.open(path, "wb") do |ocrafile|
         image = nil
         if windowed
@@ -752,6 +776,7 @@ EOF
     end
 
     def mkdir(path)
+      return if @paths[path.path.downcase]
       @paths[path.path.downcase] = true
       puts "m #{showtempdir path}" unless Ocra.quiet
       @of << [OP_CREATE_DIRECTORY, path.to_native].pack("VZ*")
@@ -767,6 +792,8 @@ EOF
     end
 
     def createfile(src, tgt)
+      return if @files[tgt]
+      @files[tgt] = true
       src, tgt = Ocra.Pathname(src), Ocra.Pathname(tgt)
       ensuremkdir(tgt.dirname)
       str = File.open(src, "rb") { |file| file.read }
