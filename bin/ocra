@@ -557,6 +557,22 @@ EOF
       end
     end
 
+    # If requested, add all ruby standard libraries
+    if Ocra.add_all_core
+      @load_path_before.each do |lp|
+        path = Pathname.new(lp)
+        next unless path.to_posix =~
+          /\/(ruby\/(?:site_ruby\/|vendor_ruby\/)?[0-9.]+)\/?$/i
+        subdir = $1
+        Dir["#{lp}/**/*"].each do |f|
+          fpath = Pathname.new(f)
+          next if fpath.directory?
+          tgt = "lib/#{subdir}/#{fpath.relative_path_from(path).to_posix}"
+          libs << [f, tgt]
+        end
+      end
+    end
+
     # Detect additional DLLs
     dlls = Ocra.autodll ? LibraryDetector.detect_dlls : []
 
@@ -631,22 +647,6 @@ EOF
       # Add loaded libraries (features, gems)
       libs.each do |path, target|
         sb.createfile(path, target)
-      end
-
-      # If requested, add all ruby standard libraries
-      if Ocra.add_all_core
-        @load_path_before.each do |lp|
-          path = Pathname.new(lp)
-          next unless path.to_posix =~
-            /\/(ruby\/(?:site_ruby\/|vendor_ruby\/)?[0-9.]+)\/?$/i
-          subdir = $1
-          Dir["#{lp}/**/*"].each do |f|
-            fpath = Pathname.new(f)
-            next if fpath.directory?
-            tgt = "lib/#{subdir}/#{fpath.relative_path_from(path).to_posix}"
-            sb.createfile(f, tgt)
-          end
-        end
       end
 
       # Set environment variable
