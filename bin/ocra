@@ -637,7 +637,8 @@ EOF
       if Ocra.add_all_core
         @load_path_before.each do |lp|
           path = Pathname.new(lp)
-          next unless path.to_posix =~ /\/(ruby\/(?:site_ruby\/|vendor_ruby\/)?[0-9.]+)\/?$/i
+          next unless path.to_posix =~
+            /\/(ruby\/(?:site_ruby\/|vendor_ruby\/)?[0-9.]+)\/?$/i
           subdir = $1
           Dir["#{lp}/**/*"].each do |f|
             fpath = Pathname.new(f)
