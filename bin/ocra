@@ -246,15 +246,15 @@ ocra [options] script.rb
 --no-lzma        Disable LZMA compression of the executable.
 --no-dep-run     Don't run script.rb to check for dependencies.
 --add-all-core   Add all core ruby libraries to the executable.
---quiet          Suppress output.
+--quiet          Suppress output while building executable.
 --debug          Executable will be verbose and leave its temp dir around.
 --help           Display this information.
 --windows        Force Windows application (rubyw.exe)
 --console        Force console application (ruby.exe)
---no-autoload    Don't load/include script.rb's autoloads
---icon <ico>     Replace icon with a custom one
---version        Display version number
---no-gem-filter  Don't filter readme's, doc, C-source, etc. from gems
+--no-autoload    Don't load/include script.rb's autoloads.
+--icon <ico>     Replace icon with a custom one.
+--version        Display version number and exit.
+--no-gem-filter  Don't filter readme's, doc, C-source, etc. from gems.
 EOF
 
     while arg = argv.shift
