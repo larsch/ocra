@@ -174,6 +174,7 @@ module Ocra
     :files => [],
     :run_script => true,
     :add_all_core => false,
+    :output_override => nil,
     :load_autoload => true,
     :force_windows => false,
     :force_console => false,
@@ -247,6 +248,7 @@ ocra [options] script.rb
 --no-lzma        Disable LZMA compression of the executable.
 --no-dep-run     Don't run script.rb to check for dependencies.
 --add-all-core   Add all core ruby libraries to the executable.
+--output <file>  Name the exe to generate. Defaults to ./<scriptname>.exe.
 --gemfile <file> Add all gems and dependencies listed in a Bundler Gemfile.
 --quiet          Suppress output while building executable.
 --debug          Executable will be verbose and leave its temp dir around.
@@ -267,6 +269,8 @@ EOF
         @options[:run_script] = false
       when /\A--add-all-core\z/
         @options[:add_all_core] = true
+      when /\A--output\z/
+        @options[:output_override] = Pathname(argv.shift)
       when /\A--dll\z/
         @options[:extra_dlls] << argv.shift
       when /\A--quiet\z/
@@ -601,8 +605,13 @@ EOF
     # Detect additional DLLs
     dlls = Ocra.autodll ? LibraryDetector.detect_dlls : []
 
-    executable = Ocra.files.first.basename.ext('.exe')
-    executable.append_to_filename!("-debug") if Ocra.debug
+    executable = nil
+    if Ocra.output_override
+      executable = Ocra.output_override
+    else
+      executable = Ocra.files.first.basename.ext('.exe')
+      executable.append_to_filename!("-debug") if Ocra.debug
+    end
 
     windowed = (Ocra.files.first.ext?('.rbw') || Ocra.force_windows) && !Ocra.force_console
 
