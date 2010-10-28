@@ -178,6 +178,7 @@ module Ocra
     :force_windows => false,
     :force_console => false,
     :icon_filename => nil,
+    :gemfile => nil,
     :quiet => false,
     :autodll => true,
     :show_warnings => true,
@@ -246,6 +247,7 @@ ocra [options] script.rb
 --no-lzma        Disable LZMA compression of the executable.
 --no-dep-run     Don't run script.rb to check for dependencies.
 --add-all-core   Add all core ruby libraries to the executable.
+--gemfile <file> Add all gems and dependencies listed in a Bundler Gemfile.
 --quiet          Suppress output while building executable.
 --debug          Executable will be verbose and leave its temp dir around.
 --help           Display this information.
@@ -278,6 +280,9 @@ EOF
       when /\A--icon\z/
         @options[:icon_filename] = Pathname(argv.shift)
         raise "Icon file #{icon_filename} not found.\n" unless icon_filename.exist?
+      when /\A--gemfile\z/
+        @options[:gemfile] = Pathname(argv.shift)
+        raise "Gemfile #{gemfile} not found.\n" unless gemfile.exist?
       when /\A--no-autodll\z/
         @options[:autodll] = false
       when /\A--version\z/
@@ -408,8 +413,27 @@ EOF
   # file from a gem path.
   def Ocra.find_gem_files(features)
     features_from_gems = []
+    gems = []
+
+    # If a Bundler Gemfile was provided, add all gems it specifies
+    if Ocra.gemfile
+      # Load Rubygems and Bundler so we can scan the Gemfile
+      ['rubygems', 'bundler'].each do |lib|
+        begin
+          require lib
+        rescue LoadError
+          puts "ERROR: Couldn't scan Gemfile, unable to load #{lib}"
+          exit
+        end
+      end
+
+      ENV['BUNDLE_GEMFILE'] = Ocra.gemfile
+      Bundler.load.specs.each do |spec|
+        gems << [Pathname(spec.installation_path), spec.full_name]
+      end
+    end
+
     if defined?(Gem)
-      gems = []
       features.each do |feature|
         if not feature.absolute?
           feature = find_load_path(Pathname($:), feature)
@@ -426,6 +450,7 @@ EOF
           end
         end
       end
+
       gems = sort_uniq(gems)
       gem_files = []
       gems.each do |gempath, fullgemname|
