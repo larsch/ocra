@@ -436,7 +436,7 @@ EOF
         # Get list of files
         files = Pathname(spec.files)
         # Filter out some unlikely files (Readme, etc.)
-        files = files.select { |filename| filename.basename !~ IGNORE_GEMFILES } if Ocra.gem_filter
+        files = files.select { |filename| filename !~ IGNORE_GEMFILES } if Ocra.gem_filter
         # Find the full path
         files = files.map { |file| (gempath / "gems" / fullgemname / file).expand }
         # Filter out non-files
