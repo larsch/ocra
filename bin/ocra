@@ -304,10 +304,10 @@ EOF
         @options[:load_autoload] = false
       when /\A--icon\z/
         @options[:icon_filename] = Pathname(argv.shift)
-        raise "Icon file #{icon_filename} not found.\n" unless icon_filename.exist?
+        Ocra.fatal_error "Icon file #{icon_filename} not found.\n" unless icon_filename.exist?
       when /\A--gemfile\z/
         @options[:gemfile] = Pathname(argv.shift)
-        raise "Gemfile #{gemfile} not found.\n" unless gemfile.exist?
+        Ocra.fatal_error "Gemfile #{gemfile} not found.\n" unless gemfile.exist?
       when /\A--no-autodll\z/
         @options[:autodll] = false
       when /\A--version\z/
@@ -342,7 +342,7 @@ EOF
         path = "#{path}/**/*"
       end
       files = Dir[path]
-      raise "#{path} not found!" if files.empty?
+      Ocra.fatal_error "#{path} not found!" if files.empty?
       files.map { |path| Pathname(path).expand }
     }.flatten!
   end
@@ -441,6 +441,7 @@ EOF
 
     # If a Bundler Gemfile was provided, add all gems it specifies
     if Ocra.gemfile
+      Ocra.msg "Scanning Gemfile"
       # Load Rubygems and Bundler so we can scan the Gemfile
       ['rubygems', 'bundler'].each do |lib|
         begin
@@ -480,6 +481,7 @@ EOF
         gemspecpath = gempath / 'specifications' / "#{fullgemname}.gemspec"
         @gemspecs << gemspecpath
         spec = Gem::Specification.load(gemspecpath)
+        Ocra.msg "Will include gem #{spec.full_name}"
 
         # Get list of files
         files = Pathname(spec.files)
@@ -601,12 +603,13 @@ EOF
         targetpath = GEMHOMEDIR / fullpath.relative_path_from(gemhome)
         libs << [ gemfile, targetpath ]
       else
-        raise "Don't know where to put #{gemfile}"
+        Ocra.fatal_error "Don't know where to put gemfile #{gemfile}"
       end
     end
 
     # If requested, add all ruby standard libraries
     if Ocra.add_all_core
+      Ocra.msg "Will include all ruby core libraries"
       @load_path_before.each do |lp|
         path = Pathname.new(lp)
         next unless path.to_posix =~
@@ -638,6 +641,7 @@ EOF
     target_script = nil
     OcraBuilder.new(executable, windowed) do |sb|
       # Add explicitly mentioned files
+      Ocra.msg "Adding user-supplied source files"
       Ocra.files.each do |file|
         file = src_prefix / file
         if file.subpath?(Host.exec_prefix)
@@ -663,6 +667,7 @@ EOF
       else
         rubyexe = Host.ruby_exe
       end
+      Ocra.msg "Adding ruby executable #{rubyexe}"
       sb.createfile(Host.bindir / rubyexe, BINDIR / rubyexe)
       if Host.libruby_so
         sb.createfile(Host.bindir / Host.libruby_so, BINDIR / Host.libruby_so)
@@ -670,6 +675,7 @@ EOF
 
       # Add detected DLLs
       dlls.each do |dll|
+        Ocra.msg "Adding detected DLL #{dll}"
         if dll.subpath?(Host.exec_prefix)
           target = dll.relative_path_from(Host.exec_prefix)
         else
@@ -680,6 +686,7 @@ EOF
       
       # Add extra DLLs specified on the command line
       Ocra.extra_dlls.each do |dll|
+        Ocra.msg "Adding supplied DLL #{dll}"
         sb.createfile(Host.bindir / dll, BINDIR / dll)
       end
       
@@ -693,11 +700,12 @@ EOF
           path = GEMHOMEDIR / gemspec.relative_path_from(gemhome)
           sb.createfile(gemspec, path)
         else
-          raise "#{gemspec} does not exist in the Ruby installation. Don't know where to put it."
+          Ocra.fatal_error "Gem spec #{gemspec} does not exist in the Ruby installation. Don't know where to put it."
         end
       end
 
       # Add loaded libraries (features, gems)
+      Ocra.msg "Adding library files"
       libs.each do |path, target|
         sb.createfile(path, target)
       end
