@@ -181,6 +181,7 @@ module Ocra
     :icon_filename => nil,
     :gemfile => nil,
     :quiet => false,
+    :verbose => false,
     :autodll => true,
     :show_warnings => true,
     :debug => false,
@@ -197,6 +198,23 @@ module Ocra
     attr_reader :stubwimage
     attr_reader :stubdimage
     attr_reader :stubdwimage
+  end
+
+  def Ocra.msg(s)
+    puts "=== #{s}" unless Ocra.quiet
+  end
+
+  def Ocra.verbose_msg(s)
+    puts s if Ocra.verbose and not Ocra.quiet
+  end
+
+  def Ocra.warn(s)
+    msg "WARNING: #{s}" if Ocra.show_warnings
+  end
+
+  def Ocra.fatal_error(s)
+    puts "ERROR: #{s}"
+    exit
   end
 
   # Returns a binary blob store embedded in the current Ruby script.
@@ -251,6 +269,7 @@ ocra [options] script.rb
 --output <file>  Name the exe to generate. Defaults to ./<scriptname>.exe.
 --gemfile <file> Add all gems and dependencies listed in a Bundler Gemfile.
 --quiet          Suppress output while building executable.
+--verbose        Show extra output while building executable.
 --debug          Executable will be verbose and leave its temp dir around.
 --help           Display this information.
 --windows        Force Windows application (rubyw.exe)
@@ -275,6 +294,8 @@ EOF
         @options[:extra_dlls] << argv.shift
       when /\A--quiet\z/
         @options[:quiet] = true
+      when /\A--verbose\z/
+        @options[:verbose] = true
       when /\A--windows\z/
         @options[:force_windows] = true
       when /\A--console\z/
@@ -350,9 +371,9 @@ EOF
             begin
               mod.const_get(const)
             rescue NameError
-              puts "=== WARNING: #{mod}::#{const} was defined autoloadable, but caused NameError" if Ocra.show_warnings
+              Ocra.warn "#{mod}::#{const} was defined autoloadable, but caused NameError"
             rescue LoadError
-              puts "=== WARNING: #{mod}::#{const} was not loadable" if Ocra.show_warnings
+              Ocra.warn "#{mod}::#{const} was not loadable"
             end
           end
         end
@@ -393,8 +414,7 @@ EOF
         loop do
           relpath = path.relative_path_from(srcroot)
           if relpath.absolute?
-            puts "ERROR: No common directory contains all specified files"
-            exit 1
+            Ocra.fatal_error "No common directory contains all specified files"
           end
           if relpath.to_s =~ /^\.\.\//
             srcroot = srcroot.dirname
@@ -426,8 +446,7 @@ EOF
         begin
           require lib
         rescue LoadError
-          puts "ERROR: Couldn't scan Gemfile, unable to load #{lib}"
-          exit
+          Ocra.fatal_error "Couldn't scan Gemfile, unable to load #{lib}"
         end
       end
 
@@ -615,7 +634,7 @@ EOF
 
     windowed = (Ocra.files.first.ext?('.rbw') || Ocra.force_windows) && !Ocra.force_console
 
-    puts "=== Building #{executable}" unless Ocra.quiet
+    Ocra.msg "Building #{executable}"
     target_script = nil
     OcraBuilder.new(executable, windowed) do |sb|
       # Add explicitly mentioned files
@@ -695,9 +714,9 @@ EOF
       sb.postcreateprocess(installed_ruby_exe,
         "#{rubyexe} \"#{launch_script}\"#{extra_arg}")
       
-      puts "=== Compressing" unless Ocra.quiet or not Ocra.lzma_mode
+      Ocra.msg "Compressing" unless not Ocra.lzma_mode
     end
-    puts "=== Finished building #{executable} (#{File.size(executable)} bytes)" unless Ocra.quiet
+    Ocra.msg "Finished building #{executable} (#{File.size(executable)} bytes)"
   end
 
   module LibraryDetector
@@ -767,8 +786,7 @@ EOF
         end
         
         unless image
-          puts "ERROR: Stub image not available"
-          exit
+          Ocra.fatal_error "Stub image not available"
         end
         ocrafile.write(image)
       end
@@ -813,7 +831,7 @@ EOF
     def mkdir(path)
       return if @paths[path.path.downcase]
       @paths[path.path.downcase] = true
-      puts "m #{showtempdir path}" unless Ocra.quiet
+      Ocra.verbose_msg "m #{showtempdir path}"
       @of << [OP_CREATE_DIRECTORY, path.to_native].pack("VZ*")
     end
 
@@ -832,22 +850,22 @@ EOF
       src, tgt = Ocra.Pathname(src), Ocra.Pathname(tgt)
       ensuremkdir(tgt.dirname)
       str = File.open(src, "rb") { |file| file.read }
-      puts "a #{showtempdir tgt}" unless Ocra.quiet
+      Ocra.verbose_msg "a #{showtempdir tgt}"
       @of << [OP_CREATE_FILE, tgt.to_native, str.size, str].pack("VZ*VA*")
     end
 
     def createprocess(image, cmdline)
-      puts "l #{showtempdir image} #{showtempdir cmdline}" unless Ocra.quiet
+      Ocra.verbose_msg "l #{showtempdir image} #{showtempdir cmdline}"
       @of << [OP_CREATE_PROCESS, image.to_native, cmdline].pack("VZ*Z*")
     end
 
     def postcreateprocess(image, cmdline)
-      puts "p #{showtempdir image} #{showtempdir cmdline}" unless Ocra.quiet
+      Ocra.verbose_msg "p #{showtempdir image} #{showtempdir cmdline}"
       @of << [OP_POST_CREATE_PROCESS, image.to_native, cmdline].pack("VZ*Z*")
     end
 
     def setenv(name, value)
-      puts "e #{name} #{showtempdir value}" unless Ocra.quiet
+      Ocra.verbose_msg "e #{name} #{showtempdir value}"
       @of << [OP_SETENV, name, value].pack("VZ*Z*")
     end
 
@@ -868,8 +886,7 @@ if File.basename(__FILE__) == File.basename($0)
   ARGV.replace(Ocra.arg)
 
   if not Ocra.files.first.exist?
-    puts "ERROR: #{Ocra.files[0]} was not found!"
-    exit 1
+    Ocra.fatal_error "#{Ocra.files[0]} was not found!"
   end
   
   at_exit do
@@ -880,7 +897,7 @@ if File.basename(__FILE__) == File.basename($0)
   end
 
   if Ocra.run_script
-    puts "=== Loading script to check dependencies" unless Ocra.quiet
+    Ocra.msg "Loading script to check dependencies"
     $0 = Ocra.files.first
     load Ocra.files.first
   end
