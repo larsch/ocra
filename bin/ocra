@@ -196,8 +196,6 @@ module Ocra
     attr_reader :ediconpath
     attr_reader :stubimage
     attr_reader :stubwimage
-    attr_reader :stubdimage
-    attr_reader :stubdwimage
   end
 
   def Ocra.msg(s)
@@ -238,9 +236,6 @@ module Ocra
     if defined?(DATA)
       @stubimage = get_next_embedded_image
       @stubwimage = get_next_embedded_image
-      # FIXME - Not sure how to arrange to embed stubd and stubdw
-      @stubdimage = nil
-      @stubdwimage = nil
       lzmaimage = get_next_embedded_image
       @lzmapath = Host.tempdir / 'lzma.exe'
       File.open(@lzmapath, "wb") { |file| file << lzmaimage }
@@ -251,8 +246,6 @@ module Ocra
       ocrapath = Pathname(File.dirname(__FILE__))
       @stubimage = File.open(ocrapath / '../share/ocra/stub.exe', "rb") { |file| file.read }
       @stubwimage = File.open(ocrapath / '../share/ocra/stubw.exe', "rb") { |file| file.read }
-      @stubdimage = File.open(ocrapath / '../share/ocra/stubd.exe', "rb") { |file| file.read }
-      @stubdwimage = File.open(ocrapath / '../share/ocra/stubdw.exe', "rb") { |file| file.read }
       @lzmapath = (ocrapath / '../share/ocra/lzma.exe').expand
       @ediconpath = (ocrapath / '../share/ocra/edicon.exe').expand
     end
@@ -773,6 +766,9 @@ EOF
     OP_DECOMPRESS_LZMA = 4
     OP_SETENV = 5
     OP_POST_CREATE_PROCESS = 6
+    OP_ENABLE_DEBUG_MODE = 7
+    OP_CREATE_INST_DIRECTORY = 8
+    OP_DELETE_INST_DIRECTORY = 9
 
     def initialize(path, windowed)
       @paths = {}
@@ -780,19 +776,11 @@ EOF
       File.open(path, "wb") do |ocrafile|
         image = nil
         if windowed
-          if Ocra.debug
-            image = Ocra.stubdwimage
-          else
-            image = Ocra.stubwimage
-          end
+          image = Ocra.stubwimage
         else
-          if Ocra.debug
-            image = Ocra.stubdimage
-          else
-            image = Ocra.stubimage
-          end
+          image = Ocra.stubimage
         end
-        
+
         unless image
           Ocra.fatal_error "Stub image not available"
         end
@@ -813,6 +801,13 @@ EOF
           @of = ocrafile
         end
 
+        if Ocra.debug
+          ocrafile.write([OP_ENABLE_DEBUG_MODE].pack("V"))
+          createinstdir true
+        else
+          createinstdir
+        end
+
         yield(self)
 
         if Ocra.lzma_mode
@@ -821,13 +816,16 @@ EOF
             system("\"#{Ocra.lzmapath}\" e tmpin tmpout 2>NUL") or fail
             compressed_data = File.open("tmpout", "rb") { |tmp| tmp.read }
             ocrafile.write([OP_DECOMPRESS_LZMA, compressed_data.size, compressed_data].pack("VVA*"))
-            ocrafile.write([OP_END].pack("V"))
           ensure
             File.unlink("tmpin") if File.exist?("tmpin")
             File.unlink("tmpout") if File.exist?("tmpout")
           end
         else
           ocrafile.write(@of) if Ocra.lzma_mode
+        end
+
+        unless Ocra.debug
+          deleteinstdir
         end
 
         ocrafile.write([OP_END].pack("V"))
@@ -850,6 +848,14 @@ EOF
         ensuremkdir(tgt.dirname)
         mkdir(tgt)
       end
+    end
+
+    def createinstdir(next_to_exe = false)
+      @of << [OP_CREATE_INST_DIRECTORY, next_to_exe ? 1 : 0].pack("VV")
+    end
+
+    def deleteinstdir
+      @of << [OP_DELETE_INST_DIRECTORY].pack("V")
     end
 
     def createfile(src, tgt)
