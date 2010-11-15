@@ -20,7 +20,10 @@ const BYTE Signature[] = { 0x41, 0xb6, 0xba, 0x4e };
 #define OP_DECOMPRESS_LZMA 4
 #define OP_SETENV 5
 #define OP_POST_CREATE_PROCRESS 6
-#define OP_MAX 7
+#define OP_ENABLE_DEBUG_MODE 7
+#define OP_CREATE_INST_DIRECTORY 8
+#define OP_DELETE_INST_DIRECTORY 9
+#define OP_MAX 10
 
 BOOL ProcessImage(LPVOID p, DWORD size);
 BOOL ProcessOpcodes(LPVOID* p);
@@ -33,6 +36,9 @@ BOOL OpCreateProcess(LPVOID *p);
 BOOL OpDecompressLzma(LPVOID *p);
 BOOL OpSetEnv(LPVOID *p);
 BOOL OpPostCreateProcess(LPVOID *p);
+BOOL OpEnableDebugMode(LPVOID *p);
+BOOL OpCreateInstDirectory(LPVOID *p);
+BOOL OpDeleteInstDirectory(LPVOID *P);
 
 #if WITH_LZMA
 #include <LzmaDec.h>
@@ -45,9 +51,11 @@ LPTSTR PostCreateProcess_CommandLine = NULL;
 
 DWORD ExitStatus = 0;
 BOOL ExitCondition = FALSE;
+BOOL DebugModeEnabled = FALSE;
+TCHAR ImageFileName[MAX_PATH];
 
 #if _CONSOLE
-#define FATAL(...) { fprintf(stderr, __VA_ARGS__); fprintf(stderr, "\n"); }
+#define FATAL(...) { fprintf(stderr, "FATAL ERROR: "); fprintf(stderr, __VA_ARGS__); fprintf(stderr, "\n"); }
 #else
 #define FATAL(...) { \
    TCHAR TextBuffer[1024]; \
@@ -56,8 +64,8 @@ BOOL ExitCondition = FALSE;
    }
 #endif
 
-#if _DEBUG && _CONSOLE
-#define DEBUG(...) { fprintf(stderr, __VA_ARGS__); fprintf(stderr, "\n"); }
+#if _CONSOLE
+#define DEBUG(...) { if (DebugModeEnabled) { fprintf(stderr, __VA_ARGS__); fprintf(stderr, "\n"); } }
 #else
 #define DEBUG(...)
 #endif
@@ -73,7 +81,10 @@ POpcodeHandler OpcodeHandlers[OP_MAX] = {
    NULL,
 #endif
    &OpSetEnv,
-   &OpPostCreateProcess
+   &OpPostCreateProcess,
+   &OpEnableDebugMode,
+   &OpCreateInstDirectory,
+   &OpDeleteInstDirectory
 };
 
 TCHAR InstDir[MAX_PATH];
@@ -104,13 +115,46 @@ BOOL WINAPI ConsoleHandleRoutine(DWORD dwCtrlType)
    return TRUE;
 }
 
-void DeleteTemporaryDirectory()
+BOOL OpCreateInstDirectory(LPVOID *p)
 {
-#if _DEBUG
-   DEBUG("**********");
-   DEBUG("Temp dir not deleted: %s", InstDir);
-   DEBUG("**********");
-#else
+   DWORD LocalTestMode = GetInteger(p);
+
+   /* Create an installation directory that will hold the extracted files */
+   TCHAR TempPath[MAX_PATH];
+   if (LocalTestMode) {
+      // In debug mode, create the temp directory next to the exe
+      strncpy(TempPath, ImageFileName, MAX_PATH);
+      unsigned int i;
+      for (i = strlen(TempPath)-1; i >= 0; --i) {
+        if (TempPath[i] == '\\') {
+          TempPath[i] = 0;
+          break;
+        }
+      }
+      if (strlen(TempPath) == 0) {
+        FATAL("Unable to find directory containing exe");
+        return FALSE;
+      }
+   } else {
+      GetTempPath(MAX_PATH, TempPath);
+   }
+   GetTempFileName(TempPath, _T("ocrastub"), 0, InstDir);
+   DEBUG("Creating installation directory: '%s'", InstDir);
+
+   /* Attempt to delete the temp file created by GetTempFileName.
+      Ignore errors, i.e. if it doesn't exist. */
+   (void)DeleteFile(InstDir);
+
+   if (!CreateDirectory(InstDir, NULL)){
+      FATAL("Failed to create installation directory.");
+      return FALSE;
+   }
+   return TRUE;
+}
+
+BOOL OpDeleteInstDirectory(LPVOID *p)
+{
+   DEBUG("Deleting temporary installation directory %s", InstDir);
    SHFILEOPSTRUCT shop;
    shop.hwnd = NULL;
    shop.wFunc = FO_DELETE;
@@ -119,49 +163,17 @@ void DeleteTemporaryDirectory()
    shop.pTo = NULL;
    shop.fFlags = FOF_NOCONFIRMATION | FOF_SILENT | FOF_NOERRORUI;
    SHFileOperation(&shop);
-#endif
+   return TRUE;
 }
 
 int CALLBACK _tWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPTSTR lpCmdLine, int nCmdShow)
 {
    /* Find name of image */
-   TCHAR ImageFileName[MAX_PATH];
    if (!GetModuleFileName(NULL, ImageFileName, MAX_PATH)) {
       FATAL("Failed to get executable name (error %lu).", GetLastError());
       return -1;
    }
-
-   TCHAR TempPath[MAX_PATH];
-#if _DEBUG
-   // In debug mode, create the temp directory next to the exe
-   strncpy(TempPath, ImageFileName, MAX_PATH);
-   unsigned int i;
-   for (i = strlen(TempPath)-1; i >= 0; --i) {
-     if (TempPath[i] == '\\') {
-       TempPath[i] = 0;
-       break;
-     }
-   }
-   if (strlen(TempPath) == 0) {
-     FATAL("Unable to find directory containing exe");
-     return -1;
-   }
-#else
-   GetTempPath(MAX_PATH, TempPath);
-#endif
-   GetTempFileName(TempPath, _T("ocrastub"), 0, InstDir);
-   DEBUG("Temporary directory: '%s'", InstDir);
-
-   /* Attempt to delete the temp file created by GetTempFileName.
-      Ignore errors, i.e. if it doesn't exist. */
-   (void)DeleteFile(InstDir);
-
-   /* Create the temporary directory that will hold the extracted files */
-   if (!CreateDirectory(InstDir, NULL)){
-      FATAL("Failed to create temporary directory.");
-      return -1;
-   }
-
+   
    /* Set up environment */
    SetEnvironmentVariable(_T("OCRA_EXECUTABLE"), ImageFileName);
    
@@ -212,8 +224,6 @@ int CALLBACK _tWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPTSTR lpCm
       CreateAndWaitForProcess(PostCreateProcess_ApplicationName, PostCreateProcess_CommandLine);
    }
 
-   /* Remove the temporary directory and exit */
-   DeleteTemporaryDirectory();
    ExitProcess(ExitStatus);
 
    /* Never gets here */
@@ -454,6 +464,12 @@ BOOL OpPostCreateProcess(LPVOID* p)
       GetCreateProcessInfo(p, &PostCreateProcess_ApplicationName, &PostCreateProcess_CommandLine);
       return TRUE;
    }
+}
+
+BOOL OpEnableDebugMode(LPVOID* p)
+{
+  DebugModeEnabled = TRUE;
+  return TRUE;
 }
 
 #if WITH_LZMA
