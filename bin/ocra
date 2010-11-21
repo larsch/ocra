@@ -261,7 +261,7 @@ EOF
         @options[:autodll] = false
       when /\A--version\z/
         puts "Ocra #{VERSION}"
-        exit
+        exit 0
       when /\A--no-warnings\z/
         @options[:show_warnings] = false
       when /\A--no-gem-filter\z/
@@ -271,7 +271,7 @@ EOF
         ARGV.clear
       when /\A--help\z/, /\A--./
         puts usage
-        exit
+        exit 0
       else
         @options[:files] << arg
       end
@@ -279,7 +279,7 @@ EOF
 
     if files.empty?
       puts usage
-      exit
+      exit 1
     end
 
     @options[:files].map! { |path|
@@ -362,7 +362,7 @@ EOF
           relpath = path.relative_path_from(srcroot)
           if relpath.absolute?
             puts "ERROR: No common directory contains all specified files"
-            exit
+            exit 1
           end
           if relpath.to_s =~ /^\.\.\//
             srcroot = srcroot.dirname
@@ -772,13 +772,13 @@ if File.basename(__FILE__) == File.basename($0)
 
   if not Ocra.files.first.exist?
     puts "ERROR: #{Ocra.files[0]} was not found!"
-    exit
+    exit 1
   end
   
   at_exit do
     if $!.nil? or $!.kind_of?(SystemExit)
       Ocra.build_exe
-      exit(0)
+      exit 0
     end
   end
 
