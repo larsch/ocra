@@ -24,10 +24,9 @@ any additionally needed ruby libraries or DLL.
 * Windows support only
 
 If you experience problems with OCRA or have found a bug, please use
-the issue tracker on GitHub
-(http://github.com/larsch/ocra/issues). You can also join the Google
-Group discussion forum to ask questions and get help
-(http://groups.google.com/group/ruby-ocra).
+the issue tracker on GitHub (http://github.com/larsch/ocra/issues).
+You can also join the Google Group discussion forum to ask questions
+and get help (http://groups.google.com/group/ruby-ocra).
 
 == SYNOPSIS:
 
@@ -256,8 +255,11 @@ your program is executed:
   src/someimage.jpeg
   src/docs/document.txt
 
-Paths on the command line can include ** globs to include a hierachy
-of files, for example
+Both files, directoriess and glob patterns can be specified on the
+command line. Files will be added as-is. If a directory is specified,
+OCRA will include all files found below that directory. Glob patterns
+(See Dir.glob) can be used to specify a specific set of files, for
+example:
 
   ocra script.rb assets/**/*.png
 

@@ -305,7 +305,7 @@ EOF
         @options[:autodll] = false
       when /\A--version\z/
         puts "Ocra #{VERSION}"
-        exit
+        exit 0
       when /\A--no-warnings\z/
         @options[:show_warnings] = false
       when /\A--debug\z/
@@ -317,7 +317,7 @@ EOF
         ARGV.clear
       when /\A--help\z/, /\A--./
         puts usage
-        exit
+        exit 0
       else
         @options[:files] << arg
       end
@@ -325,7 +325,7 @@ EOF
 
     if files.empty?
       puts usage
-      exit
+      exit 1
     end
 
     @options[:files].map! { |path|
@@ -906,7 +906,7 @@ if File.basename(__FILE__) == File.basename($0)
   at_exit do
     if $!.nil? or $!.kind_of?(SystemExit)
       Ocra.build_exe
-      exit(0)
+      exit 0
     end
   end
 
