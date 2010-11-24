@@ -117,12 +117,12 @@ BOOL WINAPI ConsoleHandleRoutine(DWORD dwCtrlType)
 
 BOOL OpCreateInstDirectory(LPVOID *p)
 {
-   DWORD LocalTestMode = GetInteger(p);
+   DWORD DebugExtractMode = GetInteger(p);
 
    /* Create an installation directory that will hold the extracted files */
    TCHAR TempPath[MAX_PATH];
-   if (LocalTestMode) {
-      // In debug mode, create the temp directory next to the exe
+   if (DebugExtractMode) {
+      // In debug extraction mode, create the temp directory next to the exe
       strncpy(TempPath, ImageFileName, MAX_PATH);
       unsigned int i;
       for (i = strlen(TempPath)-1; i >= 0; --i) {

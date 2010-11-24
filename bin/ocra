@@ -185,6 +185,7 @@ module Ocra
     :autodll => true,
     :show_warnings => true,
     :debug => false,
+    :debug_extract => false,
     :gem_filter => true,
     :arg => []
   }
@@ -263,7 +264,8 @@ ocra [options] script.rb
 --gemfile <file> Add all gems and dependencies listed in a Bundler Gemfile.
 --quiet          Suppress output while building executable.
 --verbose        Show extra output while building executable.
---debug          Executable will be verbose and leave its temp dir around.
+--debug          Executable will be verbose.
+--debug-extract  Executable will unpack to local dir and not delete after.
 --help           Display this information.
 --windows        Force Windows application (rubyw.exe)
 --console        Force console application (ruby.exe)
@@ -310,6 +312,8 @@ EOF
         @options[:show_warnings] = false
       when /\A--debug\z/
         @options[:debug] = true
+      when /\A--debug-extract\z/
+        @options[:debug_extract] = true
       when /\A--no-gem-filter\z/
         @options[:gem_filter] = false
       when /\A--\z/
@@ -803,6 +807,9 @@ EOF
 
         if Ocra.debug
           ocrafile.write([OP_ENABLE_DEBUG_MODE].pack("V"))
+        end
+
+        if Ocra.debug_extract
           createinstdir true
         else
           createinstdir
@@ -824,7 +831,7 @@ EOF
           ocrafile.write(@of) if Ocra.lzma_mode
         end
 
-        unless Ocra.debug
+        unless Ocra.debug_extract
           deleteinstdir
         end
 
