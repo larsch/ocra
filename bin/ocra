@@ -817,6 +817,10 @@ EOF
 
         yield(self)
 
+        unless Ocra.debug_extract
+          deleteinstdir
+        end
+
         if Ocra.lzma_mode
           begin
             File.open("tmpin", "wb") { |tmp| tmp.write(@of) }
@@ -829,10 +833,6 @@ EOF
           end
         else
           ocrafile.write(@of) if Ocra.lzma_mode
-        end
-
-        unless Ocra.debug_extract
-          deleteinstdir
         end
 
         ocrafile.write([OP_END].pack("V"))
