@@ -155,6 +155,21 @@ class TestOcra < Test::Unit::TestCase
     end
   end
 
+  # With dep run disabled but including all core libs, should be able
+  # to use ruby standard libraries (i.e. cgi)
+  def test_rubycoreincl
+    with_fixture 'rubycoreincl' do
+      assert system("ruby", ocra, "rubycoreincl.rb",  *(DefaultArgs + ["--no-dep-run", "--add-all-core"]))
+      pristine_env "rubycoreincl.exe" do
+        assert File.exist?("rubycoreincl.exe")
+        assert !File.exist?("output.txt") # Make sure --no-dep-run prevented script from being ran by ocra during build
+        assert system("rubycoreincl.exe")
+        assert File.exist?("output.txt")
+        assert_equal "3 &lt; 5", File.read("output.txt")
+      end
+    end
+  end
+
   # Test that scripts can exit with a specific exit status code.
   def test_exitstatus
     with_fixture 'exitstatus' do
