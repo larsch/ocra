@@ -772,7 +772,6 @@ EOF
     OP_POST_CREATE_PROCESS = 6
     OP_ENABLE_DEBUG_MODE = 7
     OP_CREATE_INST_DIRECTORY = 8
-    OP_DELETE_INST_DIRECTORY = 9
 
     def initialize(path, windowed)
       @paths = {}
@@ -809,17 +808,9 @@ EOF
           ocrafile.write([OP_ENABLE_DEBUG_MODE].pack("V"))
         end
 
-        if Ocra.debug_extract
-          createinstdir true
-        else
-          createinstdir
-        end
+        createinstdir Ocra.debug_extract, !Ocra.debug_extract
 
         yield(self)
-
-        unless Ocra.debug_extract
-          deleteinstdir
-        end
 
         if Ocra.lzma_mode
           begin
@@ -857,12 +848,8 @@ EOF
       end
     end
 
-    def createinstdir(next_to_exe = false)
-      @of << [OP_CREATE_INST_DIRECTORY, next_to_exe ? 1 : 0].pack("VV")
-    end
-
-    def deleteinstdir
-      @of << [OP_DELETE_INST_DIRECTORY].pack("V")
+    def createinstdir(next_to_exe = false, delete_after = false)
+      @of << [OP_CREATE_INST_DIRECTORY, next_to_exe ? 1 : 0, delete_after ? 1 : 0].pack("VVV")
     end
 
     def createfile(src, tgt)

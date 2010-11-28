@@ -22,8 +22,7 @@ const BYTE Signature[] = { 0x41, 0xb6, 0xba, 0x4e };
 #define OP_POST_CREATE_PROCRESS 6
 #define OP_ENABLE_DEBUG_MODE 7
 #define OP_CREATE_INST_DIRECTORY 8
-#define OP_DELETE_INST_DIRECTORY 9
-#define OP_MAX 10
+#define OP_MAX 9
 
 BOOL ProcessImage(LPVOID p, DWORD size);
 BOOL ProcessOpcodes(LPVOID* p);
@@ -38,7 +37,6 @@ BOOL OpSetEnv(LPVOID *p);
 BOOL OpPostCreateProcess(LPVOID *p);
 BOOL OpEnableDebugMode(LPVOID *p);
 BOOL OpCreateInstDirectory(LPVOID *p);
-BOOL OpDeleteInstDirectory(LPVOID *P);
 
 #if WITH_LZMA
 #include <LzmaDec.h>
@@ -52,6 +50,7 @@ LPTSTR PostCreateProcess_CommandLine = NULL;
 DWORD ExitStatus = 0;
 BOOL ExitCondition = FALSE;
 BOOL DebugModeEnabled = FALSE;
+BOOL DeleteInstDirEnabled = FALSE;
 TCHAR ImageFileName[MAX_PATH];
 
 #if _CONSOLE
@@ -84,7 +83,6 @@ POpcodeHandler OpcodeHandlers[OP_MAX] = {
    &OpPostCreateProcess,
    &OpEnableDebugMode,
    &OpCreateInstDirectory,
-   &OpDeleteInstDirectory
 };
 
 TCHAR InstDir[MAX_PATH];
@@ -118,6 +116,11 @@ BOOL WINAPI ConsoleHandleRoutine(DWORD dwCtrlType)
 BOOL OpCreateInstDirectory(LPVOID *p)
 {
    DWORD DebugExtractMode = GetInteger(p);
+   DWORD DeletingAfter = GetInteger(p);
+
+   if (DeletingAfter) {
+     DeleteInstDirEnabled = TRUE;
+   }
 
    /* Create an installation directory that will hold the extracted files */
    TCHAR TempPath[MAX_PATH];
@@ -149,20 +152,6 @@ BOOL OpCreateInstDirectory(LPVOID *p)
       FATAL("Failed to create installation directory.");
       return FALSE;
    }
-   return TRUE;
-}
-
-BOOL OpDeleteInstDirectory(LPVOID *p)
-{
-   DEBUG("Deleting temporary installation directory %s", InstDir);
-   SHFILEOPSTRUCT shop;
-   shop.hwnd = NULL;
-   shop.wFunc = FO_DELETE;
-   InstDir[lstrlen(InstDir) + sizeof(TCHAR)] = 0;
-   shop.pFrom = InstDir;
-   shop.pTo = NULL;
-   shop.fFlags = FOF_NOCONFIRMATION | FOF_SILENT | FOF_NOERRORUI;
-   SHFileOperation(&shop);
    return TRUE;
 }
 
@@ -222,6 +211,18 @@ int CALLBACK _tWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPTSTR lpCm
       DEBUG("Starting app in: %s", InstDir);
       DEBUG("**********");
       CreateAndWaitForProcess(PostCreateProcess_ApplicationName, PostCreateProcess_CommandLine);
+   }
+
+   if (DeleteInstDirEnabled) {
+     DEBUG("Deleting temporary installation directory %s", InstDir);
+     SHFILEOPSTRUCT shop;
+     shop.hwnd = NULL;
+     shop.wFunc = FO_DELETE;
+     InstDir[lstrlen(InstDir) + sizeof(TCHAR)] = 0;
+     shop.pFrom = InstDir;
+     shop.pTo = NULL;
+     shop.fFlags = FOF_NOCONFIRMATION | FOF_SILENT | FOF_NOERRORUI;
+     SHFileOperation(&shop);
    }
 
    ExitProcess(ExitStatus);
