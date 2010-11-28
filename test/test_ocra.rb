@@ -146,6 +146,21 @@ class TestOcra < Test::Unit::TestCase
   def test_writefile
     with_fixture 'writefile' do
       assert system("ruby", ocra, "writefile.rb", *DefaultArgs)
+      assert File.exist?("output.txt") # Make sure ocra ran the script during build
+      pristine_env "writefile.exe" do
+        assert File.exist?("writefile.exe")
+        assert system("writefile.exe")
+        assert File.exist?("output.txt")
+        assert_equal "output", File.read("output.txt")
+      end
+    end
+  end
+
+  # With --no-dep-run, ocra should not run script during build
+  def test_nodeprun
+    with_fixture 'writefile' do
+      assert system("ruby", ocra, "writefile.rb", *(DefaultArgs + ["--no-dep-run"]))
+      assert !File.exist?("output.txt")
       pristine_env "writefile.exe" do
         assert File.exist?("writefile.exe")
         assert system("writefile.exe")
@@ -162,7 +177,6 @@ class TestOcra < Test::Unit::TestCase
       assert system("ruby", ocra, "rubycoreincl.rb",  *(DefaultArgs + ["--no-dep-run", "--add-all-core"]))
       pristine_env "rubycoreincl.exe" do
         assert File.exist?("rubycoreincl.exe")
-        assert !File.exist?("output.txt") # Make sure --no-dep-run prevented script from being ran by ocra during build
         assert system("rubycoreincl.exe")
         assert File.exist?("output.txt")
         assert_equal "3 &lt; 5", File.read("output.txt")
