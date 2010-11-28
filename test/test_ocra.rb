@@ -174,7 +174,7 @@ class TestOcra < Test::Unit::TestCase
   # to use ruby standard libraries (i.e. cgi)
   def test_rubycoreincl
     with_fixture 'rubycoreincl' do
-      assert system("ruby", ocra, "rubycoreincl.rb",  *(DefaultArgs + ["--no-dep-run", "--add-all-core"]))
+      assert system("ruby", ocra, "rubycoreincl.rb", *(DefaultArgs + ["--no-dep-run", "--add-all-core"]))
       pristine_env "rubycoreincl.exe" do
         assert File.exist?("rubycoreincl.exe")
         assert system("rubycoreincl.exe")
