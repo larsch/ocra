@@ -195,6 +195,18 @@ class TestOcra < Test::Unit::TestCase
     end
   end
 
+  # With --debug-extract option, exe should unpack to local directory and leave it in place
+  def test_debug_extract
+    with_fixture 'helloworld' do
+      assert system("ruby", ocra, "helloworld.rb", *(DefaultArgs + ["--debug-extract"]))
+      pristine_env "helloworld.exe" do
+        assert_equal 0, Dir["ocr*"].size
+        assert system("helloworld.exe")
+        assert_equal 1, Dir["ocr*"].size
+      end
+    end
+  end
+
   # Test that scripts can exit with a specific exit status code.
   def test_exitstatus
     with_fixture 'exitstatus' do
