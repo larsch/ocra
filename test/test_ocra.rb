@@ -150,7 +150,7 @@ class TestOcra < Test::Unit::TestCase
         assert File.exist?("writefile.exe")
         assert system("writefile.exe")
         assert File.exist?("output.txt")
-        assert "output", File.read("output.txt")
+        assert_equal "output", File.read("output.txt")
       end
     end
   end
