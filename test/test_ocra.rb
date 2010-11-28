@@ -216,6 +216,16 @@ class TestOcra < Test::Unit::TestCase
     end
   end
 
+  # Test that we can specify a directory to be recursively included
+  def test_directory_on_cmd_line
+    with_fixture 'subdir' do
+      assert system("ruby", ocra, "subdir.rb", "a", *DefaultArgs)
+      pristine_env "subdir.exe" do
+        assert system("subdir.exe")
+      end
+    end
+  end
+
   # Test that scripts can exit with a specific exit status code.
   def test_exitstatus
     with_fixture 'exitstatus' do
