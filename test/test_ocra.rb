@@ -207,6 +207,15 @@ class TestOcra < Test::Unit::TestCase
     end
   end
 
+  # Test that the --output option allows us to specify a different exe name
+  def test_output_option
+    with_fixture 'helloworld' do
+      assert system("ruby", ocra, "helloworld.rb", *(DefaultArgs + ["--output", "goodbyeworld.exe"]))
+      assert !File.exists?("helloworld.exe")
+      assert File.exists?("goodbyeworld.exe")
+    end
+  end
+
   # Test that scripts can exit with a specific exit status code.
   def test_exitstatus
     with_fixture 'exitstatus' do
