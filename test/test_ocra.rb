@@ -184,6 +184,17 @@ class TestOcra < Test::Unit::TestCase
     end
   end
 
+  # With dep run disabled but including corelibs and using a Bundler Gemfile, specified gems should
+  # be automatically included and usable in packaged app
+  def test_gemfile
+    with_fixture 'bundlerusage' do
+      assert system("ruby", ocra, "bundlerusage.rb", "Gemfile", *(DefaultArgs + ["--no-dep-run", "--add-all-core", "--gemfile", "Gemfile"]))
+      pristine_env "bundlerusage.exe" do
+        assert system("bundlerusage.exe")
+      end
+    end
+  end
+
   # Test that scripts can exit with a specific exit status code.
   def test_exitstatus
     with_fixture 'exitstatus' do

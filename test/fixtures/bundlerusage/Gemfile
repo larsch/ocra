@@ -1,0 +1,2 @@
+source :gemcutter
+gem 'rake'
