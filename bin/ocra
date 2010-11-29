@@ -213,7 +213,7 @@ module Ocra
 
   def Ocra.fatal_error(s)
     puts "ERROR: #{s}"
-    exit
+    exit 1
   end
 
   # Returns a binary blob store embedded in the current Ruby script.
