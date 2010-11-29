@@ -18,6 +18,7 @@ any additionally needed ruby libraries or DLL.
 * LZMA Compression (optional, default on)
 * Ruby 1.9 support
 * Both windowed/console mode supported
+* Includes gems based on usage, or from a Bundler Gemfile
 
 == PROBLEMS & BUG REPORTING:
 
@@ -48,14 +49,21 @@ dependencies (gems and DLLs) into an executable named
 
   --dll dllname    Include additional DLLs from the Ruby bindir.
   --no-lzma        Disable LZMA compression of the executable.
-  --quiet          Suppress output.
+  --no-dep-run     Don't run script.rb to check for dependencies.
+  --add-all-core   Add all core ruby libraries to the executable.
+  --output <file>  Name the exe to generate. Defaults to ./<scriptname>.exe.
+  --gemfile <file> Add all gems and dependencies listed in a Bundler Gemfile.
+  --quiet          Suppress output while building executable.
+  --verbose        Show extra output while building executable.
+  --debug          Executable will be verbose.
+  --debug-extract  Executable will unpack to local dir and not delete after.
   --help           Display this information.
   --windows        Force Windows application (rubyw.exe)
   --console        Force console application (ruby.exe)
-  --no-autoload    Don't load/include script.rb's autoloads
-  --icon <ico>     Replace icon with a custom one
-  --version        Display version number
-  --no-gem-filter  Don't filter readme's, doc, C-source, etc. from gems    
+  --no-autoload    Don't load/include script.rb's autoloads.
+  --icon <ico>     Replace icon with a custom one.
+  --version        Display version number and exit.
+  --no-gem-filter  Don't filter readme's, doc, C-source, etc. from gems.
   
 === Compilation:
 
@@ -180,6 +188,39 @@ be logged).
 
 Dynamic link libraries (.dll files, for example WxWidgets, or other
 source files) will be detected and included by OCRA.
+
+=== Including libraries non-automatically
+
+If an application or framework is complicated enough that it tends
+to confuse Ocra's automatic dependency resolution, then you can
+use disable that mechanism and use other means to specify what
+needs to be packaged with your app.
+
+To disable automatic dependency resolution, use the --no-dep-run
+option; with it, Ocra will skip executing your program during the
+build process. You will also probably need to use the --add-all-core
+option to include the Ruby core libraries.
+
+If your app uses gems, then you can specify them in a
+Bundler (http://gembundler.com/) Gemfile, then use the --gemfile
+option to supply it to Ocra. Ocra will automatically include all
+gems specified, and all their dependencies.
+
+(Note: This assumes that the gems are installed in your system,
+not locally packaged inside the app directory by "bundle package")
+
+These options are particularly useful for packaging Rails
+applications, as Rails is a complex framework and can sometimes
+confuse Ocra's automatic dependency resolution.  For example, to
+package a Rails 3 app in the directory "someapp" and create an exe
+named "someapp.exe", without actually running the app during the
+build, you could use the following command:
+
+  ocra someapp/script/server someapp --no-dep-run --add-all-core --gemfile someapp/Gemfile
+
+Rails 2 apps can be packaged similarly, though you will have to
+integrate them with Bundler (http://gembundler.com/rails23.html)
+first.
 
 === Environment variables
 
