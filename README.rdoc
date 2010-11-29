@@ -193,8 +193,7 @@ source files) will be detected and included by OCRA.
 
 If an application or framework is complicated enough that it tends
 to confuse Ocra's automatic dependency resolution, then you can
-use disable that mechanism and use other means to specify what
-needs to be packaged with your app.
+use other means to specify what needs to be packaged with your app.
 
 To disable automatic dependency resolution, use the --no-dep-run
 option; with it, Ocra will skip executing your program during the
@@ -207,14 +206,13 @@ option to supply it to Ocra. Ocra will automatically include all
 gems specified, and all their dependencies.
 
 (Note: This assumes that the gems are installed in your system,
-not locally packaged inside the app directory by "bundle package")
+*not* locally packaged inside the app directory by "bundle package")
 
 These options are particularly useful for packaging Rails
-applications, as Rails is a complex framework and can sometimes
-confuse Ocra's automatic dependency resolution.  For example, to
-package a Rails 3 app in the directory "someapp" and create an exe
-named "someapp.exe", without actually running the app during the
-build, you could use the following command:
+applications.  For example, to package a Rails 3 app in the
+directory "someapp" and create an exe named "someapp.exe", without
+actually running the app during the build, you could use the
+following command:
 
   ocra someapp/script/server someapp --no-dep-run --add-all-core --gemfile someapp/Gemfile
 
