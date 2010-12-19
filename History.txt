@@ -1,8 +1,19 @@
-=== 1.2.1
+=== 1.3.0.rc1
 
 * Fixed some additional corner cases with absolute and relative
   require & load paths. Extended test suite to cover a lot more
   cases.
+
+* Now provides a meaningful exit status code (1 on error, 0 on
+  success). (DavidMikeSimon)
+
+* New option to _not_ run the script to detect dependencies
+  (--no-dep-run). (DavidMikeSimon)
+
+* Bundler support using the --gemfile option. (DavidMikeSimon)
+
+* Debug mode support in the stub (--debug). Also --debug-extract to
+  keep extracted files from executable. (DavidMikeSimon)
   
 === 1.2.0
 
