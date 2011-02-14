@@ -1,4 +1,4 @@
-SRCS = lzma/lzmadec.c
+SRCS = lzma/LzmaDec.c
 OBJS = $(SRCS:.c=.o) stubicon.o
 CC = gcc
 BINDIR = $(CURDIR)/../share/ocra
