@@ -682,6 +682,27 @@ class TestOcra < Test::Unit::TestCase
     end
   end
 
+  # Test that the --chdir-first option changes directory before exe starts script
+  def test_chdir_first
+    with_fixture 'writefile' do
+      # Control test; make sure the writefile script works as expected under default options 
+      assert system("ruby", ocra, "writefile.rb", *(DefaultArgs))
+      pristine_env "writefile.exe" do
+        assert !File.exist?("output.txt")
+        assert system("writefile.exe")
+        assert File.exist?("output.txt")
+      end
+      
+      assert system("ruby", ocra, "writefile.rb", *(DefaultArgs + ["--chdir-first"]))
+      pristine_env "writefile.exe" do
+        assert !File.exist?("output.txt")
+        assert system("writefile.exe")
+        # If the script ran in its temp directory, then our working dir still shouldn't have any output.txt
+        assert !File.exist?("output.txt")
+      end
+    end
+  end
+
   # Would be nice if OCRA could build from source located beneath the
   # Ruby installation too.
   def test_exec_prefix
