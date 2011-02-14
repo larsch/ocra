@@ -201,7 +201,7 @@ build process. You will also probably need to use the --add-all-core
 option to include the Ruby core libraries.
 
 If your app uses gems, then you can specify them in a
-Bundler (http://gembundler.com/) Gemfile, then use the --gemfile
+Bundler (http://gembundler.com) Gemfile, then use the --gemfile
 option to supply it to Ocra. Ocra will automatically include all
 gems specified, and all their dependencies.
 
@@ -214,7 +214,9 @@ directory "someapp" and create an exe named "someapp.exe", without
 actually running the app during the build, you could use the
 following command:
 
-  ocra someapp/script/server someapp --no-dep-run --add-all-core --gemfile someapp/Gemfile
+  ocra someapp/script/rails someapp --output someapp.exe --add-all-core --gemfile someapp/Gemfile --no-dep-run --chdir-first -- server
+
+Note the space between "--" and "server"! It's important; "server" is an argument to be passed to rails when the script is ran.
 
 Rails 2 apps can be packaged similarly, though you will have to
 integrate them with Bundler (http://gembundler.com/rails23.html)

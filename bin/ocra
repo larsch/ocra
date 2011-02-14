@@ -176,6 +176,7 @@ module Ocra
     :add_all_core => false,
     :output_override => nil,
     :load_autoload => true,
+    :chdir_first => false,
     :force_windows => false,
     :force_console => false,
     :icon_filename => nil,
@@ -270,6 +271,7 @@ ocra [options] script.rb
 --windows        Force Windows application (rubyw.exe)
 --console        Force console application (ruby.exe)
 --no-autoload    Don't load/include script.rb's autoloads.
+--chdir-first    When exe starts, change working directory to app dir.
 --icon <ico>     Replace icon with a custom one.
 --version        Display version number and exit.
 --no-gem-filter  Don't filter readme's, doc, C-source, etc. from gems.
@@ -297,6 +299,8 @@ EOF
         @options[:force_console] = true
       when /\A--no-autoload\z/
         @options[:load_autoload] = false
+      when /\A--chdir-first\z/
+        @options[:chdir_first] = true
       when /\A--icon\z/
         @options[:icon_filename] = Pathname(argv.shift)
         Ocra.fatal_error "Icon file #{icon_filename} not found.\n" unless icon_filename.exist?
@@ -808,7 +812,7 @@ EOF
           ocrafile.write([OP_ENABLE_DEBUG_MODE].pack("V"))
         end
 
-        createinstdir Ocra.debug_extract, !Ocra.debug_extract
+        createinstdir Ocra.debug_extract, !Ocra.debug_extract, Ocra.chdir_first
 
         yield(self)
 
@@ -848,8 +852,8 @@ EOF
       end
     end
 
-    def createinstdir(next_to_exe = false, delete_after = false)
-      @of << [OP_CREATE_INST_DIRECTORY, next_to_exe ? 1 : 0, delete_after ? 1 : 0].pack("VVV")
+    def createinstdir(next_to_exe = false, delete_after = false, chdir_before = false)
+      @of << [OP_CREATE_INST_DIRECTORY, next_to_exe ? 1 : 0, delete_after ? 1 : 0, chdir_before ? 1 : 0].pack("VVVV")
     end
 
     def createfile(src, tgt)

@@ -51,6 +51,7 @@ DWORD ExitStatus = 0;
 BOOL ExitCondition = FALSE;
 BOOL DebugModeEnabled = FALSE;
 BOOL DeleteInstDirEnabled = FALSE;
+BOOL ChdirBeforeRunEnabled = FALSE;
 TCHAR ImageFileName[MAX_PATH];
 
 #if _CONSOLE
@@ -117,9 +118,14 @@ BOOL OpCreateInstDirectory(LPVOID *p)
 {
    DWORD DebugExtractMode = GetInteger(p);
    DWORD DeletingAfter = GetInteger(p);
+   DWORD ChdirBeforeRun = GetInteger(p);
 
    if (DeletingAfter) {
      DeleteInstDirEnabled = TRUE;
+   }
+
+   if (ChdirBeforeRun) {
+     ChdirBeforeRunEnabled = TRUE;
    }
 
    /* Create an installation directory that will hold the extracted files */
@@ -204,6 +210,11 @@ int CALLBACK _tWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPTSTR lpCm
 
    if (!CloseHandle(hImage))
       FATAL("Failed to close executable.");
+
+   if (ChdirBeforeRunEnabled) {
+     DEBUG("Changing CWD to unpacked directory %s", InstDir);
+     SetCurrentDirectory(InstDir);
+   }
 
    if (PostCreateProcess_ApplicationName && PostCreateProcess_CommandLine)
    {
