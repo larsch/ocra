@@ -467,6 +467,7 @@ void CreateAndWaitForProcess(LPTSTR ApplicationName, LPTSTR CommandLine)
  */
 BOOL OpPostCreateProcess(LPVOID* p)
 {
+   DEBUG("PostCreateProcess");
    if (PostCreateProcess_ApplicationName || PostCreateProcess_CommandLine)
    {
       return FALSE;
@@ -481,6 +482,7 @@ BOOL OpPostCreateProcess(LPVOID* p)
 BOOL OpEnableDebugMode(LPVOID* p)
 {
   DebugModeEnabled = TRUE;
+  DEBUG("Ocra stub running in debug mode");
   return TRUE;
 }
 
