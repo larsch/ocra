@@ -801,7 +801,6 @@ EOF
       opcode_offset = File.size(path)
 
       File.open(path, "ab") do |ocrafile|
-        
         if Ocra.lzma_mode
           @of = ""
         else
@@ -809,6 +808,7 @@ EOF
         end
 
         if Ocra.debug
+          Ocra.msg("Enabling debug mode in executable")
           ocrafile.write([OP_ENABLE_DEBUG_MODE].pack("V"))
         end
 
