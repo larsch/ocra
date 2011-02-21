@@ -826,8 +826,6 @@ EOF
             File.unlink("tmpin") if File.exist?("tmpin")
             File.unlink("tmpout") if File.exist?("tmpout")
           end
-        else
-          ocrafile.write(@of) if Ocra.lzma_mode
         end
 
         ocrafile.write([OP_END].pack("V"))
