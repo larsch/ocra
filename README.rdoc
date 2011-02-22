@@ -217,7 +217,8 @@ directory "someapp" and create an exe named "someapp.exe", without
 actually running the app during the build, you could use the
 following command:
 
-  ocra someapp/script/rails someapp --output someapp.exe --add-all-core --gemfile someapp/Gemfile --no-dep-run --chdir-first -- server
+  ocra someapp/script/rails someapp --output someapp.exe --add-all-core \
+  --gemfile someapp/Gemfile --no-dep-run --chdir-first -- server
 
 Note the space between "--" and "server"! It's important; "server" is an argument to be passed to rails when the script is ran.
 
@@ -231,7 +232,7 @@ To make your application start up quicker, or to allow it to
 keep files in its application directory between runs, or if
 you just want to make your program seem more like a "regular"
 Windows application, you can have Ocra generate an installer
-for your app with the Inno Setup program.
+for your app with the free Inno Setup software.
 
 You will first have to download and install Inno Setup 5 or
 later, and also add its directory to your PATH (so that Ocra
@@ -240,8 +241,8 @@ you can use the --innosetup option to Ocra to supply an
 Inno Setup script. Do not add any [Files] or [Dirs] sections
 to the script; Ocra will figure those out itself.
 
-To continue the Rails example above, to package the Rails 3
-app into an installer, save the following as "<tt>someapp.iss</tt>":
+To continue the Rails example above, let's package the Rails 3
+app into an installer. Save the following as "<tt>someapp.iss</tt>":
 
   [Setup]
   AppName=SomeApp
@@ -256,7 +257,9 @@ app into an installer, save the following as "<tt>someapp.iss</tt>":
 
 Then, run Ocra with this command:
 
-  ocra someapp/script/rails someapp --output someapp.exe --add-all-core --gemfile someapp/Gemfile --no-dep-run --chdir-first --no-lzma --innosetup someapp.iss -- server
+  ocra someapp/script/rails someapp --output someapp.exe --add-all-core \
+  --gemfile someapp/Gemfile --no-dep-run --chdir-first --no-lzma \
+  --innosetup someapp.iss -- server
 
 If all goes well, a file named "SomeAppInstaller.exe" will be placed
 into the Output directory.
