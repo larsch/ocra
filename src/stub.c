@@ -51,7 +51,7 @@ DWORD ExitStatus = 0;
 BOOL ExitCondition = FALSE;
 BOOL DebugModeEnabled = FALSE;
 BOOL DeleteInstDirEnabled = FALSE;
-BOOL ChdirBeforeRunEnabled = FALSE;
+BOOL ChdirBeforeRunEnabled = TRUE;
 TCHAR ImageFileName[MAX_PATH];
 
 #if _CONSOLE
@@ -114,6 +114,18 @@ BOOL WINAPI ConsoleHandleRoutine(DWORD dwCtrlType)
    return TRUE;
 }
 
+void FindExeDir(TCHAR *d)
+{
+   strncpy(d, ImageFileName, MAX_PATH);
+   unsigned int i;
+   for (i = strlen(d)-1; i >= 0; --i) {
+      if (i == 0 || d[i] == '\\') {
+         d[i] = 0;
+         break;
+      }
+   }
+}
+
 BOOL OpCreateInstDirectory(LPVOID *p)
 {
    DWORD DebugExtractMode = GetInteger(p);
@@ -132,14 +144,7 @@ BOOL OpCreateInstDirectory(LPVOID *p)
    TCHAR TempPath[MAX_PATH];
    if (DebugExtractMode) {
       // In debug extraction mode, create the temp directory next to the exe
-      strncpy(TempPath, ImageFileName, MAX_PATH);
-      unsigned int i;
-      for (i = strlen(TempPath)-1; i >= 0; --i) {
-        if (TempPath[i] == '\\') {
-          TempPath[i] = 0;
-          break;
-        }
-      }
+      FindExeDir(TempPath);
       if (strlen(TempPath) == 0) {
         FATAL("Unable to find directory containing exe");
         return FALSE;
@@ -168,6 +173,9 @@ int CALLBACK _tWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPTSTR lpCm
       FATAL("Failed to get executable name (error %lu).", GetLastError());
       return -1;
    }
+
+   /* By default, assume the installation directory is wherever the EXE is */
+   FindExeDir(InstDir);
    
    /* Set up environment */
    SetEnvironmentVariable(_T("OCRA_EXECUTABLE"), ImageFileName);

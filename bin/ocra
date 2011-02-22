@@ -181,6 +181,7 @@ module Ocra
     :force_console => false,
     :icon_filename => nil,
     :gemfile => nil,
+    :inno_script => nil,
     :quiet => false,
     :verbose => false,
     :autodll => true,
@@ -257,24 +258,25 @@ module Ocra
     usage = <<EOF
 ocra [options] script.rb
 
---dll dllname    Include additional DLLs from the Ruby bindir.
---no-lzma        Disable LZMA compression of the executable.
---no-dep-run     Don't run script.rb to check for dependencies.
---add-all-core   Add all core ruby libraries to the executable.
---output <file>  Name the exe to generate. Defaults to ./<scriptname>.exe.
---gemfile <file> Add all gems and dependencies listed in a Bundler Gemfile.
---quiet          Suppress output while building executable.
---verbose        Show extra output while building executable.
---debug          Executable will be verbose.
---debug-extract  Executable will unpack to local dir and not delete after.
---help           Display this information.
---windows        Force Windows application (rubyw.exe)
---console        Force console application (ruby.exe)
---no-autoload    Don't load/include script.rb's autoloads.
---chdir-first    When exe starts, change working directory to app dir.
---icon <ico>     Replace icon with a custom one.
---version        Display version number and exit.
---no-gem-filter  Don't filter readme's, doc, C-source, etc. from gems.
+--dll dllname      Include additional DLLs from the Ruby bindir.
+--no-lzma          Disable LZMA compression of the executable.
+--no-dep-run       Don't run script.rb to check for dependencies.
+--add-all-core     Add all core ruby libraries to the executable.
+--output <file>    Name the exe to generate. Defaults to ./<scriptname>.exe.
+--gemfile <file>   Add all gems and dependencies listed in a Bundler Gemfile.
+--innosetup <file> Use given Inno Setup script (.iss) to create an installer.
+--quiet            Suppress output while building executable.
+--verbose          Show extra output while building executable.
+--debug            Executable will be verbose.
+--debug-extract    Executable will unpack to local dir and not delete after.
+--help             Display this information.
+--windows          Force Windows application (rubyw.exe)
+--console          Force console application (ruby.exe)
+--no-autoload      Don't load/include script.rb's autoloads.
+--chdir-first      When exe starts, change working directory to app dir.
+--icon <ico>       Replace icon with a custom one.
+--version          Display version number and exit.
+--no-gem-filter    Don't filter readme's, doc, C-source, etc. from gems.
 EOF
 
     while arg = argv.shift
@@ -307,6 +309,9 @@ EOF
       when /\A--gemfile\z/
         @options[:gemfile] = Pathname(argv.shift)
         Ocra.fatal_error "Gemfile #{gemfile} not found.\n" unless gemfile.exist?
+      when /\A--innosetup\z/
+        @options[:inno_script] = Pathname(argv.shift)
+        Ocra.fatal_error "Inno Script #{inno_script} not found.\n" unless inno_script.exist?
       when /\A--no-autodll\z/
         @options[:autodll] = false
       when /\A--version\z/
@@ -329,6 +334,18 @@ EOF
       else
         @options[:files] << arg
       end
+    end
+
+    if Ocra.debug_extract && Ocra.inno_script
+      Ocra.fatal_error "The --debug-extract option conflicts with use of Inno Setup"
+    end
+
+    if Ocra.lzma_mode && Ocra.inno_script
+      Ocra.fatal_error "LZMA compression must be disabled (--no-lzma) when using Inno Setup"
+    end
+
+    if !Ocra.chdir_first && Ocra.inno_script
+      Ocra.fatal_error "Chdir-first mode must be enabled (--chdir-first) when using Inno Setup"
     end
 
     if files.empty?
@@ -717,7 +734,7 @@ EOF
       sb.setenv('GEM_PATH', (TEMPDIR_ROOT / GEMHOMEDIR).to_native)
 
       # Add the opcode to launch the script
-      extra_arg = Ocra.arg.map { |arg| ' "' + arg.gsub(/\"/,'\\"') + '"' }.join
+      extra_arg = Ocra.arg.map { |arg| ' "' + arg.gsub("\\", "\\\\").gsub("\"","\\\"") + '"' }.join
       installed_ruby_exe = TEMPDIR_ROOT / BINDIR / rubyexe
       launch_script = (TEMPDIR_ROOT / target_script).to_native
       sb.postcreateprocess(installed_ruby_exe,
@@ -725,7 +742,10 @@ EOF
       
       Ocra.msg "Compressing" unless not Ocra.lzma_mode
     end
-    Ocra.msg "Finished building #{executable} (#{File.size(executable)} bytes)"
+
+    unless Ocra.inno_script
+      Ocra.msg "Finished building #{executable} (#{File.size(executable)} bytes)"
+    end
   end
 
   module LibraryDetector
@@ -816,7 +836,7 @@ EOF
 
         yield(self)
 
-        if Ocra.lzma_mode
+        if Ocra.lzma_mode and not Ocra.inno_script
           begin
             File.open("tmpin", "wb") { |tmp| tmp.write(@of) }
             system("\"#{Ocra.lzmapath}\" e tmpin tmpout 2>NUL") or fail
@@ -832,13 +852,59 @@ EOF
         ocrafile.write([opcode_offset].pack("V")) # Pointer to start of opcodes
         ocrafile.write(Signature.pack("C*"))
       end
+
+      if Ocra.inno_script
+        begin
+          iss = File.read(Ocra.inno_script) + "\n\n"
+
+          iss << "[Dirs]\n"
+          @paths.each_key do |p|
+            iss << "Name: \"{app}/#{p}\"\n"
+          end
+          iss << "\n"
+
+          iss << "[Files]\n"
+          iss << "Source: \"#{path.to_s.gsub('"', '""')}\"; DestDir: \"{app}\"\n"
+          @files.each do |tgt, src|
+            iss << "Source: \"#{src.to_s.gsub('"', '""')}\"; DestDir: \"{app}/#{Pathname.new(tgt).dirname.to_s.gsub('"', '""')}\"\n"
+          end
+          iss << "\n"
+
+          Ocra.verbose_msg "### INNOSETUP SCRIPT ###\n\n#{iss}\n\n"
+
+          f = File.open("ocratemp.iss", "w")
+          f.write(iss)
+          f.close()
+
+          iscc_cmd = ["iscc"]
+          iscc_cmd << "/Q" unless Ocra.verbose
+          iscc_cmd << "ocratemp.iss"
+          Ocra.msg "Running InnoSetup compiler ISCC"
+          result = system(*iscc_cmd)
+          if not result
+            case $?
+              when 0 then raise RuntimeError.new("ISCC reported success, but system reported error?")
+              when 1 then raise RuntimeError.new("ISCC reports invalid command line parameters")
+              when 2 then raise RuntimeError.new("ISCC reports that compilation failed")
+              else raise RuntimeError.new("ISCC failed to run. Is the InnoSetup directory in your PATH?")
+            end
+          end
+        rescue Exception => e
+          Ocra.fatal_error("InnoSetup installer creation failed: #{e.message}")
+        ensure
+          File.unlink("ocratemp.iss") if File.exist?("ocratemp.iss")
+          File.unlink(path) if File.exist?(path)
+        end
+      end
     end
 
     def mkdir(path)
       return if @paths[path.path.downcase]
       @paths[path.path.downcase] = true
       Ocra.verbose_msg "m #{showtempdir path}"
-      @of << [OP_CREATE_DIRECTORY, path.to_native].pack("VZ*")
+      unless Ocra.inno_script # The directory will be created by InnoSetup with a [Dirs] statement
+        @of << [OP_CREATE_DIRECTORY, path.to_native].pack("VZ*")
+      end
     end
 
     def ensuremkdir(tgt)
@@ -851,17 +917,21 @@ EOF
     end
 
     def createinstdir(next_to_exe = false, delete_after = false, chdir_before = false)
-      @of << [OP_CREATE_INST_DIRECTORY, next_to_exe ? 1 : 0, delete_after ? 1 : 0, chdir_before ? 1 : 0].pack("VVVV")
+      unless Ocra.inno_script # Creation of installation directory will be handled by InnoSetup
+        @of << [OP_CREATE_INST_DIRECTORY, next_to_exe ? 1 : 0, delete_after ? 1 : 0, chdir_before ? 1 : 0].pack("VVVV")
+      end
     end
 
     def createfile(src, tgt)
       return if @files[tgt]
-      @files[tgt] = true
+      @files[tgt] = src
       src, tgt = Ocra.Pathname(src), Ocra.Pathname(tgt)
       ensuremkdir(tgt.dirname)
       str = File.open(src, "rb") { |file| file.read }
       Ocra.verbose_msg "a #{showtempdir tgt}"
-      @of << [OP_CREATE_FILE, tgt.to_native, str.size, str].pack("VZ*VA*")
+      unless Ocra.inno_script # InnoSetup will install the file with a [Files] statement
+        @of << [OP_CREATE_FILE, tgt.to_native, str.size, str].pack("VZ*VA*")
+      end
     end
 
     def createprocess(image, cmdline)
