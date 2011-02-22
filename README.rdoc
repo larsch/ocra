@@ -47,23 +47,26 @@ dependencies (gems and DLLs) into an executable named
 
   ocra --help
 
-  --dll dllname    Include additional DLLs from the Ruby bindir.
-  --no-lzma        Disable LZMA compression of the executable.
-  --no-dep-run     Don't run script.rb to check for dependencies.
-  --add-all-core   Add all core ruby libraries to the executable.
-  --output <file>  Name the exe to generate. Defaults to ./<scriptname>.exe.
-  --gemfile <file> Add all gems and dependencies listed in a Bundler Gemfile.
-  --quiet          Suppress output while building executable.
-  --verbose        Show extra output while building executable.
-  --debug          Executable will be verbose.
-  --debug-extract  Executable will unpack to local dir and not delete after.
-  --help           Display this information.
-  --windows        Force Windows application (rubyw.exe)
-  --console        Force console application (ruby.exe)
-  --no-autoload    Don't load/include script.rb's autoloads.
-  --icon <ico>     Replace icon with a custom one.
-  --version        Display version number and exit.
-  --no-gem-filter  Don't filter readme's, doc, C-source, etc. from gems.
+  --dll dllname      Include additional DLLs from the Ruby bindir.
+  --no-lzma          Disable LZMA compression of the executable.
+  --no-dep-run       Don't run script.rb to check for dependencies.
+  --add-all-core     Add all core ruby libraries to the executable.
+  --output <file>    Name the exe to generate. Defaults to ./<scriptname>.exe.
+  --gemfile <file>   Add all gems and dependencies listed in a Bundler Gemfile.
+  --innosetup <file> Use given Inno Setup script (.iss) to create an installer.
+  --quiet            Suppress output while building executable.
+  --verbose          Show extra output while building executable.
+  --debug            Executable will be verbose.
+  --debug-extract    Executable will unpack to local dir and not delete after.
+  --help             Display this information.
+  --windows          Force Windows application (rubyw.exe)
+  --console          Force console application (ruby.exe)
+  --no-autoload      Don't load/include script.rb's autoloads.
+  --chdir-first      When exe starts, change working directory to app dir.
+  --icon <ico>       Replace icon with a custom one.
+  --version          Display version number and exit.
+  --no-gem-filter    Don't filter readme's, doc, C-source, etc. from gems.
+
   
 === Compilation:
 
@@ -222,6 +225,42 @@ Rails 2 apps can be packaged similarly, though you will have to
 integrate them with Bundler (http://gembundler.com/rails23.html)
 first.
 
+=== Creating an installer for your application
+
+To make your application start up quicker, or to allow it to
+keep files in its application directory between runs, or if
+you just want to make your program seem more like a "regular"
+Windows application, you can have Ocra generate an installer
+for your app with the Inno Setup program.
+
+You will first have to download and install Inno Setup 5 or
+later, and also add its directory to your PATH (so that Ocra
+can find the ISCC compiler program). Once you've done that,
+you can use the --innosetup option to Ocra to supply an
+Inno Setup script. Do not add any [Files] or [Dirs] sections
+to the script; Ocra will figure those out itself.
+
+To continue the Rails example above, to package the Rails 3
+app into an installer, save the following as "<tt>someapp.iss</tt>":
+
+  [Setup]
+  AppName=SomeApp
+  AppVersion=0.1
+  DefaultDirName={pf}\SomeApp
+  DefaultGroupName=SomeApp
+  OutputBaseFilename=SomeAppInstaller
+
+  [Icons]
+  Name: "{group}\SomeApp"; Filename: "{app}\someapp.exe"
+  Name: "{group}\Uninstall SomeApp"; Filename: "{uninstallexe}"
+
+Then, run Ocra with this command:
+
+  ocra someapp/script/rails someapp --output someapp.exe --add-all-core --gemfile someapp/Gemfile --no-dep-run --chdir-first --no-lzma --innosetup someapp.iss -- server
+
+If all goes well, a file named "SomeAppInstaller.exe" will be placed
+into the Output directory.
+
 === Environment variables
 
 OCRA executables clear the RUBYLIB environment variable before your
@@ -241,7 +280,7 @@ executable, for example
 === Working directory
 
 The OCRA executable does not change the working directory when it is
-launched.
+launched, unless you use the "<tt>--chdir-first</tt>" option.
 
 You should not assume that the current working directory when invoking
 an executable built with .exe is the location of the source script. It
@@ -249,9 +288,13 @@ can be the directory where the executable is placed (when invoked
 through the Windows Explorer), the users' current working directory
 (when invoking from the Command Prompt), or even
 <tt>C:\\WINDOWS\\SYSTEM32</tt> when the executable is invoked through
-a file association. You can optionally change the directory yourself:
+a file association.
 
-  Dir.chdir File.dirname($0)
+With the "<tt>--chdir-first</tt>" option, the working directory will
+always be the common parent directory of your source files. This
+should be fine for most applications. However, if your application
+is designed to run from the command line and take filenames as
+arguments, then you cannot use this option.
 
 If you wish to maintain the user's working directory, but need to
 'require' additional Ruby scripts from the source directory, you can
