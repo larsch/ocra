@@ -212,8 +212,9 @@ int CALLBACK _tWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPTSTR lpCm
       FATAL("Failed to close executable.");
 
    if (ChdirBeforeRunEnabled) {
-     DEBUG("Changing CWD to unpacked directory %s", InstDir);
+     DEBUG("Changing CWD to unpacked directory %s/src", InstDir);
      SetCurrentDirectory(InstDir);
+     SetCurrentDirectory("./src");
    }
 
    if (PostCreateProcess_ApplicationName && PostCreateProcess_CommandLine)
