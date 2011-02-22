@@ -697,7 +697,7 @@ class TestOcra < Test::Unit::TestCase
       pristine_env "writefile.exe" do
         assert !File.exist?("output.txt")
         assert system("writefile.exe")
-        # If the script ran in its temp directory, then our working dir still shouldn't have any output.txt
+        # If the script ran in its inst directory, then our working dir still shouldn't have any output.txt
         assert !File.exist?("output.txt")
       end
     end

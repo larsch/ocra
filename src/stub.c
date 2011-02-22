@@ -129,16 +129,9 @@ void FindExeDir(TCHAR *d)
 BOOL OpCreateInstDirectory(LPVOID *p)
 {
    DWORD DebugExtractMode = GetInteger(p);
-   DWORD DeletingAfter = GetInteger(p);
-   DWORD ChdirBeforeRun = GetInteger(p);
 
-   if (DeletingAfter) {
-     DeleteInstDirEnabled = TRUE;
-   }
-
-   if (ChdirBeforeRun) {
-     ChdirBeforeRunEnabled = TRUE;
-   }
+   DeleteInstDirEnabled = GetInteger(p);
+   ChdirBeforeRunEnabled = GetInteger(p);
 
    /* Create an installation directory that will hold the extracted files */
    TCHAR TempPath[MAX_PATH];
