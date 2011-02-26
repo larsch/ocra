@@ -864,9 +864,12 @@ EOF
           iss << "\n"
 
           iss << "[Files]\n"
-          iss << "Source: \"#{path.to_s.gsub('"', '""')}\"; DestDir: \"{app}\"\n"
+          path_escaped = path.to_s.gsub('"', '""')
+          iss << "Source: \"#{path_escaped}\"; DestDir: \"{app}\"\n"
           @files.each do |tgt, src|
-            iss << "Source: \"#{src.to_s.gsub('"', '""')}\"; DestDir: \"{app}/#{Pathname.new(tgt).dirname.to_s.gsub('"', '""')}\"\n"
+            src_escaped = src.to_s.gsub('"', '""')
+            target_dir_escaped = Pathname.new(tgt).dirname.to_s.gsub('"', '""')
+            iss << "Source: \"#{src_escaped}\"; DestDir: \"{app}/#{target_dir_escaped}\"\n"
           end
           iss << "\n"
 
