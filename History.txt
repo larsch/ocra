@@ -1,4 +1,4 @@
-=== 1.3.0.rc1
+=== 1.3.0
 
 * Fixed some additional corner cases with absolute and relative
   require & load paths. Extended test suite to cover a lot more
