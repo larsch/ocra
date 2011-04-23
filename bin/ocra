@@ -74,6 +74,30 @@ module Ocra
       Pathname.pathequal(ext, expected_ext)
     end
 
+    def entries
+      Dir.entries(@path).map { |e| self / e }
+    end
+
+    # Recursively find all files which match a specified regular
+    # expression.
+    def find_all_files(re)
+      entries.map do |pn|
+        if pn.directory?
+          if pn.basename =~ /^\.\.?$/
+            []
+          else
+            pn.find_all_files(re)
+          end
+        elsif pn.file?
+          if pn.basename =~ re
+            pn
+          else
+            []
+          end
+        end
+      end.flatten
+    end
+
     def ==(other); to_posix.downcase == other.to_posix.downcase; end
     def =~(o); @path =~ o; end
     def <=>(other); @path.casecmp(other.path); end
@@ -84,6 +108,7 @@ module Ocra
     def dirname; Pathname.new(File.dirname(@path)); end
     def basename; Pathname.new(File.basename(@path)); end
     def expand(dir = nil); Pathname.new(File.expand_path(@path, dir && Ocra.Pathname(dir))); end
+    def size; File.size(@path); end
 
     alias to_s to_posix
     alias to_str to_posix
@@ -189,7 +214,8 @@ module Ocra
     :debug => false,
     :debug_extract => false,
     :gem_filter => true,
-    :arg => []
+    :arg => [],
+    :enc => true
   }
 
   @options.each_key { |opt| eval("def self.#{opt}; @options[:#{opt}]; end") }
@@ -277,6 +303,7 @@ ocra [options] script.rb
 --icon <ico>       Replace icon with a custom one.
 --version          Display version number and exit.
 --no-gem-filter    Don't filter readme's, doc, C-source, etc. from gems.
+--no-enc           Exclude encoding support files
 EOF
 
     while arg = argv.shift
@@ -328,6 +355,8 @@ EOF
       when /\A--\z/
         @options[:arg] = ARGV.dup
         ARGV.clear
+      when /\A--(no-)?enc\z/
+        @options[:enc] = !$1
       when /\A--help\z/, /\A--./
         puts usage
         exit 0
@@ -559,6 +588,23 @@ EOF
     # Find the source root and adjust paths
     src_prefix, src_files = find_src_root(Ocra.files)
 
+    # Include encoding support files
+    if Ocra.enc
+      all_load_paths.each do |path|
+        if path.subpath?(Host.exec_prefix)
+          encpath = path / "enc"
+          if encpath.exist?
+            encfiles = encpath.find_all_files(/\.so$/)
+            size = encfiles.inject(0) { |sum,pn| sum + pn.size }
+            Ocra.msg "Including #{encfiles.size} encoding support files (#{size} bytes, use --no-enc to exclude)"
+            features.push(*encfiles)
+          end
+        end
+      end
+    else
+      Ocra.msg "Not including encoding support files"
+    end
+
     # Find features and decide where to put them in the temporary
     # directory layout.
     libs = []
@@ -739,8 +785,6 @@ EOF
       launch_script = (TEMPDIR_ROOT / target_script).to_native
       sb.postcreateprocess(installed_ruby_exe,
         "#{rubyexe} \"#{launch_script}\"#{extra_arg}")
-      
-      Ocra.msg "Compressing" unless not Ocra.lzma_mode
     end
 
     unless Ocra.inno_script
@@ -839,6 +883,7 @@ EOF
         if Ocra.lzma_mode and not Ocra.inno_script
           begin
             File.open("tmpin", "wb") { |tmp| tmp.write(@of) }
+            Ocra.msg "Compressing #{@of.size} bytes"
             system("\"#{Ocra.lzmapath}\" e tmpin tmpout 2>NUL") or fail
             compressed_data = File.open("tmpout", "rb") { |tmp| tmp.read }
             ocrafile.write([OP_DECOMPRESS_LZMA, compressed_data.size, compressed_data].pack("VVA*"))
