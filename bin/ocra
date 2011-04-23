@@ -54,8 +54,16 @@ module Ocra
       src_normalized =~ /^#{Regexp.escape tgt_normalized}#{SEPARATOR_PAT}/i
     end
 
+    # Join two pathnames together. Returns the right-hand side if it
+    # is an absolute path. Otherwise, returns the full path of the
+    # left + right.
     def /(other)
-      Ocra.Pathname(@path + '/' + Ocra.Pathname(other).path)
+      other = Ocra.Pathname(other)
+      if other.absolute?
+        other
+      else
+        Ocra.Pathname(@path + '/' + other.path)
+      end
     end
     
     def append_to_filename!(s)
@@ -487,7 +495,13 @@ EOF
         srcroot
       end
     end
-    src_files = src_files.map { |file| file.relative_path_from(src_prefix) }
+    src_files = src_files.map do |file|
+      if file.subpath?(src_prefix)
+        file.relative_path_from(src_prefix)
+      else
+        file
+      end
+    end
     return src_prefix, src_files
   end
 
