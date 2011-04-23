@@ -715,5 +715,18 @@ class TestOcra < Test::Unit::TestCase
       end
     end
   end
+
+  def test_explicit_in_exec_prefix
+    path = File.join(RbConfig::CONFIG["exec_prefix"], "include", "**", "*.h")
+    number_of_files = Dir[path].size
+    assert number_of_files > 3
+    with_fixture "check_includes" do
+      assert system("ruby", ocra, "check_includes.rb", path, *DefaultArgs)
+      assert File.exist?("check_includes.exe")
+      pristine_env "check_includes.exe" do
+        assert system("check_includes.exe", number_of_files.to_s)
+      end
+    end
+  end
   
 end
