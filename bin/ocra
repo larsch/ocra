@@ -179,18 +179,21 @@ module Ocra
 
   IGNORE_MODULES = /^enumerator.so$/
 
-  IGNORE_GEMFILES = %r{(
+  GEM_SCRIPT_RE = /\.rbw?$/
+  GEM_EXTRA_RE = %r{(
     # Auxiliary files in the root of the gem
     ^(\.\/)?(History|Install|Manifest|README|Licen[sc]e|Contributors|ChangeLog|BSD|GPL).*$ |
     # Installation files in the root of the gem
     ^(\.\/)?(Rakefile|setup.rb|extconf.rb)$ |
     # Documentation/test directories in the root of the gem
-    ^(\.\/)?(doc|ext|examples|test|tests|benchmarks)\/ |
+    ^(\.\/)?(doc|ext|examples|test|tests|benchmarks|spec)\/ |
     # Directories anywhere
     (^|\/)(\.autotest|\.svn|\.cvs|\.git)(\/|$) |
     # Unlikely extensions
-    \.(rdoc)$/
+    \.(rdoc|c|cpp|c++|cxx|h|hxx|hpp|obj|o|a)$/
   )}xi
+  
+  GEM_NON_FILE_RE = /(#{GEM_EXTRA_RE}|#{GEM_SCRIPT_RE})/
 
   # Alias for the temporary directory where files are extracted.
   TEMPDIR_ROOT = Pathname.new("\xFF")
@@ -221,9 +224,9 @@ module Ocra
     :show_warnings => true,
     :debug => false,
     :debug_extract => false,
-    :gem_filter => true,
     :arg => [],
-    :enc => true
+    :enc => true,
+    :gem => []
   }
 
   @options.each_key { |opt| eval("def self.#{opt}; @options[:#{opt}]; end") }
@@ -305,7 +308,27 @@ Packaging options:
 --add-all-core     Add all core ruby libraries to the executable.
 --gemfile <file>   Add all gems and dependencies listed in a Bundler Gemfile.
 --no-enc           Exclude encoding support files
---no-gem-filter    Don't filter readme's, doc, C-source, etc. from gems.
+
+Gem content detection modes:
+
+--gem-minimal[=gem1,..]  Include only loaded scripts
+--gem-guess=[gem1,...]   Include loaded scripts & best guess (DEFAULT)
+--gem-all[=gem1,..]      Include all scripts & files
+--gem-full[=gem1,..]     Include EVERYTHING
+--gem-spec[=gem1,..]     Include files in gemspec (Does not work with Rubygems 1.7+)
+
+  minimal: loaded scripts
+  guess: loaded scripts and other files
+  all: loaded scripts, other scripts, other files (except extras)
+  full: Everything found in the gem directory
+
+--[no-]gem-scripts[=..]  Other script files than those loaded
+--[no-]gem-files[=..]    Other files (e.g. data files)
+--[no-]gem-extras[=..]   Extra files (README, etc.)
+
+  scripts: .rb/.rbw files
+  extras: C/C++ sources, object files, test, spec, README
+  files: all other files
 
 Auto-detection options:
 
@@ -373,13 +396,15 @@ EOF
         @options[:debug] = true
       when /\A--debug-extract\z/
         @options[:debug_extract] = true
-      when /\A--no-gem-filter\z/
-        @options[:gem_filter] = false
       when /\A--\z/
         @options[:arg] = ARGV.dup
         ARGV.clear
       when /\A--(no-)?enc\z/
         @options[:enc] = !$1
+      when /\A--(no-)?gem-(\w+)(?:=(.*))?$/
+        negate, group, list = $1, $2, $3
+        @options[:gem] ||= []
+        @options[:gem] << [negate, group.to_sym, list && list.split(",") ]
       when /\A--help\z/, /\A--./
         puts usage
         exit 0
@@ -557,24 +582,86 @@ EOF
         gemspecpath = gempath / 'specifications' / "#{fullgemname}.gemspec"
         @gemspecs << gemspecpath
         spec = Gem::Specification.load(gemspecpath)
-        Ocra.msg "Will include gem #{spec.full_name}"
 
-        # Get list of files
-        files = Pathname(spec.files)
-        # Filter out some unlikely files (Readme, etc.)
-        files = files.select { |filename| filename !~ IGNORE_GEMFILES } if Ocra.gem_filter
-        # Find the full path
-        files = files.map { |file| (gempath / "gems" / fullgemname / file).expand }
-        # Filter out non-files
-        files = files.select { |file| file.file? }
-        
-        gem_files += files
+        # Determine which set of files to include for this particular gem
+        include = [ :loaded, :files ]
+        Ocra.gem.each do |negate, option, list|
+          if list.nil? or list.include?(spec.name)
+            case option
+            when :minimal
+              include = [ :loaded ]
+            when :guess
+              include = [ :loaded, :files ]
+            when :all
+              include = [ :scripts, :files ]
+            when :full
+              include = [ :scripts, :files, :extras ]
+            when :spec
+              include = [ :spec ]
+            when :scripts
+              if negate
+                include.delete(:scripts)
+              else
+                include.push(:scripts)
+              end
+            when :files
+              if negate
+                include.delete(:files)
+              else
+                include.push(:files)
+              end
+            when :extras
+              if negate
+                include.delete(:extras)
+              else
+                include.push(:extras)
+              end
+            end
+          end
+        end
+
+        Ocra.msg "Detected gem #{spec.full_name} (#{include.join(', ')})"
+
+        gem_root = gempath / "gems" / spec.full_name
+        gem_root_files = nil
+        files = []
+
+        # Find the selected files
+        include.each do |set|
+          case set
+          when :spec
+            files << Pathname(spec.files)
+          when :loaded
+            files << features_from_gems.select { |feature| feature.subpath?(gem_root) }
+          when :files
+            gem_root_files ||= gem_root.find_all_files(//)
+            files << gem_root_files.select { |path| path.relative_path_from(gem_root) !~ GEM_NON_FILE_RE }
+          when :extra
+            gem_root_files ||= gem_root.find_all_files(//)
+            files << gem_root_files.select { |path| path.relative_path_from(gem_root) =~ GEM_EXTRA_RE }
+          when :scripts
+            gem_root_files ||= gem_root.find_all_files(//)
+            files << gem_root_files.select { |path| path.relative_path_from(gem_root) =~ GEM_SCRIPT_RE }
+          end
+        end
+
+        files.flatten!
+        actual_files = files.select { |file| file.file? }
+
+        (files - actual_files).each do |missing_file|
+          Ocra.warn "#{missing_file} was not found"
+        end
+
+        total_size = actual_files.inject(0) { |size, path| size + path.size }
+        Ocra.msg "\t#{actual_files.size} files, #{total_size} bytes"
+
+        gem_files += actual_files
       end
       gem_files = sort_uniq(gem_files)
-      features -= features_from_gems # FIXME Isn't this duplicated by caller?
     else
       gem_files = []
     end
+    features_from_gems -= gem_files
     return gem_files, features_from_gems
   end
   
