@@ -47,25 +47,61 @@ dependencies (gems and DLLs) into an executable named
 
   ocra --help
 
-  --dll dllname      Include additional DLLs from the Ruby bindir.
-  --no-lzma          Disable LZMA compression of the executable.
-  --no-dep-run       Don't run script.rb to check for dependencies.
-  --add-all-core     Add all core ruby libraries to the executable.
-  --output <file>    Name the exe to generate. Defaults to ./<scriptname>.exe.
-  --gemfile <file>   Add all gems and dependencies listed in a Bundler Gemfile.
-  --innosetup <file> Use given Inno Setup script (.iss) to create an installer.
-  --quiet            Suppress output while building executable.
-  --verbose          Show extra output while building executable.
-  --debug            Executable will be verbose.
-  --debug-extract    Executable will unpack to local dir and not delete after.
-  --help             Display this information.
-  --windows          Force Windows application (rubyw.exe)
-  --console          Force console application (ruby.exe)
-  --no-autoload      Don't load/include script.rb's autoloads.
-  --chdir-first      When exe starts, change working directory to app dir.
-  --icon <ico>       Replace icon with a custom one.
-  --version          Display version number and exit.
-  --no-gem-filter    Don't filter readme's, doc, C-source, etc. from gems.
+Ocra options:
+
+--help             Display this information.
+--quiet            Suppress output while building executable.
+--verbose          Show extra output while building executable.
+--version          Display version number and exit.
+
+Packaging options:
+
+--dll dllname      Include additional DLLs from the Ruby bindir.
+--add-all-core     Add all core ruby libraries to the executable.
+--gemfile <file>   Add all gems and dependencies listed in a Bundler Gemfile.
+--no-enc           Exclude encoding support files
+
+Gem content detection modes:
+
+--gem-minimal[=gem1,..]  Include only loaded scripts
+--gem-guess=[gem1,...]   Include loaded scripts & best guess (DEFAULT)
+--gem-all[=gem1,..]      Include all scripts & files
+--gem-full[=gem1,..]     Include EVERYTHING
+--gem-spec[=gem1,..]     Include files in gemspec (Does not work with Rubygems 1.7+)
+
+  minimal: loaded scripts
+  guess: loaded scripts and other files
+  all: loaded scripts, other scripts, other files (except extras)
+  full: Everything found in the gem directory
+
+--[no-]gem-scripts[=..]  Other script files than those loaded
+--[no-]gem-files[=..]    Other files (e.g. data files)
+--[no-]gem-extras[=..]   Extra files (README, etc.)
+
+  scripts: .rb/.rbw files
+  extras: C/C++ sources, object files, test, spec, README
+  files: all other files
+
+Auto-detection options:
+
+--no-dep-run       Don't run script.rb to check for dependencies.
+--no-autoload      Don't load/include script.rb's autoloads.
+--no-autodll       Disable detection of runtime DLL dependencies.
+
+Output options:
+
+--output <file>    Name the exe to generate. Defaults to ./<scriptname>.exe.
+--no-lzma          Disable LZMA compression of the executable.
+--innosetup <file> Use given Inno Setup script (.iss) to create an installer.
+
+Executable options:
+
+--windows          Force Windows application (rubyw.exe)
+--console          Force console application (ruby.exe)
+--chdir-first      When exe starts, change working directory to app dir.
+--icon <ico>       Replace icon with a custom one.
+--debug            Executable will be verbose.
+--debug-extract    Executable will unpack to local dir and not delete after.
 
   
 === Compilation:
@@ -170,11 +206,11 @@ your script. Otherwise, OCRA won't know about it and will not include
 the source files.
 
 RubyGems are handled specially. Whenever a file from a Gem is
-detected, OCRA will attempt to include all the files from that
-specific Gem (all files listed in the manifest), expect some unlikely
-needed files such as readme's and other documentation. This latter can
-be overruled using the "<tt>--no-gem-filter</tt>" which will make OCRA
-include every file that is listed in the Gem's manifest.
+detected, OCRA will attempt to include all the required files from
+that specific Gem, expect some unlikely needed files such as readme's
+and other documentation. This behaviour can be controlled by using the
+--gem-* options. Behaviour can be changed for all gems or specific
+gems using --gem-*=gemname.
 
 Libraries found in non-standard path (for example, if you invoke OCRA
 with "ruby -I some/path") will be placed into the site dir
@@ -225,6 +261,27 @@ Note the space between "--" and "server"! It's important; "server" is an argumen
 Rails 2 apps can be packaged similarly, though you will have to
 integrate them with Bundler (http://gembundler.com/rails23.html)
 first.
+
+=== Gem handling
+
+By default, Ocra includes all scripts that are loaded by your script
+when it is run before packaging. Ocra detects which gems are using and
+includes any additional non-script files from those gems, except
+trivial files such as C/C++ source code, object files, READMEs, unit
+tests, specs, etc.
+
+This behaviour can be changed by using the --gem-* options. There are
+four possible modes:
+
+  minimal: Include only loaded scripts
+  guess: Include loaded scripts and important files (DEFAULT)
+  all: Include all scripts and important files
+  full: Include all files
+
+If you find that files are missing from the resulting executable, try
+first with --gem-all=gemname for the gem that is missing, and if that
+does not work, try --gem-full=gemname. The paranoid can use --gem-full
+to include all files for all required gems.
 
 === Creating an installer for your application
 
