@@ -182,7 +182,7 @@ module Ocra
   GEM_SCRIPT_RE = /\.rbw?$/
   GEM_EXTRA_RE = %r{(
     # Auxiliary files in the root of the gem
-    ^(\.\/)?(History|Install|Manifest|README|Licen[sc]e|Contributors|ChangeLog|BSD|GPL).*$ |
+    ^(\.\/)?(History|Install|Manifest|README|CHANGES|Licen[sc]e|Contributors|ChangeLog|BSD|GPL).*$ |
     # Installation files in the root of the gem
     ^(\.\/)?(Rakefile|setup.rb|extconf.rb)$ |
     # Documentation/test directories in the root of the gem
