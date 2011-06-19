@@ -14,6 +14,9 @@
 
 * Debug mode support in the stub (--debug). Also --debug-extract to
   keep extracted files from executable. (DavidMikeSimon)
+
+* New gem behaviour yet again due to changes in Rubygems. See README
+  file.
   
 === 1.2.0
 
