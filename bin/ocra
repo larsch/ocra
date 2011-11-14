@@ -557,6 +557,14 @@ EOF
         Ocra.verbose_msg "From Gemfile, adding gem #{spec.full_name}"
         gems << [Pathname(spec.base_dir), spec.full_name]
       end
+
+      unless gems.any?{|dir, name| name =~ /^bundler-[.0-9]+/}
+        # Bundler itself wasn't added for some reason, let's put it in directly
+        Ocra.verbose_msg "From Gemfile, forcing inclusion of bundler gem itself"
+        bundler_spec = Gem.loaded_specs["bundler"]
+        bundler_spec or Ocra.fatal_error "Unable to locate bundler gem"
+        gems << [Pathname(bundler_spec.base_dir), bundler_spec.full_name]
+      end
     end
 
     if defined?(Gem)
