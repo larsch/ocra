@@ -554,7 +554,7 @@ EOF
 
       ENV['BUNDLE_GEMFILE'] = Ocra.gemfile
       Bundler.load.specs.each do |spec|
-        gems << [Pathname(spec.installation_path), spec.full_name]
+        gems << [Pathname(spec.base_dir), spec.full_name]
       end
     end
 
