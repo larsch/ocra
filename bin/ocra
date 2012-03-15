@@ -462,6 +462,9 @@ EOF
       modules_to_check.each do |mod|
         modules_checked[mod] = true
         mod.constants.each do |const|
+          # Module::Config causes warning on Ruby 1.9.3 - prevent autoloading
+          next if Module === mod && const == :Config
+          
           if mod.autoload?(const)
             begin
               mod.const_get(const)
