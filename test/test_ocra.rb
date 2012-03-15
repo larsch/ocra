@@ -728,5 +728,20 @@ class TestOcra < Test::Unit::TestCase
       end
     end
   end
+
+  # Hello world test. Test that we can build and run executables.
+  def test_nonexistent_temp
+    with_fixture 'helloworld' do
+      assert system("ruby", ocra, "helloworld.rb", *DefaultArgs)
+      assert File.exist?("helloworld.exe")
+      pristine_env "helloworld.exe" do
+        with_env "TEMP" => "c:\\thispathdoesnotexist12345", "TMP" => "c:\\thispathdoesnotexist12345" do
+          assert File.exist?("helloworld.exe")
+          system("helloworld.exe 2>NUL")
+          assert File.exist?("helloworld.exe")
+        end
+      end
+    end
+  end
   
 end

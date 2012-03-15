@@ -145,7 +145,13 @@ BOOL OpCreateInstDirectory(LPVOID *p)
    } else {
       GetTempPath(MAX_PATH, TempPath);
    }
-   GetTempFileName(TempPath, _T("ocrastub"), 0, InstDir);
+
+   UINT tempResult = GetTempFileName(TempPath, _T("ocrastub"), 0, InstDir);
+   if (tempResult == 0u) {
+      FATAL("Failed to get temp file name.");
+      return FALSE;
+   }
+   
    DEBUG("Creating installation directory: '%s'", InstDir);
 
    /* Attempt to delete the temp file created by GetTempFileName.
