@@ -18,7 +18,7 @@ include FileUtils
 class TestOcra < Test::Unit::TestCase
 
   # Default arguments for invoking OCRA when running tests.
-  DefaultArgs = [ '--no-lzma' ]
+  DefaultArgs = [ '--no-lzma', '--verbose' ]
   DefaultArgs << "--quiet" unless ENV["OCRA_VERBOSE_TEST"]
   DefaultArgs.push '--no-autodll' if not $have_win32_api
 
@@ -40,6 +40,11 @@ class TestOcra < Test::Unit::TestCase
         yield
       end
     end
+  end
+
+  def system(*args)
+    puts args.join(" ") if ENV["OCRA_VERBOSE_TEST"]
+    Kernel.system(*args)
   end
 
   attr_reader :ocra
@@ -140,7 +145,7 @@ class TestOcra < Test::Unit::TestCase
       end
     end
   end
-  
+
   # Test that executables can writing a file to the current working
   # directory.
   def test_writefile
@@ -188,7 +193,7 @@ class TestOcra < Test::Unit::TestCase
   # be automatically included and usable in packaged app
   def test_gemfile
     with_fixture 'bundlerusage' do
-      assert system("ruby", ocra, "bundlerusage.rb", "Gemfile", *(DefaultArgs + ["--no-dep-run", "--add-all-core", "--gemfile", "Gemfile"]))
+      assert system("ruby", ocra, "bundlerusage.rb", "Gemfile", *(DefaultArgs + ["--no-dep-run", "--add-all-core", "--gemfile", "Gemfile", "--gem-all"]))
       pristine_env "bundlerusage.exe" do
         assert system("bundlerusage.exe")
       end
@@ -288,7 +293,7 @@ class TestOcra < Test::Unit::TestCase
       end
     end
   end
-  
+
   # Test that the standard output from a script can be redirected to a
   # file.
   def test_stdout_redir
@@ -327,7 +332,7 @@ class TestOcra < Test::Unit::TestCase
       return if gdbmdll.nil?
       args.push '--dll', File.basename(gdbmdll)
     end
-    
+
     with_fixture 'gdbmdll' do
       assert system("ruby", ocra, "gdbmdll.rb", *args)
       with_env 'PATH' => '.' do
@@ -449,7 +454,7 @@ class TestOcra < Test::Unit::TestCase
       end
     end
   end
-  
+
   # Should pick up file when script modifies $LOAD_PATH by adding
   # dirname of script.
   def test_loadpath_mangling_dirname
@@ -506,7 +511,7 @@ class TestOcra < Test::Unit::TestCase
       end
     end
   end
-  
+
   # Test that ocra.rb accepts --version and outputs the version number.
   def test_version
     assert_match(/^Ocra \d+(\.\d)+(.[a-z]+\d+)?$/, `ruby \"#{ocra}\" --version`)
@@ -685,14 +690,14 @@ class TestOcra < Test::Unit::TestCase
   # Test that the --chdir-first option changes directory before exe starts script
   def test_chdir_first
     with_fixture 'writefile' do
-      # Control test; make sure the writefile script works as expected under default options 
+      # Control test; make sure the writefile script works as expected under default options
       assert system("ruby", ocra, "writefile.rb", *(DefaultArgs))
       pristine_env "writefile.exe" do
         assert !File.exist?("output.txt")
         assert system("writefile.exe")
         assert File.exist?("output.txt")
       end
-      
+
       assert system("ruby", ocra, "writefile.rb", *(DefaultArgs + ["--chdir-first"]))
       pristine_env "writefile.exe" do
         assert !File.exist?("output.txt")
@@ -743,5 +748,5 @@ class TestOcra < Test::Unit::TestCase
       end
     end
   end
-  
+
 end
