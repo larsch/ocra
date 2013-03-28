@@ -17,15 +17,15 @@ module Ocra
     attr_reader :path
     SEPARATOR_PAT = /[#{Regexp.quote File::ALT_SEPARATOR}#{Regexp.quote File::SEPARATOR}]/ # }
     ABSOLUTE_PAT = /\A([A-Z]:)?#{SEPARATOR_PAT}/i
-    
+
     def initialize(path)
       @path = path
     end
-    
+
     def to_native
       @path.tr File::SEPARATOR, File::ALT_SEPARATOR
     end
-    
+
     def to_posix
       @path.tr File::ALT_SEPARATOR, File::SEPARATOR
     end
@@ -65,7 +65,7 @@ module Ocra
         Ocra.Pathname(@path + '/' + other.path)
       end
     end
-    
+
     def append_to_filename!(s)
       @path.sub!(/(\.[^.]*?|)$/) { s.to_s + $1 }
     end
@@ -138,7 +138,7 @@ module Ocra
       raise ArgumentError, obj
     end
   end
-  
+
   # Variables describing the host's build environment.
   module Host
     class << self
@@ -161,7 +161,7 @@ module Ocra
         @rubyw_exe ||= (RbConfig::CONFIG['rubyw_install_name'] || "rubyw") + exeext
       end
       def ruby_exe
-        @ruby_exe ||= (RbConfig::CONFIG['ruby_install_name'] || "ruby") + exeext     
+        @ruby_exe ||= (RbConfig::CONFIG['ruby_install_name'] || "ruby") + exeext
       end
       def tempdir
         @tempdir ||= Ocra.Pathname(ENV['TEMP'])
@@ -174,7 +174,7 @@ module Ocra
   def self.sort_uniq(a)
     a.sort.inject([]) { |r, e| r.last == e ? r : r << e }
   end
-  
+
   VERSION = "1.3.0"
 
   IGNORE_MODULES = /^enumerator.so$/
@@ -192,7 +192,7 @@ module Ocra
     # Unlikely extensions
     \.(rdoc|c|cpp|c\+\+|cxx|h|hxx|hpp|obj|o|a)$/
   )}xi
-  
+
   GEM_NON_FILE_RE = /(#{GEM_EXTRA_RE}|#{GEM_SCRIPT_RE})/
 
   # Alias for the temporary directory where files are extracted.
@@ -464,7 +464,7 @@ EOF
         mod.constants.each do |const|
           # Module::Config causes warning on Ruby 1.9.3 - prevent autoloading
           next if Module === mod && const == :Config
-          
+
           if mod.autoload?(const)
             begin
               mod.const_get(const)
@@ -500,7 +500,7 @@ EOF
       candidates.sort_by { |loadpath| loadpath.path.size }.last
     end
   end
-  
+
   # Find the root of all files specified on the command line and use
   # it as the "src" of the output.
   def Ocra.find_src_root(files)
@@ -676,16 +676,16 @@ EOF
     features_from_gems -= gem_files
     return gem_files, features_from_gems
   end
-  
+
   def Ocra.build_exe
     all_load_paths = $LOAD_PATH.map { |loadpath| Pathname(loadpath).expand }
     @added_load_paths = ($LOAD_PATH - @load_path_before).map { |loadpath| Pathname(loadpath).expand }
     working_directory = Pathname.pwd.expand
 
     restore_environment
-      
+
     features = []
-    # If the script was ran, then detect the features it used 
+    # If the script was ran, then detect the features it used
     if Ocra.run_script
       # Attempt to autoload libraries before doing anything else.
       attempt_load_autoload if Ocra.load_autoload
@@ -745,7 +745,7 @@ EOF
           feature = feature.relative_path_from(path.expand)
         end
         fullpath = feature.expand(path)
-        
+
         if fullpath.subpath?(Host.exec_prefix)
           # Features found in the Ruby installation are put in the
           # temporary Ruby installation.
@@ -875,13 +875,13 @@ EOF
         end
         sb.createfile(dll, target)
       end
-      
+
       # Add extra DLLs specified on the command line
       Ocra.extra_dlls.each do |dll|
         Ocra.msg "Adding supplied DLL #{dll}"
         sb.createfile(Host.bindir / dll, BINDIR / dll)
       end
-      
+
       # Add gemspec files
       @gemspecs = sort_uniq(@gemspecs)
       @gemspecs.each do |gemspec|
@@ -938,7 +938,7 @@ EOF
         bytes_needed = bytes_needed_buffer.unpack("I")[0]
         break if bytes_needed <= module_handle_buffer.size
       end
-      
+
       handles = module_handle_buffer.unpack("I*")
       handles.select { |handle| handle > 0 }.map do |handle|
         str = "\x00" * 256
@@ -1059,10 +1059,10 @@ EOF
           result = system(*iscc_cmd)
           if not result
             case $?
-              when 0 then raise RuntimeError.new("ISCC reported success, but system reported error?")
-              when 1 then raise RuntimeError.new("ISCC reports invalid command line parameters")
-              when 2 then raise RuntimeError.new("ISCC reports that compilation failed")
-              else raise RuntimeError.new("ISCC failed to run. Is the InnoSetup directory in your PATH?")
+            when 0 then raise RuntimeError.new("ISCC reported success, but system reported error?")
+            when 1 then raise RuntimeError.new("ISCC reports invalid command line parameters")
+            when 2 then raise RuntimeError.new("ISCC reports that compilation failed")
+            else raise RuntimeError.new("ISCC failed to run. Is the InnoSetup directory in your PATH?")
             end
           end
         rescue Exception => e
@@ -1132,9 +1132,9 @@ EOF
     def showtempdir(x)
       x.to_s.gsub(TEMPDIR_ROOT, "<tempdir>")
     end
-    
+
   end # class OcraBuilder
-  
+
 end # module Ocra
 
 if File.basename(__FILE__) == File.basename($0)
@@ -1144,7 +1144,7 @@ if File.basename(__FILE__) == File.basename($0)
   if not Ocra.files.first.exist?
     Ocra.fatal_error "#{Ocra.files[0]} was not found!"
   end
-  
+
   at_exit do
     if $!.nil? or $!.kind_of?(SystemExit)
       Ocra.build_exe
