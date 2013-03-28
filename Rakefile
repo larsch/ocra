@@ -6,7 +6,6 @@ require 'hoe'
 Hoe.spec 'ocra' do |spec|
   spec.author = "Lars Christensen"
   spec.email = "larsch@belunktum.dk"
-  spec.url = "http://ocra.rubyforge.org/"
   spec.readme_file = 'README.rdoc'
   spec.extra_rdoc_files = ['README.rdoc']
 end
@@ -41,7 +40,7 @@ file 'bin/ocrasa.rb' => [ 'bin/ocra', 'share/ocra/stub.exe', 'share/ocra/stubw.e
   cp 'bin/ocra', 'bin/ocrasa.rb'
   File.open("bin/ocrasa.rb", "a") do |f|
     f.puts "__END__"
-    
+
     stub = File.open("share/ocra/stub.exe", "rb") {|g| g.read}
     stub64 = [stub].pack("m")
     f.puts stub64.size
@@ -51,7 +50,7 @@ file 'bin/ocrasa.rb' => [ 'bin/ocra', 'share/ocra/stub.exe', 'share/ocra/stubw.e
     stub64 = [stub].pack("m")
     f.puts stub64.size
     f.puts stub64
-    
+
     lzma = File.open("share/ocra/lzma.exe", "rb") {|g| g.read}
     lzma64 = [lzma].pack("m")
     f.puts lzma64.size
