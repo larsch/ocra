@@ -196,7 +196,7 @@ module Ocra
   GEM_NON_FILE_RE = /(#{GEM_EXTRA_RE}|#{GEM_SCRIPT_RE})/
 
   # Alias for the temporary directory where files are extracted.
-  TEMPDIR_ROOT = Pathname.new("\xFF")
+  TEMPDIR_ROOT = Pathname.new("|")
   # Directory for source files in temporary directory.
   SRCDIR = Pathname.new('src')
   # Directory for Ruby binaries in temporary directory.

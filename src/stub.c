@@ -28,15 +28,15 @@ BOOL ProcessImage(LPVOID p, DWORD size);
 BOOL ProcessOpcodes(LPVOID* p);
 void CreateAndWaitForProcess(LPTSTR ApplicationName, LPTSTR CommandLine);
 
-BOOL OpEnd(LPVOID *p);
-BOOL OpCreateFile(LPVOID *p);
-BOOL OpCreateDirectory(LPVOID *p);
-BOOL OpCreateProcess(LPVOID *p);
-BOOL OpDecompressLzma(LPVOID *p);
-BOOL OpSetEnv(LPVOID *p);
-BOOL OpPostCreateProcess(LPVOID *p);
-BOOL OpEnableDebugMode(LPVOID *p);
-BOOL OpCreateInstDirectory(LPVOID *p);
+BOOL OpEnd(LPVOID* p);
+BOOL OpCreateFile(LPVOID* p);
+BOOL OpCreateDirectory(LPVOID* p);
+BOOL OpCreateProcess(LPVOID* p);
+BOOL OpDecompressLzma(LPVOID* p);
+BOOL OpSetEnv(LPVOID* p);
+BOOL OpPostCreateProcess(LPVOID* p);
+BOOL OpEnableDebugMode(LPVOID* p);
+BOOL OpCreateInstDirectory(LPVOID* p);
 
 #if WITH_LZMA
 #include <LzmaDec.h>
@@ -70,7 +70,8 @@ TCHAR ImageFileName[MAX_PATH];
 #define DEBUG(...)
 #endif
 
-POpcodeHandler OpcodeHandlers[OP_MAX] = {
+POpcodeHandler OpcodeHandlers[OP_MAX] =
+{
    &OpEnd,
    &OpCreateDirectory,
    &OpCreateFile,
@@ -114,51 +115,59 @@ BOOL WINAPI ConsoleHandleRoutine(DWORD dwCtrlType)
    return TRUE;
 }
 
-void FindExeDir(TCHAR *d)
+void FindExeDir(TCHAR* d)
 {
    strncpy(d, ImageFileName, MAX_PATH);
    unsigned int i;
-   for (i = strlen(d)-1; i >= 0; --i) {
-      if (i == 0 || d[i] == '\\') {
+   for (i = strlen(d)-1; i >= 0; --i)
+   {
+      if (i == 0 || d[i] == '\\')
+      {
          d[i] = 0;
          break;
       }
    }
 }
 
-BOOL OpCreateInstDirectory(LPVOID *p)
+BOOL OpCreateInstDirectory(LPVOID* p)
 {
    DWORD DebugExtractMode = GetInteger(p);
-
+   
    DeleteInstDirEnabled = GetInteger(p);
    ChdirBeforeRunEnabled = GetInteger(p);
-
+   
    /* Create an installation directory that will hold the extracted files */
    TCHAR TempPath[MAX_PATH];
-   if (DebugExtractMode) {
+   if (DebugExtractMode)
+   {
       // In debug extraction mode, create the temp directory next to the exe
       FindExeDir(TempPath);
-      if (strlen(TempPath) == 0) {
-        FATAL("Unable to find directory containing exe");
-        return FALSE;
+      if (strlen(TempPath) == 0)
+      {
+         FATAL("Unable to find directory containing exe");
+         return FALSE;
       }
-   } else {
+   }
+   else
+   {
       GetTempPath(MAX_PATH, TempPath);
    }
-
+   
    UINT tempResult = GetTempFileName(TempPath, _T("ocrastub"), 0, InstDir);
-   if (tempResult == 0u) {
+   if (tempResult == 0u)
+   {
       FATAL("Failed to get temp file name.");
       return FALSE;
    }
    
    DEBUG("Creating installation directory: '%s'", InstDir);
-
+   
    /* Attempt to delete the temp file created by GetTempFileName.
       Ignore errors, i.e. if it doesn't exist. */
    (void)DeleteFile(InstDir);
-
-   if (!CreateDirectory(InstDir, NULL)){
+   
+   if (!CreateDirectory(InstDir, NULL))
+   {
       FATAL("Failed to create installation directory.");
       return FALSE;
    }
@@ -168,11 +177,12 @@ BOOL OpCreateInstDirectory(LPVOID *p)
 int CALLBACK _tWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPTSTR lpCmdLine, int nCmdShow)
 {
    /* Find name of image */
-   if (!GetModuleFileName(NULL, ImageFileName, MAX_PATH)) {
+   if (!GetModuleFileName(NULL, ImageFileName, MAX_PATH))
+   {
       FATAL("Failed to get executable name (error %lu).", GetLastError());
       return -1;
    }
-
+   
    /* By default, assume the installation directory is wherever the EXE is */
    FindExeDir(InstDir);
    
@@ -180,23 +190,25 @@ int CALLBACK _tWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPTSTR lpCm
    SetEnvironmentVariable(_T("OCRA_EXECUTABLE"), ImageFileName);
    
    SetConsoleCtrlHandler(&ConsoleHandleRoutine, TRUE);
-
+   
    /* Open the image (executable) */
    HANDLE hImage = CreateFile(ImageFileName, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, 0, NULL);
-   if (hImage == INVALID_HANDLE_VALUE) {
+   if (hImage == INVALID_HANDLE_VALUE)
+   {
       FATAL("Failed to open executable (%s)", ImageFileName);
       return -1;
-   }      
-
+   }
+   
    /* Create a file mapping */
    DWORD FileSize = GetFileSize(hImage, NULL);
    HANDLE hMem = CreateFileMapping(hImage, NULL, PAGE_READONLY, 0, FileSize, NULL);
-   if (hMem == INVALID_HANDLE_VALUE) {
+   if (hMem == INVALID_HANDLE_VALUE)
+   {
       FATAL("Failed to create file mapping (error %lu)", GetLastError());
       CloseHandle(hImage);
       return -1;
    }
-
+   
    /* Map the image into memory */
    LPVOID lpv = MapViewOfFile(hMem, FILE_MAP_READ, 0, 0, 0);
    if (lpv == NULL)
@@ -206,24 +218,33 @@ int CALLBACK _tWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPTSTR lpCm
    else
    {
       if (!ProcessImage(lpv, FileSize))
+      {
          ExitStatus = -1;
+      }
       
       if (!UnmapViewOfFile(lpv))
+      {
          FATAL("Failed to unmap view of executable.");
+      }
    }
-
+   
    if (!CloseHandle(hMem))
+   {
       FATAL("Failed to close file mapping.");
-
-   if (!CloseHandle(hImage))
-      FATAL("Failed to close executable.");
-
-   if (ChdirBeforeRunEnabled) {
-     DEBUG("Changing CWD to unpacked directory %s/src", InstDir);
-     SetCurrentDirectory(InstDir);
-     SetCurrentDirectory("./src");
    }
-
+   
+   if (!CloseHandle(hImage))
+   {
+      FATAL("Failed to close executable.");
+   }
+   
+   if (ChdirBeforeRunEnabled)
+   {
+      DEBUG("Changing CWD to unpacked directory %s/src", InstDir);
+      SetCurrentDirectory(InstDir);
+      SetCurrentDirectory("./src");
+   }
+   
    if (PostCreateProcess_ApplicationName && PostCreateProcess_CommandLine)
    {
       DEBUG("**********");
@@ -231,21 +252,22 @@ int CALLBACK _tWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPTSTR lpCm
       DEBUG("**********");
       CreateAndWaitForProcess(PostCreateProcess_ApplicationName, PostCreateProcess_CommandLine);
    }
-
-   if (DeleteInstDirEnabled) {
-     DEBUG("Deleting temporary installation directory %s", InstDir);
-     SHFILEOPSTRUCT shop;
-     shop.hwnd = NULL;
-     shop.wFunc = FO_DELETE;
-     InstDir[lstrlen(InstDir) + sizeof(TCHAR)] = 0;
-     shop.pFrom = InstDir;
-     shop.pTo = NULL;
-     shop.fFlags = FOF_NOCONFIRMATION | FOF_SILENT | FOF_NOERRORUI;
-     SHFileOperation(&shop);
+   
+   if (DeleteInstDirEnabled)
+   {
+      DEBUG("Deleting temporary installation directory %s", InstDir);
+      SHFILEOPSTRUCT shop;
+      shop.hwnd = NULL;
+      shop.wFunc = FO_DELETE;
+      InstDir[lstrlen(InstDir) + sizeof(TCHAR)] = 0;
+      shop.pFrom = InstDir;
+      shop.pTo = NULL;
+      shop.fFlags = FOF_NOCONFIRMATION | FOF_SILENT | FOF_NOERRORUI;
+      SHFileOperation(&shop);
    }
-
+   
    ExitProcess(ExitStatus);
-
+   
    /* Never gets here */
    return 0;
 }
@@ -276,13 +298,15 @@ BOOL ProcessImage(LPVOID ptr, DWORD size)
 */
 BOOL ProcessOpcodes(LPVOID* p)
 {
-   while(!ExitCondition)
+   while (!ExitCondition)
    {
       DWORD opcode = GetInteger(p);
       if (opcode < OP_MAX)
       {
          if (!OpcodeHandlers[opcode](p))
+         {
             return FALSE;
+         }
       }
       else
       {
@@ -294,26 +318,27 @@ BOOL ProcessOpcodes(LPVOID* p)
 }
 
 /**
-   Expands a specially formatted string, replacing \xFF with the
+   Expands a specially formatted string, replacing | with the
    temporary installation directory.
 */
 void ExpandPath(LPTSTR* out, LPTSTR str)
 {
    DWORD OutSize = lstrlen(str) + sizeof(TCHAR);
    LPTSTR a = str;
-   while ((a = _tcschr(a, L'\xFF')))
+   while ((a = _tcschr(a, L'|')))
    {
       OutSize += lstrlen(InstDir) - sizeof(TCHAR);
       a++;
    }
-
+   
    *out = LocalAlloc(LMEM_FIXED, OutSize);
    
    LPTSTR OutPtr = *out;
-   while ((a = _tcschr(str, '\xFF')))
+   while ((a = _tcschr(str, L'|')))
    {
       int l = a - str;
-      if (l > 0) {
+      if (l > 0)
+      {
          memcpy(OutPtr, str, l);
          OutPtr += l;
          str += l;
@@ -330,28 +355,31 @@ void ExpandPath(LPTSTR* out, LPTSTR str)
 */
 LPTSTR SkipArg(LPTSTR str)
 {
-   if (*str == '"') {
+   if (*str == '"')
+   {
       str++;
-      while (*str && *str != '"') str++;
-      if (*str == '"') str++;
-   } else {
-      while (*str && *str != ' ') str++;
+      while (*str && *str != '"') { str++; }
+      if (*str == '"') { str++; }
    }
-   while (*str && *str != ' ') str++;
+   else
+   {
+      while (*str && *str != ' ') { str++; }
+   }
+   while (*str && *str != ' ') { str++; }
    return str;
 }
 
 /**
    Create a file (OP_CREATE_FILE opcode handler)
 */
-BOOL OpCreateFile(LPVOID *p)
+BOOL OpCreateFile(LPVOID* p)
 {
    BOOL Result = TRUE;
    LPTSTR FileName = GetString(p);
    DWORD FileSize = GetInteger(p);
    LPVOID Data = *p;
    *p += FileSize;
-
+   
    TCHAR Fn[MAX_PATH];
    lstrcpy(Fn, InstDir);
    lstrcat(Fn, _T("\\"));
@@ -379,17 +407,17 @@ BOOL OpCreateFile(LPVOID *p)
       FATAL("Failed to create file '%s'", Fn);
       Result = FALSE;
    }
-
+   
    return Result;
 }
 
 /**
    Create a directory (OP_CREATE_DIRECTORY opcode handler)
 */
-BOOL OpCreateDirectory(LPVOID *p)
+BOOL OpCreateDirectory(LPVOID* p)
 {
    LPTSTR DirectoryName = GetString(p);
-
+   
    TCHAR DirName[MAX_PATH];
    lstrcpy(DirName, InstDir);
    lstrcat(DirName, _T("\\"));
@@ -397,12 +425,16 @@ BOOL OpCreateDirectory(LPVOID *p)
    
    DEBUG("CreateDirectory(%s)", DirName);
    
-   if (!CreateDirectory(DirName, NULL)){
-      if (GetLastError() == ERROR_ALREADY_EXISTS) {
-        DEBUG("Directory already exists");
-      } else {
-        FATAL("Failed to create directory '%s'.", DirName);
-        return FALSE;
+   if (!CreateDirectory(DirName, NULL))
+   {
+      if (GetLastError() == ERROR_ALREADY_EXISTS)
+      {
+         DEBUG("Directory already exists");
+      }
+      else
+      {
+         FATAL("Failed to create directory '%s'.", DirName);
+         return FALSE;
       }
    }
    
@@ -413,12 +445,12 @@ void GetCreateProcessInfo(LPVOID* p, LPTSTR* pApplicationName, LPTSTR* pCommandL
 {
    LPTSTR ImageName = GetString(p);
    LPTSTR CmdLine = GetString(p);
-
+   
    ExpandPath(pApplicationName, ImageName);
-
+   
    LPTSTR ExpandedCommandLine;
    ExpandPath(&ExpandedCommandLine, CmdLine);
-
+   
    LPTSTR MyCmdLine = GetCommandLine();
    LPTSTR MyArgs = SkipArg(MyCmdLine);
    
@@ -434,7 +466,7 @@ void GetCreateProcessInfo(LPVOID* p, LPTSTR* pApplicationName, LPTSTR* pCommandL
    Create a new process and wait for it to complete (OP_CREATE_PROCESS
    opcode handler)
 */
-BOOL OpCreateProcess(LPVOID *p)
+BOOL OpCreateProcess(LPVOID* p)
 {
    LPTSTR ApplicationName;
    LPTSTR CommandLine;
@@ -453,18 +485,20 @@ void CreateAndWaitForProcess(LPTSTR ApplicationName, LPTSTR CommandLine)
    StartupInfo.cb = sizeof(StartupInfo);
    BOOL r = CreateProcess(ApplicationName, CommandLine, NULL, NULL,
                           TRUE, 0, NULL, NULL, &StartupInfo, &ProcessInformation);
-
+                          
    if (!r)
    {
       FATAL("Failed to create process (%s): %lu", ApplicationName, GetLastError());
       return;
    }
-
+   
    WaitForSingleObject(ProcessInformation.hProcess, INFINITE);
-
+   
    if (!GetExitCodeProcess(ProcessInformation.hProcess, &ExitStatus))
+   {
       FATAL("Failed to get exit status (error %lu).", GetLastError());
-
+   }
+   
    CloseHandle(ProcessInformation.hProcess);
    CloseHandle(ProcessInformation.hThread);
 }
@@ -489,20 +523,20 @@ BOOL OpPostCreateProcess(LPVOID* p)
 
 BOOL OpEnableDebugMode(LPVOID* p)
 {
-  DebugModeEnabled = TRUE;
-  DEBUG("Ocra stub running in debug mode");
-  return TRUE;
+   DebugModeEnabled = TRUE;
+   DEBUG("Ocra stub running in debug mode");
+   return TRUE;
 }
 
 #if WITH_LZMA
-void *SzAlloc(void *p, size_t size) { p = p; return LocalAlloc(LMEM_FIXED, size); }
-void SzFree(void *p, void *address) { p = p; LocalFree(address); }
+void* SzAlloc(void* p, size_t size) { p = p; return LocalAlloc(LMEM_FIXED, size); }
+void SzFree(void* p, void* address) { p = p; LocalFree(address); }
 ISzAlloc alloc = { SzAlloc, SzFree };
 
 #define LZMA_UNPACKSIZE_SIZE 8
 #define LZMA_HEADER_SIZE (LZMA_PROPS_SIZE + LZMA_UNPACKSIZE_SIZE)
 
-BOOL OpDecompressLzma(LPVOID *p)
+BOOL OpDecompressLzma(LPVOID* p)
 {
    BOOL Success = TRUE;
    
@@ -511,14 +545,16 @@ BOOL OpDecompressLzma(LPVOID *p)
    
    Byte* src = (Byte*)*p;
    *p += CompressedSize;
-
+   
    UInt64 unpackSize = 0;
    int i;
    for (i = 0; i < 8; i++)
+   {
       unpackSize += (UInt64)src[LZMA_PROPS_SIZE + i] << (i * 8);
-
+   }
+   
    Byte* DecompressedData = LocalAlloc(LMEM_FIXED, unpackSize);
-          
+   
    SizeT lzmaDecompressedSize = unpackSize;
    SizeT inSizePure = CompressedSize - LZMA_HEADER_SIZE;
    ELzmaStatus status;
@@ -533,9 +569,11 @@ BOOL OpDecompressLzma(LPVOID *p)
    {
       LPVOID decPtr = DecompressedData;
       if (!ProcessOpcodes(&decPtr))
+      {
          Success = FALSE;
+      }
    }
-
+   
    LocalFree(DecompressedData);
    return Success;
 }
@@ -554,7 +592,7 @@ BOOL OpSetEnv(LPVOID* p)
    LPTSTR ExpandedValue;
    ExpandPath(&ExpandedValue, Value);
    DEBUG("SetEnv(%s, %s)", Name, ExpandedValue);
-
+   
    BOOL Result = FALSE;
    if (!SetEnvironmentVariable(Name, ExpandedValue))
    {
