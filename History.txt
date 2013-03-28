@@ -1,3 +1,16 @@
+=== 1.3.1
+
+* Now includes $LOADED_FEATURES even when script is not run to check
+  dependencies. This fixes compatability with Ruby 1.9.3 where
+  rubygems is always loaded.
+
+* Fixed compatability with Ruby 2.0.0: Temp-path alias in binary
+  changed to be valid UTF-8 character.
+
+* README.txt updated related to --no-dep-run (karhatsu).
+
+* Fixes for Bundler handling (DavidMikeSimon).
+
 === 1.3.0
 
 * Fixed some additional corner cases with absolute and relative
