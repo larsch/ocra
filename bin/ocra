@@ -409,7 +409,7 @@ EOF
         puts usage
         exit 0
       else
-        @options[:files] << arg
+        @options[:files] << arg.dup.force_encoding(__FILE__.encoding)
       end
     end
 
