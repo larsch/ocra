@@ -236,8 +236,12 @@ use other means to specify what needs to be packaged with your app.
 
 To disable automatic dependency resolution, use the --no-dep-run
 option; with it, Ocra will skip executing your program during the
-build process. You will also probably need to use the --add-all-core
-option to include the Ruby core libraries.
+build process. This on the other hand requires using --gem-full option
+(see more below); otherwise Ocra will not include all the necessary
+files for the gems.
+
+You will also probably need to use the --add-all-core option to
+include the Ruby core libraries.
 
 If your app uses gems, then you can specify them in a
 Bundler (http://gembundler.com) Gemfile, then use the --gemfile
@@ -254,7 +258,7 @@ actually running the app during the build, you could use the
 following command:
 
   ocra someapp/script/rails someapp --output someapp.exe --add-all-core \
-  --gemfile someapp/Gemfile --no-dep-run --chdir-first -- server
+  --gemfile someapp/Gemfile --no-dep-run --gem-full --chdir-first -- server
 
 Note the space between "--" and "server"! It's important; "server" is an argument to be passed to rails when the script is ran.
 
@@ -315,7 +319,7 @@ app into an installer. Save the following as "<tt>someapp.iss</tt>":
 Then, run Ocra with this command:
 
   ocra someapp/script/rails someapp --output someapp.exe --add-all-core \
-  --gemfile someapp/Gemfile --no-dep-run --chdir-first --no-lzma \
+  --gemfile someapp/Gemfile --no-dep-run --gem-full --chdir-first --no-lzma \
   --innosetup someapp.iss -- server
 
 If all goes well, a file named "SomeAppInstaller.exe" will be placed
