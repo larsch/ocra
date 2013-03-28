@@ -9,7 +9,7 @@ begin
   gem 'win32-api', '>=1.2.0'
   require "win32/api"
   $have_win32_api = true
-rescue LoadError => e
+rescue LoadError
   $have_win32_api = false
 end
 
