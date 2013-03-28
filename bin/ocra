@@ -684,17 +684,16 @@ EOF
 
     restore_environment
 
-    features = []
     # If the script was ran, then detect the features it used
     if Ocra.run_script
       # Attempt to autoload libraries before doing anything else.
       attempt_load_autoload if Ocra.load_autoload
-
-      # Store the currently loaded files (before we require rbconfig for
-      # our own use).
-      features = $LOADED_FEATURES.map { |feature| Pathname(feature) }
-      features.delete_if { |feature| feature =~ IGNORE_MODULES }
     end
+
+    # Store the currently loaded files (before we require rbconfig for
+    # our own use).
+    features = $LOADED_FEATURES.map { |feature| Pathname(feature) }
+    features.delete_if { |feature| feature =~ IGNORE_MODULES }
 
     # Find gemspecs to include
     if defined?(Gem)
