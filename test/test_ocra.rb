@@ -722,6 +722,7 @@ class TestOcra < Test::Unit::TestCase
   end
 
   def test_explicit_in_exec_prefix
+    return unless File.directory?(RbConfig::CONFIG["exec_prefix"] + "/include")
     path = File.join(RbConfig::CONFIG["exec_prefix"], "include", "**", "*.h")
     number_of_files = Dir[path].size
     assert number_of_files > 3
