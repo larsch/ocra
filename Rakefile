@@ -18,6 +18,8 @@ task :build_stub do
 end
 
 file 'share/ocra/stub.exe' => :build_stub
+file 'share/ocra/stubw.exe' => :build_stub
+file 'share/ocra/edicon.exe' => :build_stub
 
 task :test => :build_stub
 
