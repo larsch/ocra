@@ -3,12 +3,13 @@
 require 'rubygems'
 require 'hoe'
 
-Hoe.spec 'ocra' do |spec|
+spec = Hoe.spec 'ocra' do |spec|
   spec.author = "Lars Christensen"
   spec.email = "larsch@belunktum.dk"
   spec.readme_file = 'README.rdoc'
   spec.extra_rdoc_files = ['README.rdoc']
 end
+spec.urls.each { |url| url.chomp! }
 
 task :build_stub do
   sh "mingw32-make -C src"
