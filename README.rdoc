@@ -1,6 +1,6 @@
 = ocra
 
-* Homepage: http://ocra.rubyforge.org
+* http://ocra.rubyforge.org
 * RubyForge project page: http://rubyforge.org/projects/ocra
 * GitHub: http://github.com/larsch/ocra
 * Issue tracker: http://github.com/larsch/ocra/issues
