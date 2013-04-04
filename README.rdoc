@@ -432,8 +432,8 @@ windowed applications (without console window) from .rbw-files.
 Ruby on Windows provides two executables: ruby.exe is a console mode
 application and rubyw.exe is a windowed application which does not
 bring up a console window when launched using the Windows Explorer.
-By default, or if the "<tt>--console</tt>" option is used, OCRA will use
-the console runtime (rubyw.exe). OCRA will automatically select the
+By default, or if the "<tt>--console</tt>" option is used, OCRA will
+use the console runtime (ruby.exe). OCRA will automatically select the
 windowed runtime when your script has the ".rbw" extension, or if you
 specify the "<tt>--windows</tt>" command line option.
 
