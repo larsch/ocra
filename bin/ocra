@@ -83,6 +83,7 @@ module Ocra
     end
 
     def entries
+      @path.strip!
       Dir.entries(@path).map { |e| self / e }
     end
 
@@ -591,11 +592,18 @@ EOF
           end
         end
       end
-
+      
       gems = sort_uniq(gems)
       gem_files = []
+  
       gems.each do |gempath, fullgemname|
         gemspecpath = gempath / 'specifications' / "#{fullgemname}.gemspec"
+        if not File.exists? gemspecpath
+          gem_name = fullgemname.split('-')[0]
+          path = `bundle show #{gem_name}`
+          gemspecpath = Pathname("#{path.strip}/#{gem_name}.gemspec")
+        end
+
         @gemspecs << gemspecpath
         spec = Gem::Specification.load(gemspecpath)
 
@@ -636,9 +644,14 @@ EOF
           end
         end
 
+  
         Ocra.msg "Detected gem #{spec.full_name} (#{include.join(', ')})"
 
+
         gem_root = gempath / "gems" / spec.full_name
+        if not Dir.exists? gem_root
+          gem_root = Pathname(`bundle show #{spec.name}`)
+        end
         gem_root_files = nil
         files = []
 
