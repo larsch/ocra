@@ -1,0 +1,1 @@
+gem "coderay", git: "https://github.com/rubychan/coderay.git"

@@ -1,4 +1,5 @@
-require "test/unit"
+require "minitest/autorun"
+
 require "tmpdir"
 require "fileutils"
 require "rbconfig"
@@ -15,7 +16,7 @@ end
 
 include FileUtils
 
-class TestOcra < Test::Unit::TestCase
+class TestOcra < MiniTest::Test
 
   # Default arguments for invoking OCRA when running tests.
   DefaultArgs = [ '--no-lzma', '--verbose' ]

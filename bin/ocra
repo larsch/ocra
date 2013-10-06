@@ -545,7 +545,7 @@ EOF
   # file from a gem path.
   def Ocra.find_gem_files(features)
     features_from_gems = []
-    gems = []
+    gems = {}
 
     # If a Bundler Gemfile was provided, add all gems it specifies
     if Ocra.gemfile
@@ -562,7 +562,7 @@ EOF
       ENV['BUNDLE_GEMFILE'] = Ocra.gemfile
       Bundler.load.specs.each do |spec|
         Ocra.verbose_msg "From Gemfile, adding gem #{spec.full_name}"
-        gems << [Pathname(spec.base_dir), spec.full_name]
+        gems[spec.name] ||= spec
       end
 
       unless gems.any?{|dir, name| name =~ /^bundler-[.0-9]+/}
@@ -570,15 +570,25 @@ EOF
         Ocra.verbose_msg "From Gemfile, forcing inclusion of bundler gem itself"
         bundler_spec = Gem.loaded_specs["bundler"]
         bundler_spec or Ocra.fatal_error "Unable to locate bundler gem"
-        gems << [Pathname(bundler_spec.base_dir), bundler_spec.full_name]
+        gems["bundler"] ||= spec
       end
     end
 
     if defined?(Gem)
+      # Include Gems that are loaded
+      Gem.loaded_specs.each { |gemname, spec| gems[gemname] ||= spec }
+      # Fall back to gem detection (loaded_specs are not population on
+      # all Ruby versions)
       features.each do |feature|
+        # Detect load path unless absolute
         if not feature.absolute?
           feature = find_load_path(Pathname($:), feature)
           next if feature.nil? # Could be enumerator.so
+        end
+        # Skip if found in known Gem dir
+        if gems.find { |gem, spec| feature.subpath?(spec.gem_dir) }
+          features_from_gems << feature
+          next
         end
         gempaths = Pathname(Gem.path)
         gempaths.each do |gempath|
@@ -586,18 +596,20 @@ EOF
           if feature.subpath?(geminstallpath)
             gemlocalpath = feature.relative_path_from(geminstallpath)
             fullgemname = gemlocalpath.path.split('/').first
-            gems << [gempath, fullgemname]
-            features_from_gems << feature
+            gemspecpath = gempath / 'specifications' / "#{fullgemname}.gemspec"
+            if spec = Gem::Specification.load(gemspecpath)
+              gems[spec.name] ||= spec
+              features_from_gems << feature
+            else
+              Ocra.warn "Failed to load gemspec for '#{fullgemname}'"
+            end
           end
         end
       end
 
-      gems = sort_uniq(gems)
       gem_files = []
-      gems.each do |gempath, fullgemname|
-        gemspecpath = gempath / 'specifications' / "#{fullgemname}.gemspec"
-        @gemspecs << gemspecpath
-        spec = Gem::Specification.load(gemspecpath)
+      gems.each do |gemname, spec|
+        @gemspecs << Pathname(spec.spec_file) if File.exist?(spec.spec_file)
 
         # Determine which set of files to include for this particular gem
         include = [ :loaded, :files ]
@@ -638,7 +650,7 @@ EOF
 
         Ocra.msg "Detected gem #{spec.full_name} (#{include.join(', ')})"
 
-        gem_root = gempath / "gems" / spec.full_name
+        gem_root = Pathname(spec.gem_dir)
         gem_root_files = nil
         files = []
 
