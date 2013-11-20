@@ -3,12 +3,13 @@
 require 'rubygems'
 require 'hoe'
 
-spec = Hoe.spec 'ocra' do |spec|
-  spec.author = "Lars Christensen"
-  spec.email = "larsch@belunktum.dk"
-  spec.readme_file = 'README.rdoc'
-  spec.extra_rdoc_files = ['README.rdoc']
+Hoe.plugin :minitest
+
+spec = Hoe.spec 'ocra' do
+  developer "Lars Christensen", "larsch@belunktum.dk"
+  license "MIT"
 end
+
 spec.urls.each { |url| url.chomp! }
 
 task :build_stub do
