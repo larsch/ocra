@@ -16,7 +16,7 @@ any additionally needed ruby libraries or DLL.
 == FEATURES
 
 * LZMA Compression (optional, default on)
-* Ruby 1.9 support
+* Ruby 1.8.7, 1.9.3 and 2.0.0 support
 * Both windowed/console mode supported
 * Includes gems based on usage, or from a Bundler Gemfile
 
@@ -153,9 +153,8 @@ Executable options:
 
 * Windows
 
-* Working Ruby installation, tested with:
-  * One-Click Installer (187_27_rc2)
-  * RubyInstaller (1.8.7p299, 1.9.1p249, 1.9.2p0)
+* Working Ruby installation. Ocra is tested with RubyInstaller
+  1.8.7p374, 1.9.3p488, and 2.0.0p247.
 
 * MinGW Installation (when working with the source code only)
 
