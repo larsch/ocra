@@ -36,11 +36,14 @@ Gem Installation:
   gem install ocra
 
 Alternatively you can download the gem at either of these links:
-http://rubyforge.org/frs/?group_id=8185
+
+http://rubyforge.org/frs/?group_id=8185 or 
 http://rubygems.org/gems/ocra
 
 Stand-alone Version:
-Get ocrasa.rb from rubyforge.org/frs/?group_id=8185. Requires nothing but a working Ruby installation on Windows.
+Get ocrasa.rb from rubyforge.org/frs/?group_id=8185. 
+
+Requires nothing but a working Ruby installation on Windows.
 
 == SYNOPSIS:
 
