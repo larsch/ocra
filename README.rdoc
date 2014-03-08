@@ -41,7 +41,7 @@ http://rubyforge.org/frs/?group_id=8185 or
 http://rubygems.org/gems/ocra
 
 Stand-alone Version:
-Get ocrasa.rb from rubyforge.org/frs/?group_id=8185. 
+Get ocrasa.rb from http://rubyforge.org/frs/?group_id=8185. 
 
 Requires nothing but a working Ruby installation on Windows.
 
