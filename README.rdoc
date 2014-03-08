@@ -33,7 +33,7 @@ and get help (http://groups.google.com/group/ruby-ocra).
 
 Gem Installation:
 
-gem install ocra
+  gem install ocra
 
 Alternatively you can download the gem at either of these links:
 http://rubyforge.org/frs/?group_id=8185
