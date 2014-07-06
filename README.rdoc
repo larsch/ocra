@@ -154,7 +154,7 @@ Executable options:
 * Windows
 
 * Working Ruby installation. Ocra is tested with RubyInstaller
-  1.8.7p374, 1.9.3p488, and 2.0.0p247.
+  1.8.7p374, 1.9.3p545, and 2.0.0p481 (32 and 64 bit).
 
 * MinGW Installation (when working with the source code only)
 
