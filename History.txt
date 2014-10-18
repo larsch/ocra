@@ -1,3 +1,7 @@
+=== 1.3.3
+
+* Rebuild executables with MinGW GCC 4.8.1-4.
+
 === 1.3.2
 
 * Refactored Gemfile handling for better compatibility with Ruby
