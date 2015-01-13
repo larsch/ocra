@@ -14,7 +14,7 @@ any additionally needed ruby libraries or DLL.
 == FEATURES
 
 * LZMA Compression (optional, default on)
-* Ruby 1.8.7, 1.9.3 and 2.0.0 support
+* Ruby 1.8.7, 1.9.3, 2.0.0 and 2.1.5 support
 * Both windowed/console mode supported
 * Includes gems based on usage, or from a Bundler Gemfile
 
