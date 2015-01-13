@@ -217,8 +217,8 @@ class TestOcra < MiniTest::Test
   def test_output_option
     with_fixture 'helloworld' do
       assert system("ruby", ocra, "helloworld.rb", *(DefaultArgs + ["--output", "goodbyeworld.exe"]))
-      assert !File.exists?("helloworld.exe")
-      assert File.exists?("goodbyeworld.exe")
+      assert !File.exist?("helloworld.exe")
+      assert File.exist?("goodbyeworld.exe")
     end
   end
 
