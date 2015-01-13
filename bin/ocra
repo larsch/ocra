@@ -468,8 +468,8 @@ EOF
         mod.constants.each do |const|
           # Module::Config causes warning on Ruby 1.9.3 - prevent autoloading
           next if Module === mod && const == :Config
-
           if mod.autoload?(const)
+            Ocra.msg "Attempting to trigger autoload of #{mod}::#{const}"
             begin
               mod.const_get(const)
             rescue NameError
@@ -653,6 +653,11 @@ EOF
         gem_root = Pathname(spec.gem_dir)
         gem_root_files = nil
         files = []
+
+        unless gem_root.directory?
+          Ocra.warn "Gem #{spec.full_name} root folder was not found, skipping"
+          next
+        end
 
         # Find the selected files
         include.each do |set|
