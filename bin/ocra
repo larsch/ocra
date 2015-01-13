@@ -177,7 +177,7 @@ module Ocra
 
   VERSION = "1.3.3"
 
-  IGNORE_MODULES = /^enumerator.so$/
+  IGNORE_MODULES = /\/(enumerator.so|thread.rb)$/
 
   GEM_SCRIPT_RE = /\.rbw?$/
   GEM_EXTRA_RE = %r{(
@@ -608,6 +608,7 @@ EOF
       end
 
       gem_files = []
+
       gems.each do |gemname, spec|
         @gemspecs << Pathname(spec.spec_file) if File.exist?(spec.spec_file)
 
@@ -705,7 +706,7 @@ EOF
 
     restore_environment
 
-    # If the script was ran, then detect the features it used
+    # If the script was run, then detect the features it used
     if Ocra.run_script
       # Attempt to autoload libraries before doing anything else.
       attempt_load_autoload if Ocra.load_autoload
@@ -714,7 +715,6 @@ EOF
     # Store the currently loaded files (before we require rbconfig for
     # our own use).
     features = $LOADED_FEATURES.map { |feature| Pathname(feature) }
-    features.delete_if { |feature| feature =~ IGNORE_MODULES }
 
     # Find gemspecs to include
     if defined?(Gem)
@@ -869,7 +869,11 @@ EOF
         if file.directory?
           sb.ensuremkdir(target)
         else
-          sb.createfile(file, target)
+          begin
+            sb.createfile(file, target)
+          rescue Errno::ENOENT
+            raise unless file =~ IGNORE_MODULES
+          end
         end
       end
 
