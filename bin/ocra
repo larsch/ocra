@@ -15,7 +15,11 @@ module Ocra
     end
 
     attr_reader :path
-    SEPARATOR_PAT = /[#{Regexp.quote File::ALT_SEPARATOR}#{Regexp.quote File::SEPARATOR}]/ # }
+    if File::ALT_SEPARATOR.nil?
+      SEPARATOR_PAT = /[#{Regexp.quote File::SEPARATOR}]/ # }
+    else
+      SEPARATOR_PAT = /[#{Regexp.quote File::ALT_SEPARATOR}#{Regexp.quote File::SEPARATOR}]/ # }
+    end
     ABSOLUTE_PAT = /\A([A-Z]:)?#{SEPARATOR_PAT}/i
 
     def initialize(path)
