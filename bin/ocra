@@ -815,7 +815,7 @@ EOF
       if gemfile.subpath?(Host.exec_prefix)
         libs << [ gemfile, gemfile.relative_path_from(Host.exec_prefix) ]
       elsif defined?(Gem) and gemhome = Gem.path.find { |pth| gemfile.subpath?(pth) }
-        targetpath = GEMHOMEDIR / fullpath.relative_path_from(gemhome)
+        targetpath = GEMHOMEDIR / gemfile.relative_path_from(Pathname(gemhome))
         libs << [ gemfile, targetpath ]
       else
         Ocra.fatal_error "Don't know where to put gemfile #{gemfile}"
