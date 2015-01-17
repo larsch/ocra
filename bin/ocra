@@ -16,10 +16,9 @@ module Ocra
 
     attr_reader :path
     if File::ALT_SEPARATOR.nil?
-      SEPARATOR_PAT = /[#{Regexp.quote File::SEPARATOR}]/ # }
-    else
-      SEPARATOR_PAT = /[#{Regexp.quote File::ALT_SEPARATOR}#{Regexp.quote File::SEPARATOR}]/ # }
+      File::ALT_SEPARATOR = "\\"
     end
+    SEPARATOR_PAT = /[#{Regexp.quote File::ALT_SEPARATOR}#{Regexp.quote File::SEPARATOR}]/ # }
     ABSOLUTE_PAT = /\A([A-Z]:)?#{SEPARATOR_PAT}/i
 
     def initialize(path)
@@ -27,19 +26,11 @@ module Ocra
     end
 
     def to_native
-      if File::ALT_SEPARATOR.nil?
-        @path
-      else
-        @path.tr File::SEPARATOR, File::ALT_SEPARATOR
-      end
+      @path.tr File::SEPARATOR, File::ALT_SEPARATOR
     end
 
     def to_posix
-      if File::ALT_SEPARATOR.nil?
-        @path
-      else
-        @path.tr File::ALT_SEPARATOR, File::SEPARATOR
-      end
+      @path.tr File::ALT_SEPARATOR, File::SEPARATOR
     end
 
     # Compute the relative path from the 'src' path (directory) to 'tgt'
