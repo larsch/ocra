@@ -27,11 +27,19 @@ module Ocra
     end
 
     def to_native
-      @path.tr File::SEPARATOR, File::ALT_SEPARATOR
+      if File::ALT_SEPARATOR.nil?
+        @path
+      else
+        @path.tr File::SEPARATOR, File::ALT_SEPARATOR
+      end
     end
 
     def to_posix
-      @path.tr File::ALT_SEPARATOR, File::SEPARATOR
+      if File::ALT_SEPARATOR.nil?
+        @path
+      else
+        @path.tr File::ALT_SEPARATOR, File::SEPARATOR
+      end
     end
 
     # Compute the relative path from the 'src' path (directory) to 'tgt'
