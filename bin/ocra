@@ -15,6 +15,9 @@ module Ocra
     end
 
     attr_reader :path
+    if File::ALT_SEPARATOR.nil?
+      File::ALT_SEPARATOR = "\\"
+    end
     SEPARATOR_PAT = /[#{Regexp.quote File::ALT_SEPARATOR}#{Regexp.quote File::SEPARATOR}]/ # }
     ABSOLUTE_PAT = /\A([A-Z]:)?#{SEPARATOR_PAT}/i
 
@@ -812,7 +815,7 @@ EOF
       if gemfile.subpath?(Host.exec_prefix)
         libs << [ gemfile, gemfile.relative_path_from(Host.exec_prefix) ]
       elsif defined?(Gem) and gemhome = Gem.path.find { |pth| gemfile.subpath?(pth) }
-        targetpath = GEMHOMEDIR / fullpath.relative_path_from(gemhome)
+        targetpath = GEMHOMEDIR / gemfile.relative_path_from(Pathname(gemhome))
         libs << [ gemfile, targetpath ]
       else
         Ocra.fatal_error "Don't know where to put gemfile #{gemfile}"
@@ -912,7 +915,7 @@ EOF
         if gemspec.subpath?(Host.exec_prefix)
           path = gemspec.relative_path_from(Host.exec_prefix)
           sb.createfile(gemspec, path)
-        elsif defined?(Gem) and gemhome = Gem.path.find { |pth| gemspec.subpath?(pth) }
+        elsif defined?(Gem) and gemhome = Pathname(Gem.path.find { |pth| gemspec.subpath?(pth) })
           path = GEMHOMEDIR / gemspec.relative_path_from(gemhome)
           sb.createfile(gemspec, path)
         else
