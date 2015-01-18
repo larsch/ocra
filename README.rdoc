@@ -29,19 +29,17 @@ and get help (http://groups.google.com/group/ruby-ocra).
 
 == INSTALLATION:
 
-Gem Installation:
+Gem:
 
   gem install ocra
 
-Alternatively you can download the gem at either of these links:
+Alternatively you can download the gem at either
+http://rubygems.org/gems/ocra or
+https://github.com/larsch/ocra/releases/.
 
-http://rubyforge.org/frs/?group_id=8185 or 
-http://rubygems.org/gems/ocra
-
-Stand-alone Version:
-Get ocrasa.rb from http://rubyforge.org/frs/?group_id=8185. 
-
-Requires nothing but a working Ruby installation on Windows.
+Stand-alone Version: Get ocrasa.rb from
+https://github.com/larsch/ocra/releases/. Requires nothing but a
+working Ruby installation on Windows.
 
 == SYNOPSIS:
 
@@ -171,20 +169,6 @@ Executable options:
   1.8.7p374, 1.9.3p545, and 2.0.0p481 (32 and 64 bit).
 
 * MinGW Installation (when working with the source code only)
-
-== INSTALL:
-
-=== Gem Package
-
-Install by running:
-
-  gem install ocra
-
-=== Alternate Gem download:
-
-* http://rubyforge.org/frs/?group_id=8185
-
-* http://rubygems.org/gems/ocra
 
 === Stand-alone version
 
