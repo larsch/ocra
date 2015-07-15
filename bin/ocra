@@ -1068,6 +1068,7 @@ EOF
           iss << "Source: \"#{path_escaped}\"; DestDir: \"{app}\"\n"
           @files.each do |tgt, src|
             src_escaped = src.to_s.gsub('"', '""')
+            next if src_escaped =~ IGNORE_MODULES
             target_dir_escaped = Pathname.new(tgt).dirname.to_s.gsub('"', '""')
             iss << "Source: \"#{src_escaped}\"; DestDir: \"{app}/#{target_dir_escaped}\"\n"
           end
