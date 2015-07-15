@@ -655,6 +655,12 @@ EOF
         Ocra.msg "Detected gem #{spec.full_name} (#{include.join(', ')})"
 
         gem_root = Pathname(spec.gem_dir)
+        gem_extension = (gem_root / '..' / '..' / 'extensions').expand
+        if gem_extension.exist?
+          build_complete = gem_extension.find_all_files(/gem.build_complete/).select{|p| p.dirname.basename.to_s == spec.full_name}
+        else
+          build_complete = nil
+        end
         gem_root_files = nil
         files = []
 
@@ -673,6 +679,7 @@ EOF
           when :files
             gem_root_files ||= gem_root.find_all_files(//)
             files << gem_root_files.select { |path| path.relative_path_from(gem_root) !~ GEM_NON_FILE_RE }
+            files << build_complete if build_complete
           when :extra
             gem_root_files ||= gem_root.find_all_files(//)
             files << gem_root_files.select { |path| path.relative_path_from(gem_root) =~ GEM_EXTRA_RE }
@@ -1068,6 +1075,7 @@ EOF
           iss << "Source: \"#{path_escaped}\"; DestDir: \"{app}\"\n"
           @files.each do |tgt, src|
             src_escaped = src.to_s.gsub('"', '""')
+            next if src_escaped =~ IGNORE_MODULES
             target_dir_escaped = Pathname.new(tgt).dirname.to_s.gsub('"', '""')
             iss << "Source: \"#{src_escaped}\"; DestDir: \"{app}/#{target_dir_escaped}\"\n"
           end
