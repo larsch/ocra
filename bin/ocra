@@ -673,7 +673,7 @@ EOF
           when :files
             gem_root_files ||= gem_root.find_all_files(//)
             files << gem_root_files.select { |path| path.relative_path_from(gem_root) !~ GEM_NON_FILE_RE }
-          when :extra
+          when :extras
             gem_root_files ||= gem_root.find_all_files(//)
             files << gem_root_files.select { |path| path.relative_path_from(gem_root) =~ GEM_EXTRA_RE }
           when :scripts
