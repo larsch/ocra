@@ -1,3 +1,11 @@
+=== 1.3.6
+
+* More robust cleanup of temporary files. Deletes using manual
+  recursive method instead of using the shell. Will mark files for
+  later deletion both using Windows (requires Administrator
+  privileges) and a custom method that will remove old temporary files
+  when the executable is restarted.
+
 === 1.3.5
 
 * Fixes for Ruby 2.2.2p95
@@ -47,7 +55,7 @@
 
 * New gem behaviour yet again due to changes in Rubygems. See README
   file.
-  
+
 === 1.2.0
 
 * Ignore console events (Ctrl-C, Ctrl-Break). Ruby process handles

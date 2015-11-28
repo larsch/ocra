@@ -6,7 +6,6 @@
 */
 
 #include <windows.h>
-#include <shellapi.h>
 #include <string.h>
 #include <tchar.h>
 #include <stdio.h>
@@ -129,13 +128,107 @@ void FindExeDir(TCHAR* d)
    }
 }
 
+BOOL DeleteRecursively(LPTSTR path)
+{
+   TCHAR findPath[MAX_PATH];
+   DWORD pathLength;
+   WIN32_FIND_DATA findData;
+   HANDLE handle;
+   BOOL AnyFailed = FALSE;
+
+   lstrcpy(findPath, path);
+   pathLength = lstrlen(findPath);
+   if (pathLength > 1 && pathLength < MAX_PATH - 2) {
+      if (path[pathLength-1] == '\\')
+         lstrcat(findPath, "*");
+      else {
+         lstrcat(findPath, "\\*");
+         ++pathLength;
+      }
+      handle = FindFirstFile(findPath, &findData);
+      findPath[pathLength] = 0;
+      if (handle != INVALID_HANDLE_VALUE) {
+         do {
+            if (pathLength + lstrlen(findData.cFileName) < MAX_PATH) {
+               TCHAR subPath[MAX_PATH];
+               lstrcpy(subPath, findPath);
+               lstrcat(subPath, findData.cFileName);
+               if ((lstrcmp(findData.cFileName, ".") != 0) && (lstrcmp(findData.cFileName, "..") != 0)) {
+                  if (findData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) {
+                     if (!DeleteRecursively(subPath))
+                        AnyFailed = TRUE;
+                  } else {
+                     if (!DeleteFile(subPath)) {
+                        MoveFileEx(subPath, NULL, MOVEFILE_DELAY_UNTIL_REBOOT);
+                        AnyFailed = TRUE;
+                     }
+                  }
+               }
+            } else {
+               AnyFailed = TRUE;
+            }
+         } while (FindNextFile(handle, &findData));
+         FindClose(handle);
+      }
+   } else {
+      AnyFailed = TRUE;
+   }
+   if (!RemoveDirectory(findPath)) {
+      MoveFileEx(findPath, NULL, MOVEFILE_DELAY_UNTIL_REBOOT);
+      AnyFailed = TRUE;
+   }
+   return AnyFailed;
+}
+
+void MarkForDeletion(LPTSTR path)
+{
+   TCHAR marker[MAX_PATH];
+   lstrcpy(marker, path);
+   lstrcat(marker, ".ocra-delete-me");
+   HANDLE h = CreateFile(marker, GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
+   CloseHandle(h);
+}
+
+void DeleteRecursivelyNowOrLater(LPTSTR path)
+{
+   if (!DeleteRecursively(path))
+      MarkForDeletion(path);
+}
+
+void DeleteOldFiles()
+{
+   TCHAR path[MAX_PATH];
+   DWORD len = GetTempPath(MAX_PATH, path);
+   if (path[len-1] != '\\') {
+      lstrcat(path, "\\");
+      len += 1;
+   }
+   lstrcat(path, "*.ocra-delete-me");
+   WIN32_FIND_DATA findData;
+   HANDLE handle = FindFirstFile(path, &findData);
+   path[len] = 0;
+   if (handle == INVALID_HANDLE_VALUE)
+      return;
+   do {
+      TCHAR ocraPath[MAX_PATH];
+      lstrcpy(ocraPath, path);
+      lstrcat(ocraPath, findData.cFileName);
+      DeleteFile(ocraPath);
+      DWORD len = lstrlen(ocraPath);
+      len -= lstrlen(".ocra-delete-me");
+      ocraPath[len] = 0;
+      DeleteRecursivelyNowOrLater(ocraPath);
+   } while (FindNextFile(handle, &findData));
+   FindClose(handle);
+}
+
 BOOL OpCreateInstDirectory(LPVOID* p)
 {
    DWORD DebugExtractMode = GetInteger(p);
-   
+
    DeleteInstDirEnabled = GetInteger(p);
    ChdirBeforeRunEnabled = GetInteger(p);
-   
+
    /* Create an installation directory that will hold the extracted files */
    TCHAR TempPath[MAX_PATH];
    if (DebugExtractMode)
@@ -152,20 +245,20 @@ BOOL OpCreateInstDirectory(LPVOID* p)
    {
       GetTempPath(MAX_PATH, TempPath);
    }
-   
+
    UINT tempResult = GetTempFileName(TempPath, _T("ocrastub"), 0, InstDir);
    if (tempResult == 0u)
    {
       FATAL("Failed to get temp file name.");
       return FALSE;
    }
-   
+
    DEBUG("Creating installation directory: '%s'", InstDir);
-   
+
    /* Attempt to delete the temp file created by GetTempFileName.
       Ignore errors, i.e. if it doesn't exist. */
    (void)DeleteFile(InstDir);
-   
+
    if (!CreateDirectory(InstDir, NULL))
    {
       FATAL("Failed to create installation directory.");
@@ -176,21 +269,24 @@ BOOL OpCreateInstDirectory(LPVOID* p)
 
 int CALLBACK _tWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPTSTR lpCmdLine, int nCmdShow)
 {
+   DeleteOldFiles();
+
    /* Find name of image */
    if (!GetModuleFileName(NULL, ImageFileName, MAX_PATH))
    {
       FATAL("Failed to get executable name (error %lu).", GetLastError());
       return -1;
    }
-   
+
+
    /* By default, assume the installation directory is wherever the EXE is */
    FindExeDir(InstDir);
-   
+
    /* Set up environment */
    SetEnvironmentVariable(_T("OCRA_EXECUTABLE"), ImageFileName);
-   
+
    SetConsoleCtrlHandler(&ConsoleHandleRoutine, TRUE);
-   
+
    /* Open the image (executable) */
    HANDLE hImage = CreateFile(ImageFileName, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, 0, NULL);
    if (hImage == INVALID_HANDLE_VALUE)
@@ -198,7 +294,7 @@ int CALLBACK _tWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPTSTR lpCm
       FATAL("Failed to open executable (%s)", ImageFileName);
       return -1;
    }
-   
+
    /* Create a file mapping */
    DWORD FileSize = GetFileSize(hImage, NULL);
    HANDLE hMem = CreateFileMapping(hImage, NULL, PAGE_READONLY, 0, FileSize, NULL);
@@ -208,7 +304,7 @@ int CALLBACK _tWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPTSTR lpCm
       CloseHandle(hImage);
       return -1;
    }
-   
+
    /* Map the image into memory */
    LPVOID lpv = MapViewOfFile(hMem, FILE_MAP_READ, 0, 0, 0);
    if (lpv == NULL)
@@ -221,30 +317,30 @@ int CALLBACK _tWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPTSTR lpCm
       {
          ExitStatus = -1;
       }
-      
+
       if (!UnmapViewOfFile(lpv))
       {
          FATAL("Failed to unmap view of executable.");
       }
    }
-   
+
    if (!CloseHandle(hMem))
    {
       FATAL("Failed to close file mapping.");
    }
-   
+
    if (!CloseHandle(hImage))
    {
       FATAL("Failed to close executable.");
    }
-   
+
    if (ChdirBeforeRunEnabled)
    {
       DEBUG("Changing CWD to unpacked directory %s/src", InstDir);
       SetCurrentDirectory(InstDir);
       SetCurrentDirectory("./src");
    }
-   
+
    if (PostCreateProcess_ApplicationName && PostCreateProcess_CommandLine)
    {
       DEBUG("**********");
@@ -252,22 +348,20 @@ int CALLBACK _tWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPTSTR lpCm
       DEBUG("**********");
       CreateAndWaitForProcess(PostCreateProcess_ApplicationName, PostCreateProcess_CommandLine);
    }
-   
+
    if (DeleteInstDirEnabled)
    {
       DEBUG("Deleting temporary installation directory %s", InstDir);
-      SHFILEOPSTRUCT shop;
-      shop.hwnd = NULL;
-      shop.wFunc = FO_DELETE;
-      InstDir[lstrlen(InstDir) + sizeof(TCHAR)] = 0;
-      shop.pFrom = InstDir;
-      shop.pTo = NULL;
-      shop.fFlags = FOF_NOCONFIRMATION | FOF_SILENT | FOF_NOERRORUI;
-      SHFileOperation(&shop);
+      TCHAR SystemDirectory[MAX_PATH];
+      if (GetSystemDirectory(SystemDirectory, MAX_PATH) > 0)
+         SetCurrentDirectory(SystemDirectory);
+      else
+         SetCurrentDirectory("C:\\");
+      DeleteRecursivelyNowOrLater(InstDir);
    }
-   
+
    ExitProcess(ExitStatus);
-   
+
    /* Never gets here */
    return 0;
 }
@@ -330,9 +424,9 @@ void ExpandPath(LPTSTR* out, LPTSTR str)
       OutSize += lstrlen(InstDir) - sizeof(TCHAR);
       a++;
    }
-   
+
    *out = LocalAlloc(LMEM_FIXED, OutSize);
-   
+
    LPTSTR OutPtr = *out;
    while ((a = _tcschr(str, L'|')))
    {
@@ -379,12 +473,12 @@ BOOL OpCreateFile(LPVOID* p)
    DWORD FileSize = GetInteger(p);
    LPVOID Data = *p;
    *p += FileSize;
-   
+
    TCHAR Fn[MAX_PATH];
    lstrcpy(Fn, InstDir);
    lstrcat(Fn, _T("\\"));
    lstrcat(Fn, FileName);
-   
+
    DEBUG("CreateFile(%s, %lu)", Fn, FileSize);
    HANDLE hFile = CreateFile(Fn, GENERIC_WRITE, 0, NULL, CREATE_ALWAYS, 0, NULL);
    if (hFile != INVALID_HANDLE_VALUE)
@@ -407,7 +501,7 @@ BOOL OpCreateFile(LPVOID* p)
       FATAL("Failed to create file '%s'", Fn);
       Result = FALSE;
    }
-   
+
    return Result;
 }
 
@@ -417,14 +511,14 @@ BOOL OpCreateFile(LPVOID* p)
 BOOL OpCreateDirectory(LPVOID* p)
 {
    LPTSTR DirectoryName = GetString(p);
-   
+
    TCHAR DirName[MAX_PATH];
    lstrcpy(DirName, InstDir);
    lstrcat(DirName, _T("\\"));
    lstrcat(DirName, DirectoryName);
-   
+
    DEBUG("CreateDirectory(%s)", DirName);
-   
+
    if (!CreateDirectory(DirName, NULL))
    {
       if (GetLastError() == ERROR_ALREADY_EXISTS)
@@ -437,7 +531,7 @@ BOOL OpCreateDirectory(LPVOID* p)
          return FALSE;
       }
    }
-   
+
    return TRUE;
 }
 
@@ -445,20 +539,20 @@ void GetCreateProcessInfo(LPVOID* p, LPTSTR* pApplicationName, LPTSTR* pCommandL
 {
    LPTSTR ImageName = GetString(p);
    LPTSTR CmdLine = GetString(p);
-   
+
    ExpandPath(pApplicationName, ImageName);
-   
+
    LPTSTR ExpandedCommandLine;
    ExpandPath(&ExpandedCommandLine, CmdLine);
-   
+
    LPTSTR MyCmdLine = GetCommandLine();
    LPTSTR MyArgs = SkipArg(MyCmdLine);
-   
+
    *pCommandLine = LocalAlloc(LMEM_FIXED, lstrlen(ExpandedCommandLine) + sizeof(TCHAR) + lstrlen(MyArgs) + sizeof(TCHAR));
    lstrcpy(*pCommandLine, ExpandedCommandLine);
    lstrcat(*pCommandLine, _T(" "));
    lstrcat(*pCommandLine, MyArgs);
-   
+
    LocalFree(ExpandedCommandLine);
 }
 
@@ -485,20 +579,20 @@ void CreateAndWaitForProcess(LPTSTR ApplicationName, LPTSTR CommandLine)
    StartupInfo.cb = sizeof(StartupInfo);
    BOOL r = CreateProcess(ApplicationName, CommandLine, NULL, NULL,
                           TRUE, 0, NULL, NULL, &StartupInfo, &ProcessInformation);
-                          
+
    if (!r)
    {
       FATAL("Failed to create process (%s): %lu", ApplicationName, GetLastError());
       return;
    }
-   
+
    WaitForSingleObject(ProcessInformation.hProcess, INFINITE);
-   
+
    if (!GetExitCodeProcess(ProcessInformation.hProcess, &ExitStatus))
    {
       FATAL("Failed to get exit status (error %lu).", GetLastError());
    }
-   
+
    CloseHandle(ProcessInformation.hProcess);
    CloseHandle(ProcessInformation.hThread);
 }
@@ -539,22 +633,22 @@ ISzAlloc alloc = { SzAlloc, SzFree };
 BOOL OpDecompressLzma(LPVOID* p)
 {
    BOOL Success = TRUE;
-   
+
    DWORD CompressedSize = GetInteger(p);
    DEBUG("LzmaDecode(%ld)", CompressedSize);
-   
+
    Byte* src = (Byte*)*p;
    *p += CompressedSize;
-   
+
    UInt64 unpackSize = 0;
    int i;
    for (i = 0; i < 8; i++)
    {
       unpackSize += (UInt64)src[LZMA_PROPS_SIZE + i] << (i * 8);
    }
-   
+
    Byte* DecompressedData = LocalAlloc(LMEM_FIXED, unpackSize);
-   
+
    SizeT lzmaDecompressedSize = unpackSize;
    SizeT inSizePure = CompressedSize - LZMA_HEADER_SIZE;
    ELzmaStatus status;
@@ -573,7 +667,7 @@ BOOL OpDecompressLzma(LPVOID* p)
          Success = FALSE;
       }
    }
-   
+
    LocalFree(DecompressedData);
    return Success;
 }
@@ -592,7 +686,7 @@ BOOL OpSetEnv(LPVOID* p)
    LPTSTR ExpandedValue;
    ExpandPath(&ExpandedValue, Value);
    DEBUG("SetEnv(%s, %s)", Name, ExpandedValue);
-   
+
    BOOL Result = FALSE;
    if (!SetEnvironmentVariable(Name, ExpandedValue))
    {
