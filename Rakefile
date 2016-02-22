@@ -46,24 +46,20 @@ file 'bin/ocrasa.rb' => [ 'bin/ocra', 'share/ocra/stub.exe', 'share/ocra/stubw.e
     f.puts "__END__"
 
     stub = File.open("share/ocra/stub.exe", "rb") {|g| g.read}
-    stub64 = [stub].pack("m")
-    f.puts stub64.size
+    stub64 = [stub].pack("m0")
     f.puts stub64
 
-    stub = File.open("share/ocra/stubw.exe", "rb") {|g| g.read}
-    stub64 = [stub].pack("m")
-    f.puts stub64.size
-    f.puts stub64
+    stubw = File.open("share/ocra/stubw.exe", "rb") {|g| g.read}
+    stubw64 = [stubw].pack("m0")
+    f.puts stubw64
 
     lzma = File.open("share/ocra/lzma.exe", "rb") {|g| g.read}
-    lzma64 = [lzma].pack("m")
-    f.puts lzma64.size
+    lzma64 = [lzma].pack("m0")
     f.puts lzma64
 
-    lzma = File.open("share/ocra/edicon.exe", "rb") {|g| g.read}
-    lzma64 = [lzma].pack("m")
-    f.puts lzma64.size
-    f.puts lzma64
+    edicon = File.open("share/ocra/edicon.exe", "rb") {|g| g.read}
+    edicon64 = [edicon].pack("m0")
+    f.puts edicon64
   end
 end
 
