@@ -1,5 +1,6 @@
 #!/usr/bin/env ruby
 # -*- ruby -*-
+# encoding: UTF-8
 
 module Ocra
   # Path handling class. Ruby's Pathname class is not used because it
@@ -7,7 +8,7 @@ module Ocra
   # separators.
   class Pathname
     def Pathname.pwd
-      Pathname.new(Dir.pwd)
+      Pathname.new(Dir.pwd.encode('UTF-8'))
     end
 
     def Pathname.pathequal(a, b)
@@ -22,7 +23,7 @@ module Ocra
     ABSOLUTE_PAT = /\A([A-Z]:)?#{SEPARATOR_PAT}/i
 
     def initialize(path)
-      @path = path
+      @path = path && path.encode('UTF-8')
     end
 
     def to_native
@@ -86,7 +87,7 @@ module Ocra
     end
 
     def entries
-      Dir.entries(@path).map { |e| self / e }
+      Dir.entries(@path).map { |e| self / e.encode('UTF-8') }
     end
 
     # Recursively find all files which match a specified regular
@@ -438,7 +439,7 @@ EOF
     end
 
     @options[:files].map! { |path|
-      path = path.tr('\\','/')
+      path = path.encode('UTF-8').tr('\\','/')
       if File.directory?(path)
         # If a directory is passed, we want all files under that directory
         path = "#{path}/**/*"
