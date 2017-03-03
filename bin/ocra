@@ -179,7 +179,7 @@ module Ocra
     a.sort.inject([]) { |r, e| r.last == e ? r : r << e }
   end
 
-  VERSION = "1.3.7"
+  VERSION = "1.3.8"
 
   IGNORE_MODULES = /\/(enumerator.so|rational.so|complex.so|thread.rb)$/
 
@@ -960,7 +960,7 @@ EOF
       require 'Win32API'
 
       enumprocessmodules = Win32API.new('psapi', 'EnumProcessModules', ['L','P','L','P'], 'L')
-      getmodulefilename = Win32API.new('kernel32', 'GetModuleFileName', ['L','P','L'], 'L')
+      getmodulefilename = Win32API.new('kernel32', 'GetModuleFileNameW', ['L','P','L'], 'L')
       getcurrentprocess = Win32API.new('kernel32', 'GetCurrentProcess', [], 'L')
 
       bytes_needed = 4 * 32
@@ -976,9 +976,10 @@ EOF
 
       handles = module_handle_buffer.unpack("I*")
       handles.select { |handle| handle > 0 }.map do |handle|
-        str = "\x00" * 256
+        str = "\x00\x00" * 256
         modulefilename_length = getmodulefilename.call(handle, str, str.size)
-        Ocra.Pathname(str[0,modulefilename_length])
+        modulefilename = str[0, modulefilename_length * 2].force_encoding('UTF-16LE').encode('UTF-8')
+        Ocra.Pathname(modulefilename)
       end
     end
 
