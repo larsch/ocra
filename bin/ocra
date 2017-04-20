@@ -941,6 +941,8 @@ EOF
       sb.setenv('RUBYOPT', ENV['RUBYOPT'] || '')
       sb.setenv('RUBYLIB', load_path.map{|path| path.to_native}.uniq.join(';'))
       sb.setenv('GEM_PATH', (TEMPDIR_ROOT / GEMHOMEDIR).to_native)
+      sb.setenv('BUNDLE_GEMFILE', '')
+      sb.setenv('BUNDLE_BIN_PATH', '')
 
       # Add the opcode to launch the script
       extra_arg = Ocra.arg.map { |arg| ' "' + arg.gsub("\"","\\\"") + '"' }.join
