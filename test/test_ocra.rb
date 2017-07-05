@@ -21,7 +21,6 @@ class TestOcra < MiniTest::Test
   # Default arguments for invoking OCRA when running tests.
   DefaultArgs = [ '--no-lzma', '--verbose' ]
   DefaultArgs << "--quiet" unless ENV["OCRA_VERBOSE_TEST"]
-  DefaultArgs.push '--no-autodll' if not $have_win32_api
 
   # Name of the tested ocra script.
   TESTED_OCRA = ENV['TESTED_OCRA'] || 'ocra'
@@ -475,7 +474,6 @@ class TestOcra < MiniTest::Test
   def test_loadpath_mangling_path
     with_fixture 'relloadpath' do
       each_path_combo "bin/loadpath1.rb" do |script|
-        # p [Dir.pwd, script]
         assert system('ruby', ocra, script, *DefaultArgs)
         assert File.exist?('loadpath1.exe')
         pristine_env "loadpath1.exe" do
