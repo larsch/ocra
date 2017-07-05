@@ -850,6 +850,9 @@ EOF
     # Detect additional DLLs
     dlls = Ocra.autodll ? LibraryDetector.detect_dlls : []
 
+    # Detect external manifests
+    manifests = Host.exec_prefix.find_all_files(/\.manifest$/)
+
     executable = nil
     if Ocra.output_override
       executable = Ocra.output_override
@@ -909,6 +912,13 @@ EOF
           target = BINDIR / File.basename(dll)
         end
         sb.createfile(dll, target)
+      end
+
+      # Add external manifest files
+      manifests.each do |manifest|
+        Ocra.msg "Adding external manifest #{manifest}"
+        target = manifest.relative_path_from(Host.exec_prefix)
+        sb.createfile(manifest, target)
       end
 
       # Add extra DLLs specified on the command line
