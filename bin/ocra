@@ -1039,8 +1039,10 @@ EOF
       opcode_offset = File.size(path)
 
       File.open(path, "ab") do |ocrafile|
+        tmpinpath = 'tmpin'
+
         if Ocra.lzma_mode
-          @of = ""
+          @of = File.open(tmpinpath, 'wb')
         else
           @of = ocrafile
         end
@@ -1054,16 +1056,20 @@ EOF
 
         yield(self)
 
+        @of.close if Ocra.lzma_mode
+
         if Ocra.lzma_mode and not Ocra.inno_script
+          tmpoutpath = 'tmpout'
           begin
-            File.open("tmpin", "wb") { |tmp| tmp.write(@of) }
-            Ocra.msg "Compressing #{@of.size} bytes"
-            system("\"#{Ocra.lzmapath}\" e tmpin tmpout 2>NUL") or fail
-            compressed_data = File.open("tmpout", "rb") { |tmp| tmp.read }
-            ocrafile.write([OP_DECOMPRESS_LZMA, compressed_data.size, compressed_data].pack("VVA*"))
+            data_size = File.size(tmpinpath)
+            Ocra.msg "Compressing #{data_size} bytes"
+            system(Ocra.lzmapath, 'e', tmpinpath, tmpoutpath) or fail
+            compressed_data_size = File.size?(tmpoutpath)
+            ocrafile.write([OP_DECOMPRESS_LZMA, compressed_data_size].pack("VV"))
+            IO.copy_stream(tmpoutpath, ocrafile)
           ensure
-            File.unlink("tmpin") if File.exist?("tmpin")
-            File.unlink("tmpout") if File.exist?("tmpout")
+            File.unlink(@of.path) if File.exist?(@of.path)
+            File.unlink(tmpoutpath) if File.exist?(tmpoutpath)
           end
         end
 
@@ -1152,7 +1158,8 @@ EOF
       str = File.open(src, "rb") { |file| file.read }
       Ocra.verbose_msg "a #{showtempdir tgt}"
       unless Ocra.inno_script # InnoSetup will install the file with a [Files] statement
-        @of << [OP_CREATE_FILE, tgt.to_native, str.size, str].pack("VZ*VA*")
+        @of << [OP_CREATE_FILE, tgt.to_native, str.size].pack("VZ*V")
+        @of << str
       end
     end
 
