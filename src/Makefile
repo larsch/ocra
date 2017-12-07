@@ -3,7 +3,7 @@ OBJS = $(SRCS:.c=.o) stubicon.o
 CC = gcc
 BINDIR = $(CURDIR)/../share/ocra
 
-CFLAGS = -Wall -O2 -DWITH_LZMA -Ilzma -s
+CFLAGS = -Wall -O2 -DWITH_LZMA -Ilzma 
 STUB_CFLAGS = -D_CONSOLE $(CFLAGS)
 STUBW_CFLAGS = -mwindows $(CFLAGS)
 # -D_MBCS

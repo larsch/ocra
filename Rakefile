@@ -20,7 +20,14 @@ task :do_it do
   sh "gem install pkg/ocra-1.4.666.gem"
   sh "rm hello.exe"  rescue nil
   sh "ocra hello.rb"
+  sh "cp hello.exe hello-signed.exe"
+  puts "Now creating a signed copy in hello-signed.exe"
+  sh "signtool sign /f ./CARoot.pfx /p Test123 hello-signed.exe"
+
+  puts "output of hello.exe"
   sh "./hello.exe"
+  puts "output of hello-signed.exe"
+  sh "./hello-signed.exe" rescue nil
 end
 
 task :build_stub do

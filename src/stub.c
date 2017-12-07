@@ -371,6 +371,8 @@ void ExamineSignature(LPVOID ptr) {
   PIMAGE_NT_HEADERS ntHeader = (PIMAGE_NT_HEADERS)((DWORD)dosHeader + (DWORD)dosHeader->e_lfanew);
   printf("e_lfanew: %lu\n", dosHeader->e_lfanew);
   printf("NT signature: %s\n", (char*)&ntHeader->Signature);
+  printf("size of security %ld\n", ntHeader->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_SECURITY].Size);  
+printf("address of security %ld\n", ntHeader->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_SECURITY].VirtualAddress);
 }
 
 /**
