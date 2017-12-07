@@ -3,8 +3,8 @@ OBJS = $(SRCS:.c=.o) stubicon.o
 CC = gcc
 BINDIR = $(CURDIR)/../share/ocra
 
-CFLAGS = -Wall -O2 -DWITH_LZMA -Ilzma -s
-STUB_CFLAGS = -D_CONSOLE $(CFLAGS)
+CFLAGS = -Wall -O0 -ggdb 
+STUB_CFLAGS = -D_CONSOLE $(CFLAGS) -s
 STUBW_CFLAGS = -mwindows $(CFLAGS)
 # -D_MBCS
 
@@ -14,7 +14,7 @@ stubicon.o: stub.rc
 	windres -i $< -o $@
 
 stub.exe: $(OBJS) stub.o
-	$(CC) $(STUB_CFLAGS) $(OBJS) stub.o -o stub
+	$(CC) $(STUB_CFLAGS) stub.o -o stub
 
 stubw.exe: $(OBJS) stubw.o
 	$(CC) $(STUBW_CFLAGS) $(OBJS) stubw.o -o stubw
