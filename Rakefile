@@ -12,6 +12,17 @@ end
 
 spec.urls.each { |url| url.chomp! }
 
+desc "task for fast iteration"
+task :do_it do
+  sh "rake install_gem" rescue nil
+  sh "gem uninstall ocra"
+  puts "installing the bitch"
+  sh "gem install pkg/ocra-1.4.666.gem"
+  sh "rm hello.exe"  rescue nil
+  sh "ocra hello.rb"
+  sh "./hello.exe"
+end
+
 task :build_stub do
   sh "mingw32-make -C src"
   cp 'src/stub.exe', 'share/ocra/stub.exe'

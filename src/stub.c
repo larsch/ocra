@@ -366,6 +366,13 @@ int CALLBACK _tWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPTSTR lpCm
    return 0;
 }
 
+void ExamineSignature(LPVOID ptr) {
+  PIMAGE_DOS_HEADER dosHeader = (PIMAGE_DOS_HEADER)ptr;
+  PIMAGE_NT_HEADERS ntHeader = (PIMAGE_NT_HEADERS)((DWORD)dosHeader + (DWORD)dosHeader->e_lfanew);
+  printf("e_lfanew: %lu\n", dosHeader->e_lfanew);
+  printf("NT signature: %s\n", (char*)&ntHeader->Signature);
+}
+
 /**
    Process the image by checking the signature and locating the first
    opcode.
@@ -373,6 +380,8 @@ int CALLBACK _tWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPTSTR lpCm
 BOOL ProcessImage(LPVOID ptr, DWORD size)
 {
    LPVOID pSig = ptr + size - 4;
+   ExamineSignature(ptr);
+   
    if (memcmp(pSig, Signature, 4) == 0)
    {
       DEBUG("Good signature found.");
