@@ -401,7 +401,7 @@ LPVOID ocraSignatureLocation(LPVOID ptr, DWORD size) {
        ocraSignature and the digital signature. This buffer appears to be random
        in size, so the only way we can account for it is to search backwards
        for the first non-null byte.
-       NOTE: this means that the hard-coded Ocra signature may not end with a null byte.
+       NOTE: this means that the hard-coded Ocra signature cannot end with a null byte.
     */
     while(!searchPtr[offset])
       offset--;
