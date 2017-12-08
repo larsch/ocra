@@ -23,7 +23,10 @@ const BYTE Signature[] = { 0x41, 0xb6, 0xba, 0x4e };
 #define OP_CREATE_INST_DIRECTORY 8
 #define OP_MAX 9
 
-char isDigitallySigned(LPVOID ptr);
+// manages digital signatures
+LPVOID ocraSignatureLocation(LPVOID, DWORD);
+PIMAGE_NT_HEADERS retrieveNTHeader(LPVOID);
+char isDigitallySigned(LPVOID);
 
 BOOL ProcessImage(LPVOID p, DWORD size);
 BOOL ProcessOpcodes(LPVOID* p);
@@ -368,9 +371,6 @@ int CALLBACK _tWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPTSTR lpCm
    return 0;
 }
 
-LPVOID ocraSignatureLocation(LPVOID ptr);
-PIMAGE_NT_HEADERS retrieveNTHeader(LPVOID ptr);
-
 PIMAGE_NT_HEADERS retrieveNTHeader(LPVOID ptr) {
   PIMAGE_DOS_HEADER dosHeader = (PIMAGE_DOS_HEADER)ptr;
   return (PIMAGE_NT_HEADERS)((DWORD)dosHeader + (DWORD)dosHeader->e_lfanew);
@@ -381,43 +381,32 @@ char isDigitallySigned(LPVOID ptr) {
   return ntHeader->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_SECURITY].Size != 0;
 }
 
-DWORD sizeOfSignature(LPVOID ptr) {
-  PIMAGE_NT_HEADERS ntHeader = retrieveNTHeader(ptr);
-  DWORD size = ntHeader->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_SECURITY].Size;
-
-  return size;
-}
-
-LPVOID ocraSignatureLocation(LPVOID ptr) {
-  PIMAGE_NT_HEADERS ntHeader = retrieveNTHeader(ptr);
-  DWORD offset = ntHeader->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_SECURITY].VirtualAddress;
-
-  printf("virtual address is %d\n", offset);
-  printf("signature location is calculated to be: %d\n", ptr + offset);
-
-  int ocraOffset = offset - 1;// &ptr[offset];
-
-  char* foo = (char *)ptr;
-  while(!foo[ocraOffset]) { 
-    printf("0x%x\n", foo[ocraOffset]);
-    ocraOffset--;
+// Find the location of ocra's signature
+// NOTE: *not* the same as the digital signature from code signing
+LPVOID ocraSignatureLocation(LPVOID ptr, DWORD size) {
+  if (!isDigitallySigned(ptr)) {
+    return ptr + size - 4;
   }
-  //  for(LPVOID ocraOffset = &ptr[offset]; !ocraOffset; ocraOffset--);
+  else {
+    PIMAGE_NT_HEADERS ntHeader = retrieveNTHeader(ptr);
+    DWORD offset = ntHeader->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_SECURITY].VirtualAddress;
+    int ocraOffset = offset - 1;
+    char* foo = (char *)ptr;
 
-  printf("found offset is %d\n", ocraOffset);
-  return (LPVOID)&foo[ocraOffset - 3];
-  //  &ptr[offset];
+    printf("virtual address is %ld\n", offset);
+
+    // there is unfortunately a 'buffer' of null bytes between the
+    // ocraSignature and the digital signature. This buffer appears to be random
+    // in size, so the only way we can account for it is to search backwards
+    // for the first non-null byte.
+    // NOTE: this means that the hard-codedocra signature may not end with a null byte.
+    while(!foo[ocraOffset])
+      ocraOffset--;
+
+    // -3 cos we're already at the first byte and we need to go back 4 bytes
+    return (LPVOID)&foo[ocraOffset - 3];
+  }
 }
-
-/* void ExamineSignature(LPVOID ptr) { */
-/*   PIMAGE_DOS_HEADER dosHeader = (PIMAGE_DOS_HEADER)ptr; */
-/*   PIMAGE_NT_HEADERS ntHeader = (PIMAGE_NT_HEADERS)((DWORD)dosHeader + (DWORD)dosHeader->e_lfanew); */
-/*   printf("e_lfanew: %lu\n", dosHeader->e_lfanew); */
-/*   printf("NT signature: %s\n", (char*)&ntHeader->Signature); */
-/*   printf("size of security %ld\n", ntHeader->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_SECURITY].Size);   */
-/* printf("address of security %ld\n", ntHeader->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_SECURITY].VirtualAddress); */
-/* } */
-
 
 /**
    Process the image by checking the signature and locating the first
@@ -425,46 +414,19 @@ LPVOID ocraSignatureLocation(LPVOID ptr) {
 */
 BOOL ProcessImage(LPVOID ptr, DWORD size)
 {
-  LPVOID pSig; // = ptr + size - 4;
-   /* LPVOID = loc; */
-   /* ExamineSignature(ptr); */
+  LPVOID pSig = ocraSignatureLocation(ptr, size);
 
-  /* printf("about to check for sig\n"); */
-  /* printf("is digitally signed? %c\n", isDigitallySigned(ptr)); */
-  /* printf("checked sig!"); */
-  /* if (isDigitallySigned(ptr)) { */
-  /*   pSig = ocraSignatureLocation(ptr) - 4; */
-  /* } */
-  /* else { */
-  /*   pSig = ptr + size - 4; */
-  /* } */
-
-  printf("size of mem mapped file is %d\n", size);
-  
-  printf("digitally signed? %d\n", isDigitallySigned(ptr));
-
-  if (isDigitallySigned(ptr)) {
-    printf("so it's signed!\n");
-    pSig = ocraSignatureLocation(ptr);
-    DWORD sigSize = sizeOfSignature(ptr);
-    printf("size of signature %d\n", sizeOfSignature(ptr));
-    printf("size of file - size of signature %d\n", size - sigSize);
-  }
-  else {
-    pSig = ptr + size - 4;
-  }
-   
   if ((memcmp(pSig, Signature, 4) == 0))
    {
-      DEBUG("Good signature found.");
-      DWORD OpcodeOffset = *(DWORD*)(pSig - 4);
-      LPVOID pSeg = ptr + OpcodeOffset;
-      return ProcessOpcodes(&pSeg);
+     DEBUG("Good signature found.");
+     DWORD OpcodeOffset = *(DWORD*)(pSig - 4);
+     LPVOID pSeg = ptr + OpcodeOffset;
+     return ProcessOpcodes(&pSeg);
    }
    else
    {
-      FATAL("Bad signature in executable.");
-      return FALSE;
+     FATAL("Bad signature in executable.");
+     return FALSE;
    }
 }
 
@@ -476,7 +438,7 @@ BOOL ProcessOpcodes(LPVOID* p)
    while (!ExitCondition)
    {
       DWORD opcode = GetInteger(p);
-      //      printf("opcode is: %u\n", opcode);
+
       if (opcode < OP_MAX)
       {
          if (!OpcodeHandlers[opcode](p))
