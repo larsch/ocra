@@ -373,21 +373,40 @@ PIMAGE_NT_HEADERS retrieveNTHeader(LPVOID ptr);
 
 PIMAGE_NT_HEADERS retrieveNTHeader(LPVOID ptr) {
   PIMAGE_DOS_HEADER dosHeader = (PIMAGE_DOS_HEADER)ptr;
-  printf("got as far as finding dos header!\n");
   return (PIMAGE_NT_HEADERS)((DWORD)dosHeader + (DWORD)dosHeader->e_lfanew);
 }
 
 char isDigitallySigned(LPVOID ptr) {
   PIMAGE_NT_HEADERS ntHeader = retrieveNTHeader(ptr);
-  printf("got as far as retrieving the NT header!\n");
   return ntHeader->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_SECURITY].Size != 0;
+}
+
+DWORD sizeOfSignature(LPVOID ptr) {
+  PIMAGE_NT_HEADERS ntHeader = retrieveNTHeader(ptr);
+  DWORD size = ntHeader->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_SECURITY].Size;
+
+  return size;
 }
 
 LPVOID ocraSignatureLocation(LPVOID ptr) {
   PIMAGE_NT_HEADERS ntHeader = retrieveNTHeader(ptr);
-  DWORD offset = ntHeader->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_SECURITY].VirtualAddress - 4;
+  DWORD offset = ntHeader->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_SECURITY].VirtualAddress;
 
-  return ptr + offset;
+  printf("virtual address is %d\n", offset);
+  printf("signature location is calculated to be: %d\n", ptr + offset);
+
+  int ocraOffset = offset - 1;// &ptr[offset];
+
+  char* foo = (char *)ptr;
+  while(!foo[ocraOffset]) { 
+    printf("0x%x\n", foo[ocraOffset]);
+    ocraOffset--;
+  }
+  //  for(LPVOID ocraOffset = &ptr[offset]; !ocraOffset; ocraOffset--);
+
+  printf("found offset is %d\n", ocraOffset);
+  return (LPVOID)&foo[ocraOffset - 3];
+  //  &ptr[offset];
 }
 
 /* void ExamineSignature(LPVOID ptr) { */
@@ -419,12 +438,17 @@ BOOL ProcessImage(LPVOID ptr, DWORD size)
   /* else { */
   /*   pSig = ptr + size - 4; */
   /* } */
+
+  printf("size of mem mapped file is %d\n", size);
   
   printf("digitally signed? %d\n", isDigitallySigned(ptr));
 
   if (isDigitallySigned(ptr)) {
     printf("so it's signed!\n");
-    pSig = ocraSignatureLocation(ptr) - 4 ;
+    pSig = ocraSignatureLocation(ptr);
+    DWORD sigSize = sizeOfSignature(ptr);
+    printf("size of signature %d\n", sizeOfSignature(ptr));
+    printf("size of file - size of signature %d\n", size - sigSize);
   }
   else {
     pSig = ptr + size - 4;
