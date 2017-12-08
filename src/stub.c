@@ -416,7 +416,7 @@ BOOL ProcessImage(LPVOID ptr, DWORD size)
 {
   LPVOID pSig = ocraSignatureLocation(ptr, size);
 
-  if ((memcmp(pSig, Signature, 4) == 0))
+  if (memcmp(pSig, Signature, 4) == 0)
    {
      DEBUG("Good signature found.");
      DWORD OpcodeOffset = *(DWORD*)(pSig - 4);
