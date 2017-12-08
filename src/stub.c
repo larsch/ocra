@@ -438,7 +438,6 @@ BOOL ProcessOpcodes(LPVOID* p)
    while (!ExitCondition)
    {
       DWORD opcode = GetInteger(p);
-
       if (opcode < OP_MAX)
       {
          if (!OpcodeHandlers[opcode](p))
