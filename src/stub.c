@@ -23,6 +23,8 @@ const BYTE Signature[] = { 0x41, 0xb6, 0xba, 0x4e };
 #define OP_CREATE_INST_DIRECTORY 8
 #define OP_MAX 9
 
+char isDigitallySigned(LPVOID ptr);
+
 BOOL ProcessImage(LPVOID p, DWORD size);
 BOOL ProcessOpcodes(LPVOID* p);
 void CreateAndWaitForProcess(LPTSTR ApplicationName, LPTSTR CommandLine);
@@ -366,14 +368,37 @@ int CALLBACK _tWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPTSTR lpCm
    return 0;
 }
 
-void ExamineSignature(LPVOID ptr) {
+LPVOID ocraSignatureLocation(LPVOID ptr);
+PIMAGE_NT_HEADERS retrieveNTHeader(LPVOID ptr);
+
+PIMAGE_NT_HEADERS retrieveNTHeader(LPVOID ptr) {
   PIMAGE_DOS_HEADER dosHeader = (PIMAGE_DOS_HEADER)ptr;
-  PIMAGE_NT_HEADERS ntHeader = (PIMAGE_NT_HEADERS)((DWORD)dosHeader + (DWORD)dosHeader->e_lfanew);
-  printf("e_lfanew: %lu\n", dosHeader->e_lfanew);
-  printf("NT signature: %s\n", (char*)&ntHeader->Signature);
-  printf("size of security %ld\n", ntHeader->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_SECURITY].Size);  
-printf("address of security %ld\n", ntHeader->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_SECURITY].VirtualAddress);
+  printf("got as far as finding dos header!\n");
+  return (PIMAGE_NT_HEADERS)((DWORD)dosHeader + (DWORD)dosHeader->e_lfanew);
 }
+
+char isDigitallySigned(LPVOID ptr) {
+  PIMAGE_NT_HEADERS ntHeader = retrieveNTHeader(ptr);
+  printf("got as far as retrieving the NT header!\n");
+  return ntHeader->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_SECURITY].Size != 0;
+}
+
+LPVOID ocraSignatureLocation(LPVOID ptr) {
+  PIMAGE_NT_HEADERS ntHeader = retrieveNTHeader(ptr);
+  DWORD offset = ntHeader->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_SECURITY].VirtualAddress - 4;
+
+  return ptr + offset;
+}
+
+/* void ExamineSignature(LPVOID ptr) { */
+/*   PIMAGE_DOS_HEADER dosHeader = (PIMAGE_DOS_HEADER)ptr; */
+/*   PIMAGE_NT_HEADERS ntHeader = (PIMAGE_NT_HEADERS)((DWORD)dosHeader + (DWORD)dosHeader->e_lfanew); */
+/*   printf("e_lfanew: %lu\n", dosHeader->e_lfanew); */
+/*   printf("NT signature: %s\n", (char*)&ntHeader->Signature); */
+/*   printf("size of security %ld\n", ntHeader->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_SECURITY].Size);   */
+/* printf("address of security %ld\n", ntHeader->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_SECURITY].VirtualAddress); */
+/* } */
+
 
 /**
    Process the image by checking the signature and locating the first
@@ -381,10 +406,31 @@ printf("address of security %ld\n", ntHeader->OptionalHeader.DataDirectory[IMAGE
 */
 BOOL ProcessImage(LPVOID ptr, DWORD size)
 {
-   LPVOID pSig = ptr + size - 4;
-   ExamineSignature(ptr);
+  LPVOID pSig; // = ptr + size - 4;
+   /* LPVOID = loc; */
+   /* ExamineSignature(ptr); */
+
+  /* printf("about to check for sig\n"); */
+  /* printf("is digitally signed? %c\n", isDigitallySigned(ptr)); */
+  /* printf("checked sig!"); */
+  /* if (isDigitallySigned(ptr)) { */
+  /*   pSig = ocraSignatureLocation(ptr) - 4; */
+  /* } */
+  /* else { */
+  /*   pSig = ptr + size - 4; */
+  /* } */
+  
+  printf("digitally signed? %d\n", isDigitallySigned(ptr));
+
+  if (isDigitallySigned(ptr)) {
+    printf("so it's signed!\n");
+    pSig = ocraSignatureLocation(ptr) - 4 ;
+  }
+  else {
+    pSig = ptr + size - 4;
+  }
    
-   if (memcmp(pSig, Signature, 4) == 0)
+  if ((memcmp(pSig, Signature, 4) == 0))
    {
       DEBUG("Good signature found.");
       DWORD OpcodeOffset = *(DWORD*)(pSig - 4);
@@ -406,6 +452,7 @@ BOOL ProcessOpcodes(LPVOID* p)
    while (!ExitCondition)
    {
       DWORD opcode = GetInteger(p);
+      //      printf("opcode is: %u\n", opcode);
       if (opcode < OP_MAX)
       {
          if (!OpcodeHandlers[opcode](p))
