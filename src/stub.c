@@ -371,6 +371,8 @@ int CALLBACK _tWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPTSTR lpCm
    return 0;
 }
 
+#define SECURITY_ENTRY(header) (header->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_SECURITY])
+
 PIMAGE_NT_HEADERS retrieveNTHeader(LPVOID ptr) {
   PIMAGE_DOS_HEADER dosHeader = (PIMAGE_DOS_HEADER)ptr;
   return (PIMAGE_NT_HEADERS)((DWORD)dosHeader + (DWORD)dosHeader->e_lfanew);
@@ -378,7 +380,7 @@ PIMAGE_NT_HEADERS retrieveNTHeader(LPVOID ptr) {
 
 char isDigitallySigned(LPVOID ptr) {
   PIMAGE_NT_HEADERS ntHeader = retrieveNTHeader(ptr);
-  return ntHeader->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_SECURITY].Size != 0;
+  return SECURITY_ENTRY(ntHeader).Size != 0;
 }
 
 // Find the location of ocra's signature
@@ -389,22 +391,19 @@ LPVOID ocraSignatureLocation(LPVOID ptr, DWORD size) {
   }
   else {
     PIMAGE_NT_HEADERS ntHeader = retrieveNTHeader(ptr);
-    DWORD offset = ntHeader->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_SECURITY].VirtualAddress;
-    int ocraOffset = offset - 1;
-    char* foo = (char *)ptr;
-
-    printf("virtual address is %ld\n", offset);
+    DWORD offset = SECURITY_ENTRY(ntHeader).VirtualAddress - 1;
+    char* searchPtr = (char *)ptr;
 
     // there is unfortunately a 'buffer' of null bytes between the
     // ocraSignature and the digital signature. This buffer appears to be random
     // in size, so the only way we can account for it is to search backwards
     // for the first non-null byte.
     // NOTE: this means that the hard-codedocra signature may not end with a null byte.
-    while(!foo[ocraOffset])
-      ocraOffset--;
+    while(!searchPtr[offset])
+      offset--;
 
     // -3 cos we're already at the first byte and we need to go back 4 bytes
-    return (LPVOID)&foo[ocraOffset - 3];
+    return (LPVOID)&searchPtr[offset - 3];
   }
 }
 
