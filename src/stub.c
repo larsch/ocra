@@ -26,9 +26,9 @@ const BYTE Signature[] = { 0x41, 0xb6, 0xba, 0x4e };
 /* Manages digital signatures */
 #define SECURITY_ENTRY(header) (header->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_SECURITY])
 
-LPVOID ocraSignatureLocation(LPVOID, DWORD);
-PIMAGE_NT_HEADERS retrieveNTHeader(LPVOID);
-char isDigitallySigned(LPVOID);
+static LPVOID ocraSignatureLocation(LPVOID, DWORD);
+static PIMAGE_NT_HEADERS retrieveNTHeader(LPVOID);
+static char isDigitallySigned(LPVOID);
 /******************************/
 
 BOOL ProcessImage(LPVOID p, DWORD size);
@@ -374,13 +374,13 @@ int CALLBACK _tWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPTSTR lpCm
    return 0;
 }
 
-PIMAGE_NT_HEADERS retrieveNTHeader(LPVOID ptr) {
+static PIMAGE_NT_HEADERS retrieveNTHeader(LPVOID ptr) {
   PIMAGE_DOS_HEADER dosHeader = (PIMAGE_DOS_HEADER)ptr;
   return (PIMAGE_NT_HEADERS)((DWORD)dosHeader + (DWORD)dosHeader->e_lfanew);
 }
 
 /* Check whether there's an embedded digital signature */
-char isDigitallySigned(LPVOID ptr) {
+static char isDigitallySigned(LPVOID ptr) {
   PIMAGE_NT_HEADERS ntHeader = retrieveNTHeader(ptr);
   return SECURITY_ENTRY(ntHeader).Size != 0;
 }
@@ -388,7 +388,7 @@ char isDigitallySigned(LPVOID ptr) {
 /* Find the location of ocra's signature
    NOTE: *not* the same as the digital signature from code signing
 */
-LPVOID ocraSignatureLocation(LPVOID ptr, DWORD size) {
+static LPVOID ocraSignatureLocation(LPVOID ptr, DWORD size) {
   if (!isDigitallySigned(ptr)) {
     return ptr + size - 4;
   }
