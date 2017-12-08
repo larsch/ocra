@@ -23,10 +23,13 @@ const BYTE Signature[] = { 0x41, 0xb6, 0xba, 0x4e };
 #define OP_CREATE_INST_DIRECTORY 8
 #define OP_MAX 9
 
-// manages digital signatures
+/* Manages digital signatures */
+#define SECURITY_ENTRY(header) (header->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_SECURITY])
+
 LPVOID ocraSignatureLocation(LPVOID, DWORD);
 PIMAGE_NT_HEADERS retrieveNTHeader(LPVOID);
 char isDigitallySigned(LPVOID);
+/******************************/
 
 BOOL ProcessImage(LPVOID p, DWORD size);
 BOOL ProcessOpcodes(LPVOID* p);
@@ -371,20 +374,20 @@ int CALLBACK _tWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPTSTR lpCm
    return 0;
 }
 
-#define SECURITY_ENTRY(header) (header->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_SECURITY])
-
 PIMAGE_NT_HEADERS retrieveNTHeader(LPVOID ptr) {
   PIMAGE_DOS_HEADER dosHeader = (PIMAGE_DOS_HEADER)ptr;
   return (PIMAGE_NT_HEADERS)((DWORD)dosHeader + (DWORD)dosHeader->e_lfanew);
 }
 
+/* Check whether there's an embedded digital signature */
 char isDigitallySigned(LPVOID ptr) {
   PIMAGE_NT_HEADERS ntHeader = retrieveNTHeader(ptr);
   return SECURITY_ENTRY(ntHeader).Size != 0;
 }
 
-// Find the location of ocra's signature
-// NOTE: *not* the same as the digital signature from code signing
+/* Find the location of ocra's signature
+   NOTE: *not* the same as the digital signature from code signing
+*/
 LPVOID ocraSignatureLocation(LPVOID ptr, DWORD size) {
   if (!isDigitallySigned(ptr)) {
     return ptr + size - 4;
@@ -394,15 +397,16 @@ LPVOID ocraSignatureLocation(LPVOID ptr, DWORD size) {
     DWORD offset = SECURITY_ENTRY(ntHeader).VirtualAddress - 1;
     char* searchPtr = (char *)ptr;
 
-    // there is unfortunately a 'buffer' of null bytes between the
-    // ocraSignature and the digital signature. This buffer appears to be random
-    // in size, so the only way we can account for it is to search backwards
-    // for the first non-null byte.
-    // NOTE: this means that the hard-codedocra signature may not end with a null byte.
+    /* There is unfortunately a 'buffer' of null bytes between the
+       ocraSignature and the digital signature. This buffer appears to be random
+       in size, so the only way we can account for it is to search backwards
+       for the first non-null byte.
+       NOTE: this means that the hard-coded Ocra signature may not end with a null byte.
+    */
     while(!searchPtr[offset])
       offset--;
 
-    // -3 cos we're already at the first byte and we need to go back 4 bytes
+    /* -3 cos we're already at the first byte and we need to go back 4 bytes */
     return (LPVOID)&searchPtr[offset - 3];
   }
 }
