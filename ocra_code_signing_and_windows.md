@@ -116,7 +116,12 @@ Ocra is able to find the Ocra signature and also the `opcodes_offset` field (whi
 
 ### Issues
 
-Unfortunately, the Code Signing process does not append the Digital Signature immediately after the Ocra Signature. There are usually a few NUL bytes in between the two. These NUL bytes are likely for alignment reasons that are not documented. Nonetheless, doing a small search back from the `VirtualAddress` (start of Digital Signature) until it finds the first non-NUL bytes appears to be an effective workaround and I have not noticed any problems with this approach on multiple test files. We do need to ensure the last byte of the Ocra signature is not a NUL byte though, but since the Ocra signature is hard-coded and completely under our control this is a non-issue.
+Unfortunately, the Code Signing process does not append the Digital Signature immediately after the Ocra Signature. There are usually a few NUL bytes in between the two.
+
+These NUL bytes are likely for alignment reasons that are not documented. Nonetheless, doing a small search back from the `VirtualAddress` (start of Digital Signature) until we find the
+first non-NUL bytes appears to be an effective workaround and I have not noticed any problems with this approach on multiple test files.
+
+Finally, we need to ensure the last byte of the Ocra signature is not a NUL byte. However, since the Ocra signature is hard-coded and completely under our control this is a non-issue.
 
 ## Conclusion
 
