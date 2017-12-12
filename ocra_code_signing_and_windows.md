@@ -70,7 +70,7 @@ From the diagram we see the format starts with a legacy MSDOS header. This heade
 
 From this offset we get to the the PE header (also known as an `NT header` or `COFF header`) and it is a structure of type [IMAGE_NT_HEADERS](https://msdn.microsoft.com/en-us/library/windows/desktop/ms680336(v=vs.85).aspx). It is followed by another header which contains information on executables (referred to as an [optional header](https://msdn.microsoft.com/en-us/library/windows/desktop/ms680339(v=vs.85).aspx), but it's always present for executables).  This header defines [a number of data directories](http://bytepointer.com/resources/pietrek_in_depth_look_into_pe_format_pt1_figures.htm).
 
-One of these directory entries is `IMAGE_DIRECTORY_ENTRY_SECURITY`, which is used to store [information](https://msdn.microsoft.com/en-us/library/windows/desktop/ms680305(v=vs.85).aspx) about the
+One of these directory entries, `IMAGE_DIRECTORY_ENTRY_SECURITY`, is used to store [information](https://msdn.microsoft.com/en-us/library/windows/desktop/ms680305(v=vs.85).aspx) about the
 signature. Specifically it stores the location of the signature in the file (in the `VirtualAddress` field) and also its size (in the `Size` field).
 
 The digital signature itself is just a hash of the file that is signed with the developer's private key - and it is appended to the end of the executable.
