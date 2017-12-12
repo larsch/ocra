@@ -64,7 +64,7 @@ to it. A standard Windows executable file is known as a "PE" file ([Portable Exe
 
 The structure of a PE file is as follows (image taken from https://en.wikipedia.org/wiki/Portable_Executable):
 
-![PE Format](https://www.dropbox.com/s/zds11h7e282vlv6/Screenshot%202017-12-12%2018.02.16.png?raw=1)
+![PE Format](https://www.dropbox.com/s/mx1pz6em1slzdyt/Screenshot%202017-12-12%2019.26.03.png?raw=1)
 
 From the diagram we see the format starts with a legacy MSDOS header. This header is represented by the [IMAGE_DOS_HEADER struct](https://www.nirsoft.net/kernel_struct/vista/IMAGE_DOS_HEADER.html) - which has  a member called `e_lfanew` which stands for "long file address for the New Executable" and it contains the offset (known as an RVA - Relative Virtual Address) to the start of the PE header proper.
 
