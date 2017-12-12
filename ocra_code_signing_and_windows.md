@@ -43,7 +43,7 @@ accessed by the program itself once it is mapped into memory.
 
 ### Running the executable
 
-Once we have an output executable with the structure shown in the previous diagram, Ocra can execute it. When the executable
+Once we have an output executable with the structure shown in the prevqious diagram, Ocra can execute it. When the executable
 is run the process is as follows:
 
 * It opens its associated file on disk for reading and [maps itself into memory](https://github.com/larsch/ocra/blob/9c5fe287887f16db0c00ad54a549ff383f4c8d91/src/stub.c#L309)
@@ -72,7 +72,7 @@ From this offset we get to the the PE header (also known as an `NT header` or `C
 One of these directory entries, `IMAGE_DIRECTORY_ENTRY_SECURITY`, is used to store [information](https://msdn.microsoft.com/en-us/library/windows/desktop/ms680305(v=vs.85).aspx) about the
 signature. Specifically it stores the location of the signature in the file (in the `VirtualAddress` field) and also its size (in the `Size` field).
 
-The digital signature itself is just a hash of the file that is signed with the developer's private key - and it is appended to the end of the executable.
+The digital signature itself is just a hash of the file that is encrypted with the developer's private key - and it is appended to the end of the executable.
 
 Because the signature appears after the EOF of the proper executable it is not treated as "executable code" (recall the [custom data](https://edn.embarcadero.com/article/27979) trick).
 
