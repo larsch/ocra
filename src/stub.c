@@ -381,7 +381,7 @@ int CALLBACK _tWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPTSTR lpCm
 static PIMAGE_NT_HEADERS retrieveNTHeader(LPVOID ptr) {
   PIMAGE_DOS_HEADER dosHeader = (PIMAGE_DOS_HEADER)ptr;
 
-  /* e_lfanew is an RVA (relative virtual offset) to the NTHeader (aka PE Header)
+  /* e_lfanew is an RVA (relative virtual address, i.e offset) to the NTHeader
    to get a usable pointer we add the RVA to the base address */
   return (PIMAGE_NT_HEADERS)((DWORD)dosHeader + (DWORD)dosHeader->e_lfanew);
 }
