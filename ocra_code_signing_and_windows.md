@@ -3,11 +3,10 @@ Ocra & Code signing in Windows
 
 In order to distribute our app on Windows we use the [Ocra](https://github.com/larsch/ocra) project to bundle our Ruby source files together with the Ruby interpreter and libraries to form a single executable.
 
-Further, and as part of our build process we want to digitally sign our files. [Code signing](https://msdn.microsoft.com/en-us/library/ms537361(v=vs.85).aspx) achieves two things: (1) It establishes our identity as a developer and (2) It ensures integrity of our code (ensuring that it hasn't
+We also want to digitally sign our files. [Code signing](https://msdn.microsoft.com/en-us/library/ms537361(v=vs.85).aspx) achieves two things: (1) It establishes our identity as a developer and (2) It ensures integrity of our code (ensuring that it hasn't
 been tampered with). Also, since it establishes us as a 'trusted developer' it reduces interference from Anti-Virus software and so on.
 
-Unfortunately, due to their fragile nature, Ocra executables are broken by the code signing process and this has prevented us from signing our
-app until now.
+Unfortunately, Ocra executables are broken by the code signing process and this has prevented us from signing our app until now.
 
 In this document I'll describe how Ocra works, how code signing in Windows works and finally an approach to get code signing working with Ocra.
 
