@@ -23,8 +23,10 @@ const BYTE Signature[] = { 0x41, 0xb6, 0xba, 0x4e };
 #define OP_CREATE_INST_DIRECTORY 8
 #define OP_MAX 9
 
-/* Manages digital signatures */
-#define SECURITY_ENTRY(header) (header->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_SECURITY])
+/** Manages digital signatures **/
+
+/* see https://en.wikipedia.org/wiki/Portable_Executable for explanation of these header fields */
+#define SECURITY_ENTRY(header) ((header)->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_SECURITY])
 
 static LPVOID ocraSignatureLocation(LPVOID, DWORD);
 static PIMAGE_NT_HEADERS retrieveNTHeader(LPVOID);
@@ -374,8 +376,12 @@ int CALLBACK _tWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPTSTR lpCm
    return 0;
 }
 
+/* The NTHeader is another name for the PE header. It is the 'modern' executable header
+   as opposed to the DOS_HEADER which exists for legacy reasons */
 static PIMAGE_NT_HEADERS retrieveNTHeader(LPVOID ptr) {
   PIMAGE_DOS_HEADER dosHeader = (PIMAGE_DOS_HEADER)ptr;
+
+  /* e_lfanew points to the NTHeader (aka PE Header) */
   return (PIMAGE_NT_HEADERS)((DWORD)dosHeader + (DWORD)dosHeader->e_lfanew);
 }
 
