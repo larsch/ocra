@@ -62,13 +62,16 @@ As is clear from above, the Ocra binary is quite a fragile thing. If the last 4 
 A signed file is a standard Windows executable with signature data appended
 to it. A standard Windows executable file is known as a "PE" file ([Portable Execution format](https://en.wikipedia.org/wiki/Portable_Executable)).
 
-The structure of a PE file is as follows:
+The structure of a PE file is as follows (image taken from https://en.wikipedia.org/wiki/Portable_Executable):
 
-![PE Format](https://www.dropbox.com/s/9kmm3h3axcoiijp/Screenshot%202017-12-12%2009.59.44.png?raw=1)
+![PE Format](https://www.dropbox.com/s/cv4bbcdco57mcm5/Screenshot%202017-12-12%2017.56.44.png?raw=1)
 
-From the diagram we see the format starts with an MSDOS header, this header is represented by the [IMAGE_DOS_HEADER struct](https://www.nirsoft.net/kernel_struct/vista/IMAGE_DOS_HEADER.html) - which has  a member called `e_lfanew` which stands for "long file address for the New Executable" and it points to the start of the PE header proper.
+From the diagram we see the format starts with a legacy MSDOS header. This header is represented by the [IMAGE_DOS_HEADER struct](https://www.nirsoft.net/kernel_struct/vista/IMAGE_DOS_HEADER.html) - which has  a member called `e_lfanew` which stands for "long file address for the New Executable" and it contains the offset (known as an RVA - Relative Virtual Address) to the start of the PE header proper.
 
-Following this pointer we get to the the PE header (also known as an `NT header` or `COFF header`) and it is a structure of type [IMAGE_NT_HEADERS](https://msdn.microsoft.com/en-us/library/windows/desktop/ms680336(v=vs.85).aspx). It is followed by another header which contains information on executables (referred to as an [optional header](https://msdn.microsoft.com/en-us/library/windows/desktop/ms680339(v=vs.85).aspx), but it's always present for executables).  This header defines [a number of data directories](http://bytepointer.com/resources/pietrek_in_depth_look_into_pe_format_pt1_figures.htm).  One of these directory entries is `IMAGE_DIRECTORY_ENTRY_SECURITY`, which is used to store [information](https://msdn.microsoft.com/en-us/library/windows/desktop/ms680305(v=vs.85).aspx) about the signature. Specifically it stores the location of the signature in the file (in the `VirtualAddress` field) and also its size (in the `Size` field).
+From this offset we get to the the PE header (also known as an `NT header` or `COFF header`) and it is a structure of type [IMAGE_NT_HEADERS](https://msdn.microsoft.com/en-us/library/windows/desktop/ms680336(v=vs.85).aspx). It is followed by another header which contains information on executables (referred to as an [optional header](https://msdn.microsoft.com/en-us/library/windows/desktop/ms680339(v=vs.85).aspx), but it's always present for executables).  This header defines [a number of data directories](http://bytepointer.com/resources/pietrek_in_depth_look_into_pe_format_pt1_figures.htm).
+
+One of these directory entries is `IMAGE_DIRECTORY_ENTRY_SECURITY`, which is used to store [information](https://msdn.microsoft.com/en-us/library/windows/desktop/ms680305(v=vs.85).aspx) about the
+signature. Specifically it stores the location of the signature in the file (in the `VirtualAddress` field) and also its size (in the `Size` field).
 
 The digital signature itself is just a hash of the file that is signed with the developer's private key - and it is appended to the end of the executable.
 
@@ -76,8 +79,9 @@ Because the signature appears after the EOF of the proper executable it is not t
 
 To summarize, after code signing, an executable will change in the following way:
 
-* The `IMAGE_DIRECTORY_ENTRY_SECURITY` element in the PE header will have its `Size` field changed from zero (as is the case of an unsigned PE) to the size of the digital signature. The `VirtualAddress` field will be updated to point to the location of the digital signature.
-* The digital signature (which is a hash of the original executable encrypted with the developer's private key) will be appended to the executable.
+* The `IMAGE_DIRECTORY_ENTRY_SECURITY` element in the PE header will have its `Size` field changed from zero (as is the case of an unsigned PE) to the size of the digital signature.
+* The `VirtualAddress` field will be updated to point to the location of the digital signature.
+* The digital signature will be appended to the executable.
 
 ## Why Code Signing Breaks Ocra Executables
 
@@ -142,8 +146,8 @@ The proposed fix is to update [stub.c](https://github.com/larsch/ocra/blob/maste
 ## Resources
 
 * [Peering Inside the PE](https://msdn.microsoft.com/en-us/library/ms809762.aspx)
-* [Authenticode](https://www.cs.auckland.ac.nz/~pgut001/pubs/authenticode.txt)
+* [Authenticode Reverse-engineered](https://www.cs.auckland.ac.nz/~pgut001/pubs/authenticode.txt)
 * [Winnt.h](http://www.rensselaer.org/dept/cis/software/g77-mingw32/include/winnt.h)
-* [Pe Format (MSDN)](https://msdn.microsoft.com/en-us/library/windows/desktop/ms680547(v=vs.85).aspx)
+* [PE Format (MSDN)](https://msdn.microsoft.com/en-us/library/windows/desktop/ms680547(v=vs.85).aspx)
 * [Portable Execution Format Wikipedia Page](https://en.wikipedia.org/wiki/Portable_Executable)
 * [Introduction To Code Signing](https://msdn.microsoft.com/en-us/library/ms537361(v=vs.85).aspx)
