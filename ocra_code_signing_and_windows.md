@@ -14,7 +14,7 @@ In this document I'll describe how Ocra works, how code signing in Windows works
 
 ## How Ocra Works
 
-At a high level Ocra works by writing custom data after the end of the executable image -- and then reading this custom data into memory at runtime. The custom data contains "opcodes" and embedded Ruby source files. The opcodes contain instructions like "create temp directory", "create file" (i.e extract embedded Ruby file to a temp folder on disk), "create process" and so on. It is this runtime execution of opcodes that allow the magic of Ocra to happen.
+At a high level Ocra works by writing custom data after the end of the executable image -- and then reading this into memory at runtime. The custom data contains "opcodes" and embedded Ruby source files. The opcodes contain instructions like "create temp directory", "create file" (i.e extract embedded Ruby file to a temp folder on disk), "create process" and so on. It is this runtime execution of opcodes that allow the magic of Ocra to happen.
 
 ### Building the executable
 
