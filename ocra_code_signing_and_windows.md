@@ -43,7 +43,7 @@ accessed by the program itself once it is mapped into memory.
 
 ### Running the executable
 
-Once we have an output executable with the structure shown in the prevqious diagram, Ocra can execute it. When the executable
+Once we have an output executable with the structure shown in the previous diagram, Ocra can execute it. When the executable
 is run the process is as follows:
 
 * It opens its associated file on disk for reading and [maps itself into memory](https://github.com/larsch/ocra/blob/9c5fe287887f16db0c00ad54a549ff383f4c8d91/src/stub.c#L309)
