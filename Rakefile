@@ -12,23 +12,6 @@ end
 
 spec.urls.each { |url| url.chomp! }
 
-desc "task for fast iteration"
-task :do_it do
-  sh "gem uninstall ocra"
-  sh "rake install_gem" rescue nil
-  puts "installing the bitch"
-  sh "gem install pkg/ocra-1.4.666.gem"
-  sh "rm hello.exe"  rescue nil
-  sh "ocra hello.rb"
-  sh "cp hello.exe hello-signed.exe"
-  puts "Now creating a signed copy in hello-signed.exe"
-  sh "signtool sign /f ./CARoot.pfx /p Test123 hello-signed.exe"
-  puts "output of hello.exe"
-  sh "./hello.exe"
-  puts "output of hello-signed.exe"
-  sh "./hello-signed.exe" rescue nil
-end
-
 task :build_stub do
   sh "mingw32-make -C src"
   cp 'src/stub.exe', 'share/ocra/stub.exe'
