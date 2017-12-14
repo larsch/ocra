@@ -43,7 +43,8 @@ class FakeCodeSigner
     # append the "digital signature" to the end of the executable, complete with padding
     pe_wrapper.append_data(padding_string + FAKE_SIG)
 
-    File.binwrite(@output, @image)
+    # Write out the "signed" image
+    File.binwrite(@output, pe_wrapper.to_s)
   end
 
   private

@@ -58,6 +58,11 @@ class FakeCodeSigner
       @image << byte_string
     end
 
+    # string representation of this object
+    def to_s
+      @image
+    end
+
     private
 
     # convert an integer to a raw byte string
