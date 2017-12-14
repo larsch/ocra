@@ -26,10 +26,8 @@ class FakeCodeSigner
   end
 
   def sign
-    if pe_header.security_size !=0
+    if pe_header.security_size != 0
       raise "Binary already signed, nothing to do!"
-    elsif @input == @output
-      raise "input and output files must be different!"
     end
 
     # Below we access an instance of the IMAGE_DATA_DIRECTORY struct.
@@ -37,10 +35,10 @@ class FakeCodeSigner
     # see: https://msdn.microsoft.com/en-us/library/windows/desktop/ms680305(v=vs.85).aspx
 	
     # write the offset (address) of the digital signature to the security header (VirtualAddress field)
-    @image[pe_header.security_offset, 4] = raw_bytes(@image.size + @padding)
+    @image[pe_header.security_address_offset, PEHeader::DWORD_SIZE] = raw_bytes(@image.size + @padding)
 
     # write the size of the digital signature to the security header (Size field)
-    @image[pe_header.security_offset + 4, 4] = raw_bytes(FAKE_SIG.size)
+    @image[pe_header.security_size_offset, PEHeader::DWORD_SIZE] = raw_bytes(FAKE_SIG.size)
 	
     # append the "digital signature" to the end of the executable, complete with padding
     @image << padding_string << FAKE_SIG

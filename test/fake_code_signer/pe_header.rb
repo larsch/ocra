@@ -39,14 +39,20 @@ class FakeCodeSigner
       image_data_directory_offset + DATA_DIRECTORY_ENTRY_SIZE * 4
     end
 
+    alias security_address_offset security_offset
+
+    def security_size_offset
+      security_offset + DWORD_SIZE
+    end
+
     # location of the digital signature
     def security_address
-      deref(security_offset)
+      deref(security_address_offset)
     end
 
     # size of the digital signature
     def security_size
-      deref(security_offset + DWORD_SIZE)
+      deref(security_size_offset)
     end
 
     private
