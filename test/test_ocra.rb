@@ -755,8 +755,8 @@ class TestOcra < MiniTest::Test
     with_fixture 'helloworld' do
       each_path_combo "helloworld.rb" do |script|
         assert system("ruby", ocra, script, *DefaultArgs)
-        FakeCodeSigner.new(input: "helloworld.exe",
-                           output: "helloworld-signed.exe",
+        FakeCodeSigner.new(input_file: "helloworld.exe",
+                           output_file: "helloworld-signed.exe",
                            padding: rand(20)).sign
 
         pristine_env "helloworld.exe", "helloworld-signed.exe" do
