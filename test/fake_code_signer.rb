@@ -32,9 +32,17 @@ class FakeCodeSigner
       raise "input and output files must be different!"
     end
 
+    # Below we access an instance of the IMAGE_DATA_DIRECTORY struct.
+    # This instance is called IMAGE_DIRECTORY_ENTRY_SECURITY and it contains information about the digital signature
+    # see: https://msdn.microsoft.com/en-us/library/windows/desktop/ms680305(v=vs.85).aspx
+	
+    # write the offset (address) of the digital signature to the security header (VirtualAddress field)
     @image[pe_header.security_offset, 4] = raw_bytes(@image.size + @padding)
 
+    # write the size of the digital signature to the security header (Size field)
     @image[pe_header.security_offset + 4, 4] = raw_bytes(FAKE_SIG.size)
+	
+    # append the "digital signature" to the end of the executable, complete with padding
     @image << padding_string << FAKE_SIG
 
     File.binwrite(@output, @image)
