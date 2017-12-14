@@ -14,7 +14,7 @@ class FakeCodeSigner
     # https://msdn.microsoft.com/en-us/library/windows/desktop/ms680336(v=vs.85).aspx
     PE_SIGNATURE_SIZE = 4
 
-    # struct IMAGE_FILE_HEADER
+    # struct IMAGE_FILE_HEADER (second field from IMAGE_NT_HEADERS)
     # see: https://msdn.microsoft.com/en-us/library/windows/desktop/ms680313(v=vs.85).aspx
     IMAGE_FILE_HEADER_SIZE = 20
 
@@ -95,11 +95,14 @@ class FakeCodeSigner
     end
 
     # We dereference e_lfanew_offset to get the actual pe_header_offset
+    # the pe_header is represented by the IMAGE_NT_HEADERS struct
     def pe_header_offset
       deref(e_lfanew_offset)
     end
 
     # offset of the IMAGE_OPTIONAL_HEADER struct
+    # IMAGE_OPTIONAL_HEADER is the third field in IMAGE_NT_HEADERS, so we add
+    # the size of the previous two fields to locate it.
     # see: https://msdn.microsoft.com/en-us/library/windows/desktop/ms680313(v=vs.85).aspx
     def image_optional_header_offset
       pe_header_offset + PE_SIGNATURE_SIZE + IMAGE_FILE_HEADER_SIZE
