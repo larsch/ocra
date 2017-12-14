@@ -19,10 +19,9 @@ class FakeCodeSigner
   FAKE_SIG = "fake signature"
 
   def initialize(input_file:, output_file:, padding: 4)
-    @input = input_file
-    @output = output_file
+    @output_file = output_file
     @padding = padding
-    @image = File.binread(input)
+    @image = File.binread(input_file)
   end
 
   def sign
@@ -44,7 +43,7 @@ class FakeCodeSigner
     pe_wrapper.append_data(padding_string + FAKE_SIG)
 
     # Write out the "signed" image
-    File.binwrite(@output, pe_wrapper.to_s)
+    File.binwrite(@output_file, pe_wrapper.to_s)
   end
 
   private
