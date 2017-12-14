@@ -18,9 +18,9 @@ require File.join File.dirname(__FILE__), "fake_code_signer/pe_wrapper"
 class FakeCodeSigner
   FAKE_SIG = "fake signature"
 
-  def initialize(input:, output:, padding: 4)
-    @input = input
-    @output = output
+  def initialize(input_file:, output_file:, padding: 4)
+    @input = input_file
+    @output = output_file
     @padding = padding
     @image = File.binread(input)
   end
