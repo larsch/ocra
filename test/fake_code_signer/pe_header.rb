@@ -27,7 +27,7 @@ class FakeCodeSigner
 
     # struct IMAGE_DATA_DIRECTORY
     # https://msdn.microsoft.com/en-us/library/windows/desktop/ms680305(v=vs.85).aspx
-    DATA_DIRECTORY_ENTRY_SIZE = 4
+    DATA_DIRECTORY_ENTRY_SIZE = 8
 
     def initialize(image)
       @image = image
