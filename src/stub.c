@@ -424,19 +424,19 @@ static LPVOID ocraSignatureLocation(LPVOID ptr, DWORD size) {
 */
 BOOL ProcessImage(LPVOID ptr, DWORD size)
 {
-  LPVOID pSig = ocraSignatureLocation(ptr, size);
+   LPVOID pSig = ocraSignatureLocation(ptr, size);
 
-  if (memcmp(pSig, Signature, 4) == 0)
+   if (memcmp(pSig, Signature, 4) == 0)
    {
-     DEBUG("Good signature found.");
-     DWORD OpcodeOffset = *(DWORD*)(pSig - 4);
-     LPVOID pSeg = ptr + OpcodeOffset;
-     return ProcessOpcodes(&pSeg);
+      DEBUG("Good signature found.");
+      DWORD OpcodeOffset = *(DWORD*)(pSig - 4);
+      LPVOID pSeg = ptr + OpcodeOffset;
+      return ProcessOpcodes(&pSeg);
    }
    else
    {
-     FATAL("Bad signature in executable.");
-     return FALSE;
+      FATAL("Bad signature in executable.");
+      return FALSE;
    }
 }
 
