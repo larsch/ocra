@@ -46,7 +46,7 @@ class FakeCodeSigner
 
     # size of the digital signature
     def security_size
-      deref(security_offset + 4)
+      deref(security_offset + DWORD_SIZE)
     end
 
     private
@@ -54,7 +54,7 @@ class FakeCodeSigner
     # dereferences a pointer
     # the only pointer type we support is an unsigned long (DWORD)
     def deref(ptr)
-      @image[ptr, 4].unpack("L").first
+      @image[ptr, DWORD_SIZE].unpack("L").first
     end
 
     # offset of e_lfanew (which stores the offset of the actual PE header)
