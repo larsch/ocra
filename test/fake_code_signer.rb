@@ -1,4 +1,4 @@
-require File.join File.dirname(__FILE__), "fake_code_signer/pe_header"
+require File.join File.dirname(__FILE__), "fake_code_signer/pe_wrapper"
 
 # This class digitally signs an executable.
 # In reality, it doesn't create a "valid" digital signature - but it sets up the executable
@@ -26,22 +26,22 @@ class FakeCodeSigner
   end
 
   def sign
-    if pe_header.security_size != 0
+    if pe_wrapper.security_size != 0
       raise "Binary already signed, nothing to do!"
     end
 
     # Below we access an instance of the IMAGE_DATA_DIRECTORY struct.
     # This instance is called IMAGE_DIRECTORY_ENTRY_SECURITY and it contains information about the digital signature
     # see: https://msdn.microsoft.com/en-us/library/windows/desktop/ms680305(v=vs.85).aspx
-	
+
     # write the offset (address) of the digital signature to the security header (VirtualAddress field)
-    @image[pe_header.security_address_offset, PEHeader::DWORD_SIZE] = raw_bytes(@image.size + @padding)
+    pe_wrapper.security_address = @image.size + @padding
 
     # write the size of the digital signature to the security header (Size field)
-    @image[pe_header.security_size_offset, PEHeader::DWORD_SIZE] = raw_bytes(FAKE_SIG.size)
-	
+    pe_wrapper.security_size = FAKE_SIG.size
+
     # append the "digital signature" to the end of the executable, complete with padding
-    @image << padding_string << FAKE_SIG
+    pe_wrapper.append_data(padding_string + FAKE_SIG)
 
     File.binwrite(@output, @image)
   end
@@ -52,11 +52,7 @@ class FakeCodeSigner
     "\x0" * @padding
   end
 
-  def raw_bytes(int)
-    [int].pack("L")
-  end
-
-  def pe_header
-    @pe_header ||= PEHeader.new(@image)
+  def pe_wrapper
+    @pe_wrapper ||= PEWrapper.new(@image)
   end
 end

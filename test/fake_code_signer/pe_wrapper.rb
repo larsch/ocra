@@ -1,8 +1,8 @@
 class FakeCodeSigner
-  # This class exists to navigate and manipulate the headers of the Windows
+  # This class exists to navigate and manipulate the data of the Windows
   # executable format, PE, see: https://en.wikipedia.org/wiki/Portable_Executable
   # also https://msdn.microsoft.com/en-us/library/ms809762.aspx
-  class PEHeader
+  class PEWrapper
     # size of a DWORD is 2 words (4 bytes)
     DWORD_SIZE = 4
 
@@ -33,16 +33,14 @@ class FakeCodeSigner
       @image = image
     end
 
-    # security is the 4th element in the data directory array
-    # see http://bytepointer.com/resources/pietrek_in_depth_look_into_pe_format_pt1_figures.htm
-    def security_offset
-      image_data_directory_offset + DATA_DIRECTORY_ENTRY_SIZE * 4
+    # set digital signature address in security header
+    def security_address=(offset)
+      @image[security_address_offset, DWORD_SIZE] = raw_bytes(offset)
     end
 
-    alias security_address_offset security_offset
-
-    def security_size_offset
-      security_offset + DWORD_SIZE
+    # set digital signature size in security header
+    def security_size=(size)
+      @image[security_size_offset, DWORD_SIZE] = raw_bytes(size)
     end
 
     # location of the digital signature
@@ -55,7 +53,29 @@ class FakeCodeSigner
       deref(security_size_offset)
     end
 
+    # append data to end of executable
+    def append_data(byte_string)
+      @image << byte_string
+    end
+
     private
+
+    # convert an integer to a raw byte string
+    def raw_bytes(int)
+      [int].pack("L")
+    end
+
+    # security is the 4th element in the data directory array
+    # see http://bytepointer.com/resources/pietrek_in_depth_look_into_pe_format_pt1_figures.htm
+    def security_offset
+      image_data_directory_offset + DATA_DIRECTORY_ENTRY_SIZE * 4
+    end
+
+    alias security_address_offset security_offset
+
+    def security_size_offset
+      security_offset + DWORD_SIZE
+    end
 
     # dereferences a pointer
     # the only pointer type we support is an unsigned long (DWORD)
