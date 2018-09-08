@@ -14,7 +14,6 @@ any additionally needed ruby libraries or DLL.
 == FEATURES
 
 * LZMA Compression (optional, default on)
-* Ruby 1.8.7, 1.9.3, 2.0.0 and 2.1.5 support
 * Both windowed/console mode supported
 * Includes gems based on usage, or from a Bundler Gemfile
 
@@ -165,8 +164,7 @@ Executable options:
 
 * Windows
 
-* Working Ruby installation. Ocra is tested with RubyInstaller
-  1.8.7p374, 1.9.3p545, and 2.0.0p481 (32 and 64 bit).
+* Working Ruby installation.
 
 * MinGW Installation (when working with the source code only)
 
@@ -257,7 +255,8 @@ following command:
   ocra someapp/script/rails someapp --output someapp.exe --add-all-core \
   --gemfile someapp/Gemfile --no-dep-run --gem-full --chdir-first -- server
 
-Note the space between "--" and "server"! It's important; "server" is an argument to be passed to rails when the script is ran.
+Note the space between "--" and "server"! It's important; "server" is
+an argument to be passed to rails when the script is ran.
 
 Rails 2 apps can be packaged similarly, though you will have to
 integrate them with Bundler (http://gembundler.com/rails23.html)
