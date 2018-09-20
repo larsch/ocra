@@ -564,7 +564,9 @@ EOF
       end
 
       ENV['BUNDLE_GEMFILE'] = Ocra.gemfile
-      Bundler.load.specs.each do |spec|
+      bundler_definition = Bundler::Definition.build(Bundler::SharedHelpers.default_gemfile, Bundler::SharedHelpers.default_lockfile, nil)
+
+      bundler_definition.specs_for([:default]).each do |spec|
         Ocra.verbose_msg "From Gemfile, adding gem #{spec.full_name}"
         gems[spec.name] ||= spec
       end
@@ -580,7 +582,7 @@ EOF
 
     if defined?(Gem)
       # Include Gems that are loaded
-      Gem.loaded_specs.each { |gemname, spec| gems[gemname] ||= spec }
+      Gem.loaded_specs.each { |gemname, spec| gems[gemname] ||= spec } unless Ocra.gemfile
       # Fall back to gem detection (loaded_specs are not population on
       # all Ruby versions)
       features.each do |feature|
