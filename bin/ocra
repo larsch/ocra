@@ -261,7 +261,7 @@ module Ocra
 
   # Returns a binary blob store embedded in the current Ruby script.
   def Ocra.get_next_embedded_image
-    DATA.read(DATA.readline.to_i).unpack("m")[0]
+    DATA.readline.chomp.unpack("m0")[0]
   end
 
   def Ocra.save_environment
