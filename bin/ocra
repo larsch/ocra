@@ -8,7 +8,7 @@ module Ocra
   # separators.
   class Pathname
     def Pathname.pwd
-      Pathname.new(Dir.pwd.encode('UTF-8'))
+      Pathname.new(Dir.pwd.encode("UTF-8"))
     end
 
     def Pathname.pathequal(a, b)
@@ -23,7 +23,7 @@ module Ocra
     ABSOLUTE_PAT = /\A([A-Z]:)?#{SEPARATOR_PAT}/i
 
     def initialize(path)
-      @path = path && path.encode('UTF-8')
+      @path = path && path.encode("UTF-8")
     end
 
     def to_native
@@ -45,8 +45,8 @@ module Ocra
         b.shift
       end
       return other if Pathname.new(b.first).absolute?
-      b.size.times { a.unshift '..' }
-      return Pathname.new(a.join('/'))
+      b.size.times { a.unshift ".." }
+      return Pathname.new(a.join("/"))
     end
 
     # Determines if 'src' is contained in 'tgt' (i.e. it is a subpath of
@@ -66,7 +66,7 @@ module Ocra
       if other.absolute?
         other
       else
-        Ocra.Pathname(@path + '/' + other.path)
+        Ocra.Pathname(@path + "/" + other.path)
       end
     end
 
@@ -87,7 +87,7 @@ module Ocra
     end
 
     def entries
-      Dir.entries(@path).map { |e| self / e.encode('UTF-8') }
+      Dir.entries(@path).map { |e| self / e.encode("UTF-8") }
     end
 
     # Recursively find all files which match a specified regular
@@ -147,28 +147,35 @@ module Ocra
   module Host
     class << self
       def exec_prefix
-        @exec_prefix ||= Ocra.Pathname(RbConfig::CONFIG['exec_prefix'])
+        @exec_prefix ||= Ocra.Pathname(RbConfig::CONFIG["exec_prefix"])
       end
+
       def sitelibdir
-        @sitelibdir ||= Ocra.Pathname(RbConfig::CONFIG['sitelibdir'])
+        @sitelibdir ||= Ocra.Pathname(RbConfig::CONFIG["sitelibdir"])
       end
+
       def bindir
-        @bindir ||= Ocra.Pathname(RbConfig::CONFIG['bindir'])
+        @bindir ||= Ocra.Pathname(RbConfig::CONFIG["bindir"])
       end
+
       def libruby_so
-        @libruby_so ||= Ocra.Pathname(RbConfig::CONFIG['LIBRUBY_SO'])
+        @libruby_so ||= Ocra.Pathname(RbConfig::CONFIG["LIBRUBY_SO"])
       end
+
       def exeext
-        RbConfig::CONFIG['EXEEXT'] || ".exe"
+        RbConfig::CONFIG["EXEEXT"] || ".exe"
       end
+
       def rubyw_exe
-        @rubyw_exe ||= (RbConfig::CONFIG['rubyw_install_name'] || "rubyw") + exeext
+        @rubyw_exe ||= (RbConfig::CONFIG["rubyw_install_name"] || "rubyw") + exeext
       end
+
       def ruby_exe
-        @ruby_exe ||= (RbConfig::CONFIG['ruby_install_name'] || "ruby") + exeext
+        @ruby_exe ||= (RbConfig::CONFIG["ruby_install_name"] || "ruby") + exeext
       end
+
       def tempdir
-        @tempdir ||= Ocra.Pathname(ENV['TEMP'])
+        @tempdir ||= Ocra.Pathname(ENV["TEMP"])
       end
     end
   end
@@ -202,11 +209,11 @@ module Ocra
   # Alias for the temporary directory where files are extracted.
   TEMPDIR_ROOT = Pathname.new("|")
   # Directory for source files in temporary directory.
-  SRCDIR = Pathname.new('src')
+  SRCDIR = Pathname.new("src")
   # Directory for Ruby binaries in temporary directory.
-  BINDIR = Pathname.new('bin')
+  BINDIR = Pathname.new("bin")
   # Directory for GEMHOME files in temporary directory.
-  GEMHOMEDIR = Pathname.new('gemhome')
+  GEMHOMEDIR = Pathname.new("gemhome")
 
   @options = {
     :lzma_mode => true,
@@ -230,7 +237,7 @@ module Ocra
     :debug_extract => false,
     :arg => [],
     :enc => true,
-    :gem => []
+    :gem => [],
   }
 
   @options.each_key { |opt| eval("def self.#{opt}; @options[:#{opt}]; end") }
@@ -281,17 +288,17 @@ module Ocra
       @stubimage = get_next_embedded_image
       @stubwimage = get_next_embedded_image
       lzmaimage = get_next_embedded_image
-      @lzmapath = Host.tempdir / 'lzma.exe'
+      @lzmapath = Host.tempdir / "lzma.exe"
       File.open(@lzmapath, "wb") { |file| file << lzmaimage }
       ediconimage = get_next_embedded_image
-      @ediconpath = Host.tempdir / 'edicon.exe'
+      @ediconpath = Host.tempdir / "edicon.exe"
       File.open(@ediconpath, "wb") { |file| file << ediconimage }
     else
       ocrapath = Pathname(File.dirname(__FILE__))
-      @stubimage = File.open(ocrapath / '../share/ocra/stub.exe', "rb") { |file| file.read }
-      @stubwimage = File.open(ocrapath / '../share/ocra/stubw.exe', "rb") { |file| file.read }
-      @lzmapath = (ocrapath / '../share/ocra/lzma.exe').expand
-      @ediconpath = (ocrapath / '../share/ocra/edicon.exe').expand
+      @stubimage = File.open(ocrapath / "../share/ocra/stub.exe", "rb") { |file| file.read }
+      @stubwimage = File.open(ocrapath / "../share/ocra/stubw.exe", "rb") { |file| file.read }
+      @lzmapath = (ocrapath / "../share/ocra/lzma.exe").expand
+      @ediconpath = (ocrapath / "../share/ocra/edicon.exe").expand
     end
   end
 
@@ -408,7 +415,7 @@ EOF
       when /\A--(no-)?gem-(\w+)(?:=(.*))?$/
         negate, group, list = $1, $2, $3
         @options[:gem] ||= []
-        @options[:gem] << [negate, group.to_sym, list && list.split(",") ]
+        @options[:gem] << [negate, group.to_sym, list && list.split(",")]
       when /\A--help\z/, /\A--./
         puts usage
         exit 0
@@ -439,7 +446,7 @@ EOF
     end
 
     @options[:files].map! { |path|
-      path = path.encode('UTF-8').tr('\\','/')
+      path = path.encode("UTF-8").tr('\\', "/")
       if File.directory?(path)
         # If a directory is passed, we want all files under that directory
         path = "#{path}/**/*"
@@ -555,7 +562,7 @@ EOF
     if Ocra.gemfile
       Ocra.msg "Scanning Gemfile"
       # Load Rubygems and Bundler so we can scan the Gemfile
-      ['rubygems', 'bundler'].each do |lib|
+      ["rubygems", "bundler"].each do |lib|
         begin
           require lib
         rescue LoadError
@@ -563,13 +570,13 @@ EOF
         end
       end
 
-      ENV['BUNDLE_GEMFILE'] = Ocra.gemfile
+      ENV["BUNDLE_GEMFILE"] = Ocra.gemfile
       Bundler.load.specs.each do |spec|
         Ocra.verbose_msg "From Gemfile, adding gem #{spec.full_name}"
         gems[spec.name] ||= spec
       end
 
-      unless gems.any?{|dir, name| name =~ /^bundler-[.0-9]+/}
+      unless gems.any? { |dir, name| name =~ /^bundler-[.0-9]+/ }
         # Bundler itself wasn't added for some reason, let's put it in directly
         Ocra.verbose_msg "From Gemfile, forcing inclusion of bundler gem itself"
         bundler_spec = Gem.loaded_specs["bundler"]
@@ -599,8 +606,8 @@ EOF
           geminstallpath = Pathname(gempath) / "gems"
           if feature.subpath?(geminstallpath)
             gemlocalpath = feature.relative_path_from(geminstallpath)
-            fullgemname = gemlocalpath.path.split('/').first
-            gemspecpath = gempath / 'specifications' / "#{fullgemname}.gemspec"
+            fullgemname = gemlocalpath.path.split("/").first
+            gemspecpath = gempath / "specifications" / "#{fullgemname}.gemspec"
             if spec = Gem::Specification.load(gemspecpath)
               gems[spec.name] ||= spec
               features_from_gems << feature
@@ -617,20 +624,20 @@ EOF
         @gemspecs << Pathname(spec.spec_file) if File.exist?(spec.spec_file)
 
         # Determine which set of files to include for this particular gem
-        include = [ :loaded, :files ]
+        include = [:loaded, :files]
         Ocra.gem.each do |negate, option, list|
           if list.nil? or list.include?(spec.name)
             case option
             when :minimal
-              include = [ :loaded ]
+              include = [:loaded]
             when :guess
-              include = [ :loaded, :files ]
+              include = [:loaded, :files]
             when :all
-              include = [ :scripts, :files ]
+              include = [:scripts, :files]
             when :full
-              include = [ :scripts, :files, :extras ]
+              include = [:scripts, :files, :extras]
             when :spec
-              include = [ :spec ]
+              include = [:spec]
             when :scripts
               if negate
                 include.delete(:scripts)
@@ -653,12 +660,12 @@ EOF
           end
         end
 
-        Ocra.msg "Detected gem #{spec.full_name} (#{include.join(', ')})"
+        Ocra.msg "Detected gem #{spec.full_name} (#{include.join(", ")})"
 
         gem_root = Pathname(spec.gem_dir)
-        gem_extension = (gem_root / '..' / '..' / 'extensions').expand
+        gem_extension = (gem_root / ".." / ".." / "extensions").expand
         if gem_extension.exist?
-          build_complete = gem_extension.find_all_files(/gem.build_complete/).select{|p| p.dirname.basename.to_s == spec.full_name}
+          build_complete = gem_extension.find_all_files(/gem.build_complete/).select { |p| p.dirname.basename.to_s == spec.full_name }
         else
           build_complete = nil
         end
@@ -729,12 +736,12 @@ EOF
 
     # Find gemspecs to include
     if defined?(Gem)
-      @gemspecs = Gem.loaded_specs.map { |name,info| Pathname(info.loaded_from) }
+      @gemspecs = Gem.loaded_specs.map { |name, info| Pathname(info.loaded_from) }
     else
       @gemspecs = []
     end
 
-    require 'rbconfig'
+    require "rbconfig"
     instsitelibdir = Host.sitelibdir.relative_path_from(Host.exec_prefix)
 
     load_path = []
@@ -754,7 +761,7 @@ EOF
           encpath = path / "enc"
           if encpath.exist?
             encfiles = encpath.find_all_files(/\.so$/)
-            size = encfiles.inject(0) { |sum,pn| sum + pn.size }
+            size = encfiles.inject(0) { |sum, pn| sum + pn.size }
             Ocra.msg "Including #{encfiles.size} encoding support files (#{size} bytes, use --no-enc to exclude)"
             features.push(*encfiles)
           end
@@ -780,12 +787,12 @@ EOF
         if fullpath.subpath?(Host.exec_prefix)
           # Features found in the Ruby installation are put in the
           # temporary Ruby installation.
-          libs << [ fullpath, fullpath.relative_path_from(Host.exec_prefix) ]
+          libs << [fullpath, fullpath.relative_path_from(Host.exec_prefix)]
         elsif defined?(Gem) and gemhome = Gem.path.find { |pth| fullpath.subpath?(pth) }
           # Features found in any other Gem path (e.g. ~/.gems) is put
           # in a special 'gemhome' folder.
           targetpath = GEMHOMEDIR / fullpath.relative_path_from(gemhome)
-          libs << [ fullpath, targetpath ]
+          libs << [fullpath, targetpath]
         elsif fullpath.subpath?(src_prefix) || path == working_directory
           # Any feature found inside the src_prefix automatically gets
           # added as a source file (to go in 'src').
@@ -803,7 +810,7 @@ EOF
           # All other feature that can not be resolved go in the the
           # Ruby sitelibdir. This is automatically in the load path
           # when Ruby starts.
-          libs << [ fullpath, instsitelibdir / feature ]
+          libs << [fullpath, instsitelibdir / feature]
         end
       end
     end
@@ -821,10 +828,10 @@ EOF
     # GEMHOME.
     gem_files.each do |gemfile|
       if gemfile.subpath?(Host.exec_prefix)
-        libs << [ gemfile, gemfile.relative_path_from(Host.exec_prefix) ]
+        libs << [gemfile, gemfile.relative_path_from(Host.exec_prefix)]
       elsif defined?(Gem) and gemhome = Gem.path.find { |pth| gemfile.subpath?(pth) }
         targetpath = GEMHOMEDIR / gemfile.relative_path_from(Pathname(gemhome))
-        libs << [ gemfile, targetpath ]
+        libs << [gemfile, targetpath]
       else
         Ocra.fatal_error "Don't know where to put gemfile #{gemfile}"
       end
@@ -836,7 +843,7 @@ EOF
       @load_path_before.each do |lp|
         path = Pathname.new(lp)
         next unless path.to_posix =~
-          /\/(ruby\/(?:site_ruby\/|vendor_ruby\/)?[0-9.]+)\/?$/i
+                    /\/(ruby\/(?:site_ruby\/|vendor_ruby\/)?[0-9.]+)\/?$/i
         subdir = $1
         Dir["#{lp}/**/*"].each do |f|
           fpath = Pathname.new(f)
@@ -857,11 +864,11 @@ EOF
     if Ocra.output_override
       executable = Ocra.output_override
     else
-      executable = Ocra.files.first.basename.ext('.exe')
+      executable = Ocra.files.first.basename.ext(".exe")
       executable.append_to_filename!("-debug") if Ocra.debug
     end
 
-    windowed = (Ocra.files.first.ext?('.rbw') || Ocra.force_windows) && !Ocra.force_console
+    windowed = (Ocra.files.first.ext?(".rbw") || Ocra.force_windows) && !Ocra.force_console
 
     Ocra.msg "Building #{executable}"
     target_script = nil
@@ -948,16 +955,16 @@ EOF
       end
 
       # Set environment variable
-      sb.setenv('RUBYOPT', ENV['RUBYOPT'] || '')
-      sb.setenv('RUBYLIB', load_path.map{|path| path.to_native}.uniq.join(';'))
-      sb.setenv('GEM_PATH', (TEMPDIR_ROOT / GEMHOMEDIR).to_native)
+      sb.setenv("RUBYOPT", ENV["RUBYOPT"] || "")
+      sb.setenv("RUBYLIB", load_path.map { |path| path.to_native }.uniq.join(";"))
+      sb.setenv("GEM_PATH", (TEMPDIR_ROOT / GEMHOMEDIR).to_native)
 
       # Add the opcode to launch the script
-      extra_arg = Ocra.arg.map { |arg| ' "' + arg.gsub("\"","\\\"") + '"' }.join
+      extra_arg = Ocra.arg.map { |arg| ' "' + arg.gsub("\"", "\\\"") + '"' }.join
       installed_ruby_exe = TEMPDIR_ROOT / BINDIR / rubyexe
       launch_script = (TEMPDIR_ROOT / target_script).to_native
       sb.postcreateprocess(installed_ruby_exe,
-        "#{rubyexe} \"#{launch_script}\"#{extra_arg}")
+                           "#{rubyexe} \"#{launch_script}\"#{extra_arg}")
     end
 
     unless Ocra.inno_script
@@ -967,11 +974,11 @@ EOF
 
   module LibraryDetector
     def LibraryDetector.loaded_dlls
-      require 'Win32API'
+      require "Win32API"
 
-      enumprocessmodules = Win32API.new('psapi', 'EnumProcessModules', ['L','P','L','P'], 'L')
-      getmodulefilename = Win32API.new('kernel32', 'GetModuleFileNameW', ['L','P','L'], 'L')
-      getcurrentprocess = Win32API.new('kernel32', 'GetCurrentProcess', [], 'L')
+      enumprocessmodules = Win32API.new("psapi", "EnumProcessModules", ["L", "P", "L", "P"], "L")
+      getmodulefilename = Win32API.new("kernel32", "GetModuleFileNameW", ["L", "P", "L"], "L")
+      getcurrentprocess = Win32API.new("kernel32", "GetCurrentProcess", [], "L")
 
       bytes_needed = 4 * 32
       module_handle_buffer = nil
@@ -988,7 +995,7 @@ EOF
       handles.select { |handle| handle > 0 }.map do |handle|
         str = "\x00\x00" * 256
         modulefilename_length = getmodulefilename.call(handle, str, str.size)
-        modulefilename = str[0, modulefilename_length * 2].force_encoding('UTF-16LE').encode('UTF-8')
+        modulefilename = str[0, modulefilename_length * 2].force_encoding("UTF-16LE").encode("UTF-8")
         Ocra.Pathname(modulefilename)
       end
     end
@@ -996,7 +1003,7 @@ EOF
     def LibraryDetector.detect_dlls
       loaded = loaded_dlls
       exec_prefix = Host.exec_prefix
-      loaded.select { |path| path.subpath?(exec_prefix) && path.basename.ext?('.dll') && path.basename != Host.libruby_so }
+      loaded.select { |path| path.subpath?(exec_prefix) && path.basename.ext?(".dll") && path.basename != Host.libruby_so }
     end
   end
 
@@ -1039,10 +1046,10 @@ EOF
       opcode_offset = File.size(path)
 
       File.open(path, "ab") do |ocrafile|
-        tmpinpath = 'tmpin'
+        tmpinpath = "tmpin"
 
         if Ocra.lzma_mode
-          @of = File.open(tmpinpath, 'wb')
+          @of = File.open(tmpinpath, "wb")
         else
           @of = ocrafile
         end
@@ -1059,11 +1066,11 @@ EOF
         @of.close if Ocra.lzma_mode
 
         if Ocra.lzma_mode and not Ocra.inno_script
-          tmpoutpath = 'tmpout'
+          tmpoutpath = "tmpout"
           begin
             data_size = File.size(tmpinpath)
             Ocra.msg "Compressing #{data_size} bytes"
-            system(Ocra.lzmapath, 'e', tmpinpath, tmpoutpath) or fail
+            system(Ocra.lzmapath, "e", tmpinpath, tmpoutpath) or fail
             compressed_data_size = File.size?(tmpoutpath)
             ocrafile.write([OP_DECOMPRESS_LZMA, compressed_data_size].pack("VV"))
             IO.copy_stream(tmpoutpath, ocrafile)
@@ -1185,9 +1192,7 @@ EOF
     def showtempdir(x)
       x.to_s.gsub(TEMPDIR_ROOT, "<tempdir>")
     end
-
   end # class OcraBuilder
-
 end # module Ocra
 
 if File.basename(__FILE__) == File.basename($0)
