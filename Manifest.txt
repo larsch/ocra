@@ -1,6 +1,6 @@
 History.txt
 Manifest.txt
-README.rdoc
+README.md
 Rakefile
 bin/ocra
 share/ocra/lzma.exe
