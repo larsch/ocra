@@ -576,7 +576,7 @@ EOF
         gems[spec.name] ||= spec
       end
 
-      unless gems.any? { |dir, name| name =~ /^bundler-[.0-9]+/ }
+      unless gems.any? { |name, spec| name == "bundler" }
         # Bundler itself wasn't added for some reason, let's put it in directly
         Ocra.verbose_msg "From Gemfile, forcing inclusion of bundler gem itself"
         bundler_spec = Gem.loaded_specs["bundler"]
