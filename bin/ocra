@@ -973,12 +973,31 @@ EOF
   end
 
   module LibraryDetector
-    def LibraryDetector.loaded_dlls
-      require "Win32API"
+    def LibraryDetector.init_fiddle
+      require "fiddle"
+      require "fiddle/types"
+      module_eval {
+        extend Fiddle::Importer
+        dlload "psapi.dll"
+        include Fiddle::Win32Types
+        extern "BOOL EnumProcessModules(HANDLE, HMODULE*, DWORD, DWORD*)"
+        extend Fiddle::Importer
+        dlload "kernel32.dll"
+        include Fiddle::Win32Types
+        typealias "HMODULE", "uintptr_t"
+        typealias "LPWSTR", "char*"
+        extern "DWORD GetModuleFileNameW(HMODULE, LPWSTR, DWORD)"
+        extern "HANDLE GetCurrentProcess(void)"
+      }
+    end
 
-      enumprocessmodules = Win32API.new("psapi", "EnumProcessModules", ["L", "P", "L", "P"], "L")
-      getmodulefilename = Win32API.new("kernel32", "GetModuleFileNameW", ["L", "P", "L"], "L")
-      getcurrentprocess = Win32API.new("kernel32", "GetCurrentProcess", [], "L")
+    def LibraryDetector.loaded_dlls
+      require "fiddle"
+      psapi = Fiddle.dlopen("psapi")
+      enumprocessmodules = Fiddle::Function.new(psapi["EnumProcessModules"], [Fiddle::TYPE_UINTPTR_T, Fiddle::TYPE_VOIDP, Fiddle::TYPE_LONG, Fiddle::TYPE_VOIDP], Fiddle::TYPE_LONG)
+      kernel32 = Fiddle.dlopen("kernel32")
+      getcurrentprocess = Fiddle::Function.new(kernel32["GetCurrentProcess"], [], Fiddle::TYPE_LONG)
+      getmodulefilename = Fiddle::Function.new(kernel32["GetModuleFileNameW"], [Fiddle::TYPE_UINTPTR_T, Fiddle::TYPE_VOIDP, Fiddle::TYPE_LONG], Fiddle::TYPE_LONG)
 
       bytes_needed = 4 * 32
       module_handle_buffer = nil
