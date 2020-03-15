@@ -791,7 +791,7 @@ EOF
         elsif defined?(Gem) and gemhome = Gem.path.find { |pth| fullpath.subpath?(pth) }
           # Features found in any other Gem path (e.g. ~/.gems) is put
           # in a special 'gemhome' folder.
-          targetpath = GEMHOMEDIR / fullpath.relative_path_from(gemhome)
+          targetpath = GEMHOMEDIR / fullpath.relative_path_from(Pathname(gemhome))
           libs << [fullpath, targetpath]
         elsif fullpath.subpath?(src_prefix) || path == working_directory
           # Any feature found inside the src_prefix automatically gets
