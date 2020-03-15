@@ -188,7 +188,7 @@ module Ocra
 
   VERSION = "1.3.10"
 
-  IGNORE_MODULES = /\/(enumerator.so|rational.so|complex.so|thread.rb|ruby2_keywords.rb)$/
+  IGNORE_MODULE_NAMES = /\/(enumerator.so|rational.so|complex.so|thread.rb|ruby2_keywords.rb)$/
 
   GEM_SCRIPT_RE = /\.rbw?$/
   GEM_EXTRA_RE = %r{(
@@ -214,6 +214,8 @@ module Ocra
   BINDIR = Pathname.new("bin")
   # Directory for GEMHOME files in temporary directory.
   GEMHOMEDIR = Pathname.new("gemhome")
+
+  IGNORE_MODULES = []
 
   @options = {
     :lzma_mode => true,
@@ -461,6 +463,7 @@ EOF
     save_environment
     parseargs(argv)
     find_stubs
+    IGNORE_MODULES.push(*ObjectSpace.each_object(Module).to_a)
   end
 
   # Force loading autoloaded constants. Searches through all modules
@@ -468,6 +471,7 @@ EOF
   # ones, then attempts to load them.
   def Ocra.attempt_load_autoload
     modules_checked = {}
+    IGNORE_MODULES.each { |m| modules_checked[m] = true }
     loop do
       modules_to_check = []
       ObjectSpace.each_object(Module) do |mod|
@@ -893,7 +897,7 @@ EOF
           begin
             sb.createfile(file, target)
           rescue Errno::ENOENT
-            raise unless file =~ IGNORE_MODULES
+            raise unless file =~ IGNORE_MODULE_NAMES
           end
         end
       end
@@ -1120,7 +1124,7 @@ EOF
           @files.each do |tgt, src|
             src_escaped = src.to_s.gsub('"', '""')
             target_dir_escaped = Pathname.new(tgt).dirname.to_s.gsub('"', '""')
-            iss << "Source: \"#{src_escaped}\"; DestDir: \"{app}/#{target_dir_escaped}\"\n" unless src_escaped =~ IGNORE_MODULES
+            iss << "Source: \"#{src_escaped}\"; DestDir: \"{app}/#{target_dir_escaped}\"\n" unless src_escaped =~ IGNORE_MODULE_NAMES
           end
           iss << "\n"
 
