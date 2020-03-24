@@ -4,6 +4,7 @@ require "tmpdir"
 require "fileutils"
 require "rbconfig"
 require "pathname"
+require File.join(File.dirname(__FILE__), "fake_code_signer")
 
 begin
   require "rubygems"
@@ -749,4 +750,20 @@ class TestOcra < MiniTest::Test
     end
   end
 
+  # Test that code-signed executables still work
+  def test_codesigning_support
+    with_fixture 'helloworld' do
+      each_path_combo "helloworld.rb" do |script|
+        assert system("ruby", ocra, script, *DefaultArgs)
+        FakeCodeSigner.new(input_file: "helloworld.exe",
+                           output_file: "helloworld-signed.exe",
+                           padding: rand(20)).sign
+
+        pristine_env "helloworld.exe", "helloworld-signed.exe" do
+          assert system("helloworld.exe")
+          assert system("helloworld-signed.exe")
+        end
+      end
+    end
+  end
 end

@@ -23,6 +23,16 @@ const BYTE Signature[] = { 0x41, 0xb6, 0xba, 0x4e };
 #define OP_CREATE_INST_DIRECTORY 8
 #define OP_MAX 9
 
+/** Manages digital signatures **/
+
+/* see https://en.wikipedia.org/wiki/Portable_Executable for explanation of these header fields */
+#define SECURITY_ENTRY(header) ((header)->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_SECURITY])
+
+static LPVOID ocraSignatureLocation(LPVOID, DWORD);
+static PIMAGE_NT_HEADERS retrieveNTHeader(LPVOID);
+static char isDigitallySigned(LPVOID);
+/******************************/
+
 BOOL ProcessImage(LPVOID p, DWORD size);
 BOOL ProcessOpcodes(LPVOID* p);
 void CreateAndWaitForProcess(LPTSTR ApplicationName, LPTSTR CommandLine);
@@ -366,13 +376,56 @@ int CALLBACK _tWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPTSTR lpCm
    return 0;
 }
 
+/* The NTHeader is another name for the PE header. It is the 'modern' executable header
+   as opposed to the DOS_HEADER which exists for legacy reasons */
+static PIMAGE_NT_HEADERS retrieveNTHeader(LPVOID ptr) {
+  PIMAGE_DOS_HEADER dosHeader = (PIMAGE_DOS_HEADER)ptr;
+
+  /* e_lfanew is an RVA (relative virtual address, i.e offset) to the NTHeader
+   to get a usable pointer we add the RVA to the base address */
+  return (PIMAGE_NT_HEADERS)((DWORD)dosHeader + (DWORD)dosHeader->e_lfanew);
+}
+
+/* Check whether there's an embedded digital signature */
+static char isDigitallySigned(LPVOID ptr) {
+  PIMAGE_NT_HEADERS ntHeader = retrieveNTHeader(ptr);
+  return SECURITY_ENTRY(ntHeader).Size != 0;
+}
+
+/* Find the location of ocra's signature
+   NOTE: *not* the same as the digital signature from code signing
+*/
+static LPVOID ocraSignatureLocation(LPVOID ptr, DWORD size) {
+  if (!isDigitallySigned(ptr)) {
+    return ptr + size - 4;
+  }
+  else {
+    PIMAGE_NT_HEADERS ntHeader = retrieveNTHeader(ptr);
+    DWORD offset = SECURITY_ENTRY(ntHeader).VirtualAddress - 1;
+    char* searchPtr = (char *)ptr;
+
+    /* There is unfortunately a 'buffer' of null bytes between the
+       ocraSignature and the digital signature. This buffer appears to be random
+       in size, so the only way we can account for it is to search backwards
+       for the first non-null byte.
+       NOTE: this means that the hard-coded Ocra signature cannot end with a null byte.
+    */
+    while(!searchPtr[offset])
+      offset--;
+
+    /* -3 cos we're already at the first byte and we need to go back 4 bytes */
+    return (LPVOID)&searchPtr[offset - 3];
+  }
+}
+
 /**
    Process the image by checking the signature and locating the first
    opcode.
 */
 BOOL ProcessImage(LPVOID ptr, DWORD size)
 {
-   LPVOID pSig = ptr + size - 4;
+   LPVOID pSig = ocraSignatureLocation(ptr, size);
+
    if (memcmp(pSig, Signature, 4) == 0)
    {
       DEBUG("Good signature found.");
