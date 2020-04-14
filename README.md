@@ -1,10 +1,8 @@
-# ocra
+# Ocra
 
-home   :: https://github.com/larsch/ocra/
+![Gem Version](https://badge.fury.io/rb/ocra.svg) - ![Total Downloads](https://badgen.net/rubygems/dt/ocra) - ![stars](https://badgen.net/github/stars/larsch/ocra)
 
-issues :: http://github.com/larsch/ocra/issues
-
-forum  :: http://groups.google.com/group/ruby-ocra
+[Home](https://github.com/larsch/ocra/) - [Issues](http://github.com/larsch/ocra/issues) - [Forum](http://groups.google.com/group/ruby-ocra)
 
 ## Description
 
