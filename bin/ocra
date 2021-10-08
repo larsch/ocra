@@ -625,7 +625,17 @@ EOF
       gem_files = []
 
       gems.each do |gemname, spec|
-        @gemspecs << Pathname(spec.spec_file) if File.exist?(spec.spec_file)
+        if File.exist?(spec.spec_file) then
+          @gemspecs << Pathname(spec.spec_file)
+        else
+          spec_name = File.basename(spec.spec_file)
+          spec_path = File.dirname(spec.spec_file)
+          default_spec_file = spec_path + "/default/" + spec_name
+          if File.exist?(default_spec_file) then
+            @gemspecs << Pathname(default_spec_file)
+            Ocra.msg "Using default specification #{default_spec_file} for gem #{spec.full_name}"
+          end 
+        end
 
         # Determine which set of files to include for this particular gem
         include = [:loaded, :files]
@@ -961,6 +971,7 @@ EOF
       # Set environment variable
       sb.setenv("RUBYOPT", ENV["RUBYOPT"] || "")
       sb.setenv("RUBYLIB", load_path.map { |path| path.to_native }.uniq.join(";"))
+
       sb.setenv("GEM_PATH", (TEMPDIR_ROOT / GEMHOMEDIR).to_native)
 
       # Add the opcode to launch the script
@@ -988,10 +999,18 @@ EOF
         extend Fiddle::Importer
         dlload "kernel32.dll"
         include Fiddle::Win32Types
-        typealias "HMODULE", "uintptr_t"
+
+# https://docs.microsoft.com/en-us/windows/win32/winprog/windows-data-types
+# typedef PVOID HANDLE
+# typedef HINSTANCE HMODULE;
+
+        typealias "HMODULE", "voidp"
+        typealias "HANDLE", "voidp"
         typealias "LPWSTR", "char*"
+
         extern "DWORD GetModuleFileNameW(HMODULE, LPWSTR, DWORD)"
         extern "HANDLE GetCurrentProcess(void)"
+        extern "DWORD GetLastError(void)"
       }
     end
 
@@ -1002,22 +1021,36 @@ EOF
       kernel32 = Fiddle.dlopen("kernel32")
       getcurrentprocess = Fiddle::Function.new(kernel32["GetCurrentProcess"], [], Fiddle::TYPE_LONG)
       getmodulefilename = Fiddle::Function.new(kernel32["GetModuleFileNameW"], [Fiddle::TYPE_UINTPTR_T, Fiddle::TYPE_VOIDP, Fiddle::TYPE_LONG], Fiddle::TYPE_LONG)
+      getlasterror = Fiddle::Function.new(kernel32["GetLastError"], [], Fiddle::TYPE_LONG)
 
-      bytes_needed = 4 * 32
+# Different packing/unpacking for 64/32 bits systems      
+      if Fiddle::SIZEOF_VOIDP == 8 then
+        f_single = "Q"
+        f_array  = "Q*"
+      else
+        f_single = "I"
+        f_array = "I*"
+      end
+
+      bytes_needed = Fiddle::SIZEOF_VOIDP * 32
       module_handle_buffer = nil
       process_handle = getcurrentprocess.call()
       loop do
         module_handle_buffer = "\x00" * bytes_needed
-        bytes_needed_buffer = [0].pack("I")
+        bytes_needed_buffer = [0].pack(f_single)
         r = enumprocessmodules.call(process_handle, module_handle_buffer, module_handle_buffer.size, bytes_needed_buffer)
-        bytes_needed = bytes_needed_buffer.unpack("I")[0]
+        bytes_needed = bytes_needed_buffer.unpack(f_single)[0]
         break if bytes_needed <= module_handle_buffer.size
       end
 
-      handles = module_handle_buffer.unpack("I*")
+      handles = module_handle_buffer.unpack(f_array)
       handles.select { |handle| handle > 0 }.map do |handle|
         str = "\x00\x00" * 256
         modulefilename_length = getmodulefilename.call(handle, str, str.size)
+        unless modulefilename_length > 0
+          errorcode = getlasterror.call()
+          Ocra.fatal_error "LibraryDetector: GetModuleFileNameW failed with error code 0x" + errorcode.to_s(16)
+        end
         modulefilename = str[0, modulefilename_length * 2].force_encoding("UTF-16LE").encode("UTF-8")
         Ocra.Pathname(modulefilename)
       end

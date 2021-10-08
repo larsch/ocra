@@ -191,6 +191,7 @@ void MarkForDeletion(LPTSTR path)
 
 void DeleteRecursivelyNowOrLater(LPTSTR path)
 {
+   DEBUG("DeleteRecursivelyNowOrLater:  %s", path);
    if (!DeleteRecursively(path))
       MarkForDeletion(path);
 }

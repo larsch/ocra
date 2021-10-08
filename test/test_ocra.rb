@@ -164,6 +164,7 @@ class TestOcra < MiniTest::Test
   # With --no-dep-run, ocra should not run script during build
   def test_nodeprun
     with_fixture 'writefile' do
+      File.delete("output.txt") if File.exist?("output.txt")
       assert system("ruby", ocra, "writefile.rb", *(DefaultArgs + ["--no-dep-run"]))
       assert !File.exist?("output.txt")
       pristine_env "writefile.exe" do
@@ -215,6 +216,7 @@ class TestOcra < MiniTest::Test
   # Test that the --output option allows us to specify a different exe name
   def test_output_option
     with_fixture 'helloworld' do
+      File.delete("helloworld.exe") if File.exist?("helloworld.exe")
       assert system("ruby", ocra, "helloworld.rb", *(DefaultArgs + ["--output", "goodbyeworld.exe"]))
       assert !File.exist?("helloworld.exe")
       assert File.exist?("goodbyeworld.exe")
