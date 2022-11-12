@@ -188,7 +188,7 @@ module Ocra
 
   VERSION = "1.3.10"
 
-  IGNORE_MODULE_NAMES = /\/(enumerator.so|rational.so|complex.so|thread.rb|ruby2_keywords.rb)$/
+  IGNORE_MODULE_NAMES = /\/(enumerator.so|rational.so|complex.so|fiber.so|thread.rb|ruby2_keywords.rb)$/
 
   GEM_SCRIPT_RE = /\.rbw?$/
   GEM_EXTRA_RE = %r{(
