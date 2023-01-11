@@ -1,6 +1,5 @@
 /*
   Single Executable Bundle Stub
-
   This stub reads itself for embedded instructions to create directory
   and files in a temporary directory, launching a program.
 */
@@ -246,23 +245,30 @@ BOOL OpCreateInstDirectory(LPVOID* p)
       GetTempPath(MAX_PATH, TempPath);
    }
 
-   UINT tempResult = GetTempFileName(TempPath, _T("ocrastub"), 0, InstDir);
-   if (tempResult == 0u)
+   while (TRUE)
    {
-      FATAL("Failed to get temp file name.");
-      return FALSE;
-   }
+      UINT tempResult = GetTempFileName(TempPath, _T("ocrastub"), 0, InstDir);
+      if (tempResult == 0u)
+      {
+         FATAL("Failed to get temp file name.");
+         return FALSE;
+      }
 
-   DEBUG("Creating installation directory: '%s'", InstDir);
+      DEBUG("Creating installation directory: '%s'", InstDir);
 
-   /* Attempt to delete the temp file created by GetTempFileName.
-      Ignore errors, i.e. if it doesn't exist. */
-   (void)DeleteFile(InstDir);
+      /* Attempt to delete the temp file created by GetTempFileName.
+         Ignore errors, i.e. if it doesn't exist. */
+      (void)DeleteFile(InstDir);
 
-   if (!CreateDirectory(InstDir, NULL))
-   {
-      FATAL("Failed to create installation directory.");
-      return FALSE;
+      if (CreateDirectory(InstDir, NULL))
+      {
+         break;
+      }
+      else if (GetLastError() != ERROR_ALREADY_EXISTS)
+      {
+         FATAL("Failed to create installation directory.");
+         return FALSE;
+      }
    }
    return TRUE;
 }

@@ -13,7 +13,7 @@ end
 spec.urls.each { |key, url| url.chomp! }
 
 task :build_stub do
-  sh "mingw32-make -C src"
+  sh "bash -c make -C src"
   cp "src/stub.exe", "share/ocra/stub.exe"
   cp "src/stubw.exe", "share/ocra/stubw.exe"
   cp "src/edicon.exe", "share/ocra/edicon.exe"
