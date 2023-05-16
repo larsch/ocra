@@ -1,5 +1,6 @@
 *.o
 *.exe
+!/share/ocran/lzma.exe
 bin/ocransa.rb
 pkg
 README.txt
