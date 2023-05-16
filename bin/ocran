@@ -747,6 +747,10 @@ EOF
     # Store the currently loaded files (before we require rbconfig for
     # our own use).
     features = $LOADED_FEATURES.map { |feature| Pathname(feature) }
+    
+    # Since https://github.com/rubygems/rubygems/commit/cad4cf16cf8fcc637d9da643ef97cf0be2ed63cb
+    # rubygems/core_ext/kernel_require.rb is evaled and thus missing in $LOADED_FEATURES, so we can't find it and need to add it manually
+    features.push(Pathname("rubygems/core_ext/kernel_require.rb"))
 
     # Find gemspecs to include
     if defined?(Gem)

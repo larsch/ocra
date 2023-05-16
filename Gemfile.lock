@@ -6,6 +6,7 @@ GEM
     rake (13.0.6)
 
 PLATFORMS
+  x64-mingw-ucrt
   x86_64-linux
 
 DEPENDENCIES

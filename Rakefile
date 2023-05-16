@@ -14,7 +14,7 @@ end
 spec.urls.each { |key, url| url.chomp! }
 
 task :build_stub do
-  sh "bash -c 'make -C src'"
+  sh "ridk exec bash -c 'make -C src'"
   cp "src/stub.exe", "share/ocran/stub.exe"
   cp "src/stubw.exe", "share/ocran/stubw.exe"
   cp "src/edicon.exe", "share/ocran/edicon.exe"
@@ -38,7 +38,7 @@ end
 
 task :release_standalone => standalone_zip do
   load "bin/ocran"
-  sh "rubyforge add_release ocran ocran-standalone #{Ocran::VERSION} #{standalone_zip}"
+  #sh "rubyforge add_release ocran ocran-standalone #{Ocran::VERSION} #{standalone_zip}"
 end
 
 file "bin/ocransa.rb" => ["bin/ocran", "share/ocran/stub.exe", "share/ocran/stubw.exe", "share/ocran/lzma.exe", "share/ocran/edicon.exe"] do
