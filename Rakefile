@@ -15,9 +15,6 @@ spec.urls.each { |key, url| url.chomp! }
 
 task :build_stub do
   sh "ridk exec make -C src"
-  sh "dir src"
-  sh "dir"
-
   cp "src/stub.exe", "share/ocran/stub.exe"
   cp "src/stubw.exe", "share/ocran/stubw.exe"
   cp "src/edicon.exe", "share/ocran/edicon.exe"
@@ -29,24 +26,24 @@ file "share/ocran/edicon.exe" => :build_stub
 
 task :test => :build_stub
 
-task :standalone => ["bin/ocransa.rb"]
+task :standalone => ["exe/ocrasa.rb"]
 
-standalone_zip = "bin/ocransa-#{ENV["VERSION"]}.zip"
+standalone_zip = "exe/ocrasa-#{ENV["VERSION"]}.zip"
 
-file standalone_zip => "bin/ocransa.rb" do
-  chdir "bin" do
+file standalone_zip => "exe/ocrasa.rb" do
+  chdir "exe" do
     sh "zip", "ocransa-#{ENV["VERSION"]}.zip", "ocransa.rb"
   end
 end
 
 task :release_standalone => standalone_zip do
-  load "bin/ocran"
+  load "exe/ocran"
   #sh "rubyforge add_release ocran ocran-standalone #{Ocran::VERSION} #{standalone_zip}"
 end
 
-file "bin/ocransa.rb" => ["bin/ocran", "share/ocran/stub.exe", "share/ocran/stubw.exe", "share/ocran/lzma.exe", "share/ocran/edicon.exe"] do
-  cp "bin/ocran", "bin/ocransa.rb"
-  File.open("bin/ocransa.rb", "a") do |f|
+file "exe/ocrasa.rb" => ["exe/ocra", "share/ocran/stub.exe", "share/ocran/stubw.exe", "share/ocran/lzma.exe", "share/ocran/edicon.exe"] do
+  cp "exe/ocran", "exe/ocrasa.rb"
+  File.open("exe/ocrasa.rb", "a") do |f|
     f.puts "__END__"
 
     stub = File.open("share/ocran/stub.exe", "rb") { |g| g.read }

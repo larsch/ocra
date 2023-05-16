@@ -1,3 +1,3 @@
 class Ocran
-  VERSION = '1.3.11-1'
+  VERSION = '1.3.12
 end

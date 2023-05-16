@@ -9,4 +9,4 @@ jobs:
         with:
           ruby-version: 3.2.2
       - run: bundle install
-      - run: rake build_stub
+      - run: rake
