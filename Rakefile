@@ -37,13 +37,13 @@ file standalone_zip => "exe/ocrasa.rb" do
 end
 
 task :release_standalone => standalone_zip do
-  load "exe/ocran"
+  load "bin/ocran"
   #sh "rubyforge add_release ocran ocran-standalone #{Ocran::VERSION} #{standalone_zip}"
 end
 
-file "exe/ocrasa.rb" => ["exe/ocra", "share/ocran/stub.exe", "share/ocran/stubw.exe", "share/ocran/lzma.exe", "share/ocran/edicon.exe"] do
-  cp "exe/ocran", "exe/ocrasa.rb"
-  File.open("exe/ocrasa.rb", "a") do |f|
+file "bin/ocrasa.rb" => ["bin/ocra", "share/ocran/stub.exe", "share/ocran/stubw.exe", "share/ocran/lzma.exe", "share/ocran/edicon.exe"] do
+  cp "bin/ocran", "bin/ocrasa.rb"
+  File.open("bin/ocrasa.rb", "a") do |f|
     f.puts "__END__"
 
     stub = File.open("share/ocran/stub.exe", "rb") { |g| g.read }

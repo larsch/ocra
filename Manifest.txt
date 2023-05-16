@@ -2,7 +2,7 @@ History.txt
 Manifest.txt
 README.md
 Rakefile
-exe/ocran
+bin/ocran
 share/ocran/lzma.exe
 share/ocran/stub.exe
 share/ocran/stubw.exe

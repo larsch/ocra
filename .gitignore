@@ -2,7 +2,7 @@
 *.exe
 *.gem
 !/share/ocran/lzma.exe
-exe/ocransa.rb
+bin/ocransa.rb
 pkg
 README.txt
 ocransa-*.zip
