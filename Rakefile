@@ -14,7 +14,7 @@ end
 spec.urls.each { |key, url| url.chomp! }
 
 task :build_stub do
-  sh "ridk exec bash -c 'make -C src'"
+  sh "ridk exec make -C src"
   cp "src/stub.exe", "share/ocran/stub.exe"
   cp "src/stubw.exe", "share/ocran/stubw.exe"
   cp "src/edicon.exe", "share/ocran/edicon.exe"
@@ -71,7 +71,7 @@ end
 task :clean do
   rm_f Dir["{bin,samples}/*.exe"]
   rm_f Dir["share/ocran/{stub,stubw,edicon}.exe"]
-  sh "mingw32-make -C src clean"
+  sh "ridk exec make -C src clean"
 end
 
 task :test_standalone => :standalone do
