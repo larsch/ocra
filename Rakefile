@@ -15,6 +15,9 @@ spec.urls.each { |key, url| url.chomp! }
 
 task :build_stub do
   sh "ridk exec make -C src"
+  sh "dir src"
+  sh "dir"
+
   cp "src/stub.exe", "share/ocran/stub.exe"
   cp "src/stubw.exe", "share/ocran/stubw.exe"
   cp "src/edicon.exe", "share/ocran/edicon.exe"
