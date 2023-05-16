@@ -1,0 +1,12 @@
+name: Rake on Windows
+on: [push, pull_request]
+jobs:
+  rake:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: 3.x
+      - run: bundle install
+      - run: rake build_stub
