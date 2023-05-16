@@ -14,7 +14,7 @@ end
 spec.urls.each { |key, url| url.chomp! }
 
 task :build_stub do
-  sh "bash -c make -C src"
+  sh "bash -c 'make -C src'"
   cp "src/stub.exe", "share/ocran/stub.exe"
   cp "src/stubw.exe", "share/ocran/stubw.exe"
   cp "src/edicon.exe", "share/ocran/edicon.exe"
