@@ -1,0 +1,15 @@
+GEM
+  remote: https://rubygems.org/
+  specs:
+    hoe (4.0.3)
+      rake (>= 0.8, < 15.0)
+    rake (13.0.6)
+
+PLATFORMS
+  x86_64-linux
+
+DEPENDENCIES
+  hoe (~> 4.0)
+
+BUNDLED WITH
+   2.4.13
