@@ -5,8 +5,8 @@ require 'wx'
 class MyMainWindow < Wx::Frame
   MY_BUTTON_ID = 1001
   def initialize
-    super(nil, -1, "OCRA wxWidgets sample application")
-    @button = Wx::Button.new(self, MY_BUTTON_ID, "OCRA Sample")
+    super(nil, -1, "OCRAN wxWidgets sample application")
+    @button = Wx::Button.new(self, MY_BUTTON_ID, "OCRAN Sample")
     evt_button(MY_BUTTON_ID) { close }
   end
 end
@@ -22,6 +22,6 @@ end
 # Create MyApp
 app = MyApp.new
 
-# Run MyApp (unless Ocra is currently defined, and we are compiling
+# Run MyApp (unless Ocran is currently defined, and we are compiling
 # the application).
-app.main_loop unless defined?(Ocra)
+app.main_loop unless defined?(Ocran)

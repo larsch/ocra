@@ -1,4 +1,4 @@
-exit if defined?(Ocra)
+exit if defined?(Ocran)
 exit 1 if ARGV.size != 2
 exit 2 if ARGV[0] != "foo"
 if RUBY_VERSION == "1.8.6"

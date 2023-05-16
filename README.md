@@ -1,17 +1,18 @@
-# ocra
+# ocran
 
-home   :: https://github.com/larsch/ocra/
+home   :: https://github.com/largo/ocran/
 
-issues :: http://github.com/larsch/ocra/issues
-
-forum  :: http://groups.google.com/group/ruby-ocra
+issues :: http://github.com/largo/ocran/issues
 
 ## Description
 
-OCRA (One-Click Ruby Application) builds Windows executables from Ruby
+OCRAN (One-Click Ruby Application) builds Windows executables from Ruby
 source code. The executable is a self-extracting, self-running
 executable that contains the Ruby interpreter, your source code and
 any additionally needed ruby libraries or DLL.
+
+OCRAN is a fork of Ocra (https://github.com/larsch/ocra) in order to
+maintain compatibility with newer Ruby versions after 2.7
 
 ## Features
 
@@ -23,30 +24,28 @@ any additionally needed ruby libraries or DLL.
 
 * Windows support only
 
-If you experience problems with OCRA or have found a bug, please use
-the issue tracker on GitHub (http://github.com/larsch/ocra/issues).
-You can also join the Google Group discussion forum to ask questions
-and get help (http://groups.google.com/group/ruby-ocra).
+If you experience problems with OCRAN or have found a bug, please use
+the issue tracker on GitHub (http://github.com/largo/ocran/issues).
 
 ## Installation
 
 Gem:
 
-    gem install ocra
+    gem install ocran
 
 Alternatively you can download the gem at either
-http://rubygems.org/gems/ocra or
-https://github.com/larsch/ocra/releases/.
+http://rubygems.org/gems/ocran or
+https://github.com/largo/ocran/releases/.
 
-Stand-alone Version: Get ocrasa.rb from
-https://github.com/larsch/ocra/releases/. Requires nothing but a
+Stand-alone Version: Get ocransa.rb from
+https://github.com/largo/ocran/releases/. Requires nothing but a
 working Ruby installation on Windows.
 
 ## Synopsis
 
 ### Building an executable:
 
-    ocra script.rb
+    ocran script.rb
 
 Will package `script.rb`, the Ruby interpreter and all
 dependencies (gems and DLLs) into an executable named
@@ -54,13 +53,13 @@ dependencies (gems and DLLs) into an executable named
 
 ### Command line:
   
-    ocra [options] script.rb [<other files> ...] [-- <script arguments> ...]
+    ocran [options] script.rb [<other files> ...] [-- <script arguments> ...]
 
 ### Options:
 
-    ocra --help
+    ocran --help
 
-Ocra options:
+Ocran options:
 
     --help             Display this information.
     --quiet            Suppress output while building executable.
@@ -123,11 +122,11 @@ Executable options:
   
 ### Compilation:
 
-* OCRA will load your script (using `Kernel#load`) and build
+* OCRAN will load your script (using `Kernel#load`) and build
   the executable when it exits.
 
 * Your program should 'require' all necessary files when invoked without
-  arguments, so OCRA can detect all dependencies.
+  arguments, so OCRAN can detect all dependencies.
 
 * DLLs are detected automatically but only those located in your Ruby
   installation are included.
@@ -139,14 +138,14 @@ Executable options:
 
 ### Running your application:
 
-* The 'current working directory' is not changed by OCRA when running
+* The 'current working directory' is not changed by OCRAN when running
   your application. You must change to the installation or temporary
   directory yourself. See also below.
-* When the application is running, the OCRA_EXECUTABLE environment
+* When the application is running, the OCRAN_EXECUTABLE environment
   variable points to the .exe (with full path).
 * The temporary location of the script can be obtained by inspected
   the $0 variable.
-* OCRA does not set up the include path. Use `$:.unshift
+* OCRAN does not set up the include path. Use `$:.unshift
   File.dirname($0)` at the start of your script if you need to
   'require' additional source files from the same directory as your
   main script.
@@ -154,12 +153,12 @@ Executable options:
 ### Pitfalls:
 
 * Avoid modifying load paths at run time. Specify load paths using -I
-  or RUBYLIB if you must, but don't expect OCRA to preserve them for
-  runtime. OCRA may pack sources into other directories than you
+  or RUBYLIB if you must, but don't expect OCRAN to preserve them for
+  runtime. OCRAN may pack sources into other directories than you
   expect.
 * If you use .rbw files or the `--windows` option, then check
-  that your application works with rubyw.exe before trying with OCRA.
-* Avoid absolute paths in your code and when invoking OCRA.
+  that your application works with rubyw.exe before trying with OCRAN.
+* Avoid absolute paths in your code and when invoking OCRAN.
 
 ## REQUIREMENTS:
 
@@ -169,23 +168,23 @@ Executable options:
 
 ### Stand-alone version
 
-Get ocrasa.rb from http://rubyforge.org/frs/?group_id=8185. Requires
+Get ocransa.rb from http://rubyforge.org/frs/?group_id=8185. Requires
 nothing but a working Ruby installation on Windows.
 
 ## Technical details
 
-OCRA first runs the target script in order to detect any files that
+OCRAN first runs the target script in order to detect any files that
 are loaded and used at runtime (Using `Kernel#require` and
 `Kernel#load`).
 
-OCRA embeds everything needed to run a Ruby script into a single
+OCRAN embeds everything needed to run a Ruby script into a single
 executable file. The file contains the .exe stub which is compiled
 from C-code, and a custom opcode format containing instructions to
 create directories, save files, set environment variables and run
-programs. The OCRA script generates this executable and the
+programs. The OCRAN script generates this executable and the
 instructions to be run when it is launched.
 
-When executed, the OCRA stub extracts the Ruby interpreter and your
+When executed, the OCRAN stub extracts the Ruby interpreter and your
 scripts into a temporary directory. The directory will contains the
 same directory layout as your Ruby installlation. The source files for
 your application will be put in the 'src' subdirectory.
@@ -193,45 +192,45 @@ your application will be put in the 'src' subdirectory.
 ### Libraries
 
 Any code that is loaded through `Kernel#require` when your
-script is executed will be included in the OCRA
+script is executed will be included in the OCRAN
 executable. Conditionally loaded code will not be loaded and included
-in the executable unless the code is actually run when OCRA invokes
-your script. Otherwise, OCRA won't know about it and will not include
+in the executable unless the code is actually run when OCRAN invokes
+your script. Otherwise, OCRAN won't know about it and will not include
 the source files.
 
 RubyGems are handled specially. Whenever a file from a Gem is
-detected, OCRA will attempt to include all the required files from
+detected, OCRAN will attempt to include all the required files from
 that specific Gem, expect some unlikely needed files such as readme's
 and other documentation. This behaviour can be controlled by using the
 --gem-* options. Behaviour can be changed for all gems or specific
 gems using --gem-*=gemname.
 
-Libraries found in non-standard path (for example, if you invoke OCRA
+Libraries found in non-standard path (for example, if you invoke OCRAN
 with "ruby -I some/path") will be placed into the site dir
 (lib/ruby/site_ruby). Avoid changing `$LOAD_PATH` or
 `$:` from your script to include paths outside your source
-tree, since OCRA may place the files elsewhere when extracted into the
+tree, since OCRAN may place the files elsewhere when extracted into the
 temporary directory.
 
 In case your script (or any of its dependencies) sets up autoloaded
-module using `Kernel#autoload`, OCRA will automatically try to
+module using `Kernel#autoload`, OCRAN will automatically try to
 load them to ensure that they are all included in the
 executable. Modules that doesn't exist will be ignored (a warning will
 be logged).
 
 Dynamic link libraries (.dll files, for example WxWidgets, or other
-source files) will be detected and included by OCRA.
+source files) will be detected and included by OCRAN.
 
 ### Including libraries non-automatically
 
 If an application or framework is complicated enough that it tends
-to confuse Ocra's automatic dependency resolution, then you can
+to confuse Ocran's automatic dependency resolution, then you can
 use other means to specify what needs to be packaged with your app.
 
 To disable automatic dependency resolution, use the `--no-dep-run`
-option; with it, Ocra will skip executing your program during the
+option; with it, Ocran will skip executing your program during the
 build process. This on the other hand requires using `--gem-full` option
-(see more below); otherwise Ocra will not include all the necessary
+(see more below); otherwise Ocran will not include all the necessary
 files for the gems.
 
 You will also probably need to use the `--add-all-core` option to
@@ -239,7 +238,7 @@ include the Ruby core libraries.
 
 If your app uses gems, then you can specify them in a
 Bundler (http://gembundler.com) Gemfile, then use the --gemfile
-option to supply it to Ocra. Ocra will automatically include all
+option to supply it to Ocran. Ocran will automatically include all
 gems specified, and all their dependencies.
 
 (Note: This assumes that the gems are installed in your system,
@@ -251,7 +250,7 @@ directory "someapp" and create an exe named "someapp.exe", without
 actually running the app during the build, you could use the
 following command:
 
-    ocra someapp/script/rails someapp --output someapp.exe --add-all-core \
+    ocran someapp/script/rails someapp --output someapp.exe --add-all-core \
     --gemfile someapp/Gemfile --no-dep-run --gem-full --chdir-first -- server
 
 Note the space between `--` and `server`! It's important; `server` is
@@ -263,8 +262,8 @@ first.
 
 ### Gem handling
 
-By default, Ocra includes all scripts that are loaded by your script
-when it is run before packaging. Ocra detects which gems are using and
+By default, Ocran includes all scripts that are loaded by your script
+when it is run before packaging. Ocran detects which gems are using and
 includes any additional non-script files from those gems, except
 trivial files such as C/C++ source code, object files, READMEs, unit
 tests, specs, etc.
@@ -287,15 +286,15 @@ to include all files for all required gems.
 To make your application start up quicker, or to allow it to
 keep files in its application directory between runs, or if
 you just want to make your program seem more like a "regular"
-Windows application, you can have Ocra generate an installer
+Windows application, you can have Ocran generate an installer
 for your app with the free Inno Setup software.
 
 You will first have to download and install Inno Setup 5 or
-later, and also add its directory to your PATH (so that Ocra
+later, and also add its directory to your PATH (so that Ocran
 can find the ISCC compiler program). Once you've done that,
-you can use the `--innosetup` option to Ocra to supply an
+you can use the `--innosetup` option to Ocran to supply an
 Inno Setup script. Do not add any [Files] or [Dirs] sections
-to the script; Ocra will figure those out itself.
+to the script; Ocran will figure those out itself.
 
 To continue the Rails example above, let's package the Rails 3
 app into an installer. Save the following as `someapp.iss`:
@@ -311,9 +310,9 @@ app into an installer. Save the following as `someapp.iss`:
   Name: "{group}\SomeApp"; Filename: "{app}\someapp.exe"
   Name: "{group}\Uninstall SomeApp"; Filename: "{uninstallexe}"
 
-Then, run Ocra with this command:
+Then, run Ocran with this command:
 
-    ocra someapp/script/rails someapp --output someapp.exe --add-all-core \
+    ocran someapp/script/rails someapp --output someapp.exe --add-all-core \
     --gemfile someapp/Gemfile --no-dep-run --gem-full --chdir-first --no-lzma \
     --innosetup someapp.iss -- server
 
@@ -322,23 +321,23 @@ into the Output directory.
 
 ### Environment variables
 
-OCRA executables clear the RUBYLIB environment variable before your
+OCRAN executables clear the RUBYLIB environment variable before your
 script is launched. This is done to ensure that your script does not
 use load paths from the end user's Ruby installation.
 
-OCRA executables set the RUBYOPT environment variable to the value it
-had when you invoked OCRA. For example, if you had "RUBYOPT=rubygems"
-on your build PC, OCRA ensures that it is also set on PC's running the
+OCRAN executables set the RUBYOPT environment variable to the value it
+had when you invoked OCRAN. For example, if you had "RUBYOPT=rubygems"
+on your build PC, OCRAN ensures that it is also set on PC's running the
 executables.
 
-OCRA executables set OCRA_EXECUTABLE to the full path of the
+OCRAN executables set OCRAN_EXECUTABLE to the full path of the
 executable, for example
 
-    ENV["OCRA_EXECUTABLE"] # => C:\Program Files\MyApp\MyApp.exe
+    ENV["OCRAN_EXECUTABLE"] # => C:\Program Files\MyApp\MyApp.exe
 
 ### Working directory
 
-The OCRA executable does not change the working directory when it is
+The OCRAN executable does not change the working directory when it is
 launched, unless you use the `--chdir-first` option.
 
 You should not assume that the current working directory when invoking
@@ -373,21 +372,21 @@ directory containing your source script you can use this idiom:
 
 ### Detecting
 
-You can detect whether OCRA is currently building your script by
-looking for the 'Ocra' constant. If it is defined, OCRA is currenly
+You can detect whether OCRAN is currently building your script by
+looking for the 'Ocran' constant. If it is defined, OCRAN is currenly
 building the executable from your script. For example, you can use
 this to avoid opening a GUI window when compiling executables:
 
     app = MyApp.new
-    app.main_loop unless defined?(Ocra)
+    app.main_loop unless defined?(Ocran)
 
 ### Additional files and resources
 
-You can add additional files to the OCRA executable (for example
+You can add additional files to the OCRAN executable (for example
 images) by appending them to the command line. They should be placed
 in the source directory with your main script (or a subdirectory).
 
-    ocra mainscript.rb someimage.jpeg docs/document.txt
+    ocran mainscript.rb someimage.jpeg docs/document.txt
 
 This will create the following layout in the temporary directory when
 your program is executed:
@@ -398,11 +397,11 @@ your program is executed:
 
 Both files, directoriess and glob patterns can be specified on the
 command line. Files will be added as-is. If a directory is specified,
-OCRA will include all files found below that directory. Glob patterns
+OCRAN will include all files found below that directory. Glob patterns
 (See Dir.glob) can be used to specify a specific set of files, for
 example:
 
-    ocra script.rb assets/**/*.png
+    ocran script.rb assets/**/*.png
 
 ### Command Line Arguments
 
@@ -410,7 +409,7 @@ To pass command line argument to your script (both while building and
 when run from the resulting executable), specify them after a
 `--` marker. For example:
 
-    ocra script.rb -- --some-options=value
+    ocran script.rb -- --some-options=value
 
 This will pass `--some-options=value` to the script when
 build and when running the executable. Any extra argument specified by
@@ -419,19 +418,19 @@ compile-time arguments.
 
 ### Window/Console
 
-By default, OCRA builds console application from .rb-files and
+By default, OCRAN builds console application from .rb-files and
 windowed applications (without console window) from .rbw-files.
 
 Ruby on Windows provides two executables: ruby.exe is a console mode
 application and rubyw.exe is a windowed application which does not
 bring up a console window when launched using the Windows Explorer.
-By default, or if the `--console` option is used, OCRA will
-use the console runtime (ruby.exe). OCRA will automatically select the
+By default, or if the `--console` option is used, OCRAN will
+use the console runtime (ruby.exe). OCRAN will automatically select the
 windowed runtime when your script has the ".rbw" extension, or if you
 specify the `--windows` command line option.
 
 If your application works in console mode but not in windowed mode,
-first check if your script works without OCRA using rubyw.exe. A
+first check if your script works without OCRAN using rubyw.exe. A
 script that prints to standard output (using puts, print etc.) will
 eventually cause an exception when run with rubyw.exe (when the IO
 buffers run full).

@@ -2,7 +2,7 @@
 # -*- ruby -*-
 # encoding: UTF-8
 
-module Ocra
+module Ocran
   # Path handling class. Ruby's Pathname class is not used because it
   # is case sensitive and doesn't handle paths with mixed path
   # separators.
@@ -52,7 +52,7 @@ module Ocra
     # Determines if 'src' is contained in 'tgt' (i.e. it is a subpath of
     # 'tgt'). Both must be absolute paths and not contain '..'
     def subpath?(other)
-      other = Ocra.Pathname(other)
+      other = Ocran.Pathname(other)
       src_normalized = to_posix.downcase
       tgt_normalized = other.to_posix.downcase
       src_normalized =~ /^#{Regexp.escape tgt_normalized}#{SEPARATOR_PAT}/i
@@ -62,11 +62,11 @@ module Ocra
     # is an absolute path. Otherwise, returns the full path of the
     # left + right.
     def /(other)
-      other = Ocra.Pathname(other)
+      other = Ocran.Pathname(other)
       if other.absolute?
         other
       else
-        Ocra.Pathname(@path + "/" + other.path)
+        Ocran.Pathname(@path + "/" + other.path)
       end
     end
 
@@ -119,7 +119,7 @@ module Ocra
     def absolute?; @path =~ ABSOLUTE_PAT; end
     def dirname; Pathname.new(File.dirname(@path)); end
     def basename; Pathname.new(File.basename(@path)); end
-    def expand(dir = nil); Pathname.new(File.expand_path(@path, dir && Ocra.Pathname(dir))); end
+    def expand(dir = nil); Pathname.new(File.expand_path(@path, dir && Ocran.Pathname(dir))); end
     def size; File.size(@path); end
 
     alias to_s to_posix
@@ -147,19 +147,19 @@ module Ocra
   module Host
     class << self
       def exec_prefix
-        @exec_prefix ||= Ocra.Pathname(RbConfig::CONFIG["exec_prefix"])
+        @exec_prefix ||= Ocran.Pathname(RbConfig::CONFIG["exec_prefix"])
       end
 
       def sitelibdir
-        @sitelibdir ||= Ocra.Pathname(RbConfig::CONFIG["sitelibdir"])
+        @sitelibdir ||= Ocran.Pathname(RbConfig::CONFIG["sitelibdir"])
       end
 
       def bindir
-        @bindir ||= Ocra.Pathname(RbConfig::CONFIG["bindir"])
+        @bindir ||= Ocran.Pathname(RbConfig::CONFIG["bindir"])
       end
 
       def libruby_so
-        @libruby_so ||= Ocra.Pathname(RbConfig::CONFIG["LIBRUBY_SO"])
+        @libruby_so ||= Ocran.Pathname(RbConfig::CONFIG["LIBRUBY_SO"])
       end
 
       def exeext
@@ -175,7 +175,7 @@ module Ocra
       end
 
       def tempdir
-        @tempdir ||= Ocra.Pathname(ENV["TEMP"])
+        @tempdir ||= Ocran.Pathname(ENV["TEMP"])
       end
     end
   end
@@ -251,41 +251,41 @@ module Ocra
     attr_reader :stubwimage
   end
 
-  def Ocra.msg(s)
-    puts "=== #{s}" unless Ocra.quiet
+  def Ocran.msg(s)
+    puts "=== #{s}" unless Ocran.quiet
   end
 
-  def Ocra.verbose_msg(s)
-    puts s if Ocra.verbose and not Ocra.quiet
+  def Ocran.verbose_msg(s)
+    puts s if Ocran.verbose and not Ocran.quiet
   end
 
-  def Ocra.warn(s)
-    msg "WARNING: #{s}" if Ocra.show_warnings
+  def Ocran.warn(s)
+    msg "WARNING: #{s}" if Ocran.show_warnings
   end
 
-  def Ocra.fatal_error(s)
+  def Ocran.fatal_error(s)
     puts "ERROR: #{s}"
     exit 1
   end
 
   # Returns a binary blob store embedded in the current Ruby script.
-  def Ocra.get_next_embedded_image
+  def Ocran.get_next_embedded_image
     DATA.read(DATA.readline.to_i).unpack("m")[0]
   end
 
-  def Ocra.save_environment
+  def Ocran.save_environment
     @load_path_before = $LOAD_PATH.dup
     @pwd_before = Dir.pwd
     @env_before = {}; ENV.each { |key, value| @env_before[key] = value }
   end
 
-  def Ocra.restore_environment
+  def Ocran.restore_environment
     @env_before.each { |key, value| ENV[key] = value }
     ENV.each_key { |key| ENV.delete(key) unless @env_before.has_key?(key) }
     Dir.chdir @pwd_before
   end
 
-  def Ocra.find_stubs
+  def Ocran.find_stubs
     if defined?(DATA)
       @stubimage = get_next_embedded_image
       @stubwimage = get_next_embedded_image
@@ -296,19 +296,19 @@ module Ocra
       @ediconpath = Host.tempdir / "edicon.exe"
       File.open(@ediconpath, "wb") { |file| file << ediconimage }
     else
-      ocrapath = Pathname(File.dirname(__FILE__))
-      @stubimage = File.open(ocrapath / "../share/ocra/stub.exe", "rb") { |file| file.read }
-      @stubwimage = File.open(ocrapath / "../share/ocra/stubw.exe", "rb") { |file| file.read }
-      @lzmapath = (ocrapath / "../share/ocra/lzma.exe").expand
-      @ediconpath = (ocrapath / "../share/ocra/edicon.exe").expand
+      ocranpath = Pathname(File.dirname(__FILE__))
+      @stubimage = File.open(ocranpath / "../share/ocran/stub.exe", "rb") { |file| file.read }
+      @stubwimage = File.open(ocranpath / "../share/ocran/stubw.exe", "rb") { |file| file.read }
+      @lzmapath = (ocranpath / "../share/ocran/lzma.exe").expand
+      @ediconpath = (ocranpath / "../share/ocran/edicon.exe").expand
     end
   end
 
-  def Ocra.parseargs(argv)
+  def Ocran.parseargs(argv)
     usage = <<EOF
-ocra [options] script.rb
+ocran [options] script.rb
 
-Ocra options:
+Ocran options:
 
 --help             Display this information.
 --quiet            Suppress output while building executable.
@@ -391,17 +391,17 @@ EOF
         @options[:chdir_first] = true
       when /\A--icon\z/
         @options[:icon_filename] = Pathname(argv.shift)
-        Ocra.fatal_error "Icon file #{icon_filename} not found.\n" unless icon_filename.exist?
+        Ocran.fatal_error "Icon file #{icon_filename} not found.\n" unless icon_filename.exist?
       when /\A--gemfile\z/
         @options[:gemfile] = Pathname(argv.shift)
-        Ocra.fatal_error "Gemfile #{gemfile} not found.\n" unless gemfile.exist?
+        Ocran.fatal_error "Gemfile #{gemfile} not found.\n" unless gemfile.exist?
       when /\A--innosetup\z/
         @options[:inno_script] = Pathname(argv.shift)
-        Ocra.fatal_error "Inno Script #{inno_script} not found.\n" unless inno_script.exist?
+        Ocran.fatal_error "Inno Script #{inno_script} not found.\n" unless inno_script.exist?
       when /\A--no-autodll\z/
         @options[:autodll] = false
       when /\A--version\z/
-        puts "Ocra #{VERSION}"
+        puts "Ocran #{VERSION}"
         exit 0
       when /\A--no-warnings\z/
         @options[:show_warnings] = false
@@ -430,16 +430,16 @@ EOF
       end
     end
 
-    if Ocra.debug_extract && Ocra.inno_script
-      Ocra.fatal_error "The --debug-extract option conflicts with use of Inno Setup"
+    if Ocran.debug_extract && Ocran.inno_script
+      Ocran.fatal_error "The --debug-extract option conflicts with use of Inno Setup"
     end
 
-    if Ocra.lzma_mode && Ocra.inno_script
-      Ocra.fatal_error "LZMA compression must be disabled (--no-lzma) when using Inno Setup"
+    if Ocran.lzma_mode && Ocran.inno_script
+      Ocran.fatal_error "LZMA compression must be disabled (--no-lzma) when using Inno Setup"
     end
 
-    if !Ocra.chdir_first && Ocra.inno_script
-      Ocra.fatal_error "Chdir-first mode must be enabled (--chdir-first) when using Inno Setup"
+    if !Ocran.chdir_first && Ocran.inno_script
+      Ocran.fatal_error "Chdir-first mode must be enabled (--chdir-first) when using Inno Setup"
     end
 
     if files.empty?
@@ -454,12 +454,12 @@ EOF
         path = "#{path}/**/*"
       end
       files = Dir[path]
-      Ocra.fatal_error "#{path} not found!" if files.empty?
+      Ocran.fatal_error "#{path} not found!" if files.empty?
       files.map { |path| Pathname(path).expand }
     }.flatten!
   end
 
-  def Ocra.init(argv)
+  def Ocran.init(argv)
     save_environment
     parseargs(argv)
     find_stubs
@@ -469,7 +469,7 @@ EOF
   # Force loading autoloaded constants. Searches through all modules
   # (and hence classes), and checks their constants for autoloaded
   # ones, then attempts to load them.
-  def Ocra.attempt_load_autoload
+  def Ocran.attempt_load_autoload
     modules_checked = {}
     IGNORE_MODULES.each { |m| modules_checked[m] = true }
     loop do
@@ -484,13 +484,13 @@ EOF
           # Module::Config causes warning on Ruby 1.9.3 - prevent autoloading
           next if Module === mod && const == :Config
           if mod.autoload?(const)
-            Ocra.msg "Attempting to trigger autoload of #{mod}::#{const}"
+            Ocran.msg "Attempting to trigger autoload of #{mod}::#{const}"
             begin
               mod.const_get(const)
             rescue NameError
-              Ocra.warn "#{mod}::#{const} was defined autoloadable, but caused NameError"
+              Ocran.warn "#{mod}::#{const} was defined autoloadable, but caused NameError"
             rescue LoadError
-              Ocra.warn "#{mod}::#{const} was not loadable"
+              Ocran.warn "#{mod}::#{const} was not loadable"
             end
           end
         end
@@ -501,7 +501,7 @@ EOF
   # Guess the load path (from 'paths') that was used to load
   # 'path'. This is primarily relevant on Ruby 1.8 which stores
   # "unqualified" paths in $LOADED_FEATURES.
-  def Ocra.find_load_path(loadpaths, feature)
+  def Ocran.find_load_path(loadpaths, feature)
     if feature.absolute?
       # Choose those loadpaths which contain the feature
       candidate_loadpaths = loadpaths.select { |loadpath| feature.subpath?(loadpath.expand) }
@@ -522,7 +522,7 @@ EOF
 
   # Find the root of all files specified on the command line and use
   # it as the "src" of the output.
-  def Ocra.find_src_root(files)
+  def Ocran.find_src_root(files)
     src_files = files.map { |file| file.expand }
     src_prefix = src_files.inject(src_files.first.dirname) do |srcroot, path|
       if path.subpath?(Host.exec_prefix)
@@ -531,7 +531,7 @@ EOF
         loop do
           relpath = path.relative_path_from(srcroot)
           if relpath.absolute?
-            Ocra.fatal_error "No common directory contains all specified files"
+            Ocran.fatal_error "No common directory contains all specified files"
           end
           if relpath.to_s =~ /^\.\.\//
             srcroot = srcroot.dirname
@@ -558,33 +558,33 @@ EOF
   # included. Ruby 1.8 provides Gem.loaded_specs to detect gems, but
   # this is empty with Ruby 1.9. So instead, we look for any loaded
   # file from a gem path.
-  def Ocra.find_gem_files(features)
+  def Ocran.find_gem_files(features)
     features_from_gems = []
     gems = {}
 
     # If a Bundler Gemfile was provided, add all gems it specifies
-    if Ocra.gemfile
-      Ocra.msg "Scanning Gemfile"
+    if Ocran.gemfile
+      Ocran.msg "Scanning Gemfile"
       # Load Rubygems and Bundler so we can scan the Gemfile
       ["rubygems", "bundler"].each do |lib|
         begin
           require lib
         rescue LoadError
-          Ocra.fatal_error "Couldn't scan Gemfile, unable to load #{lib}"
+          Ocran.fatal_error "Couldn't scan Gemfile, unable to load #{lib}"
         end
       end
 
-      ENV["BUNDLE_GEMFILE"] = Ocra.gemfile
+      ENV["BUNDLE_GEMFILE"] = Ocran.gemfile
       Bundler.load.specs.each do |spec|
-        Ocra.verbose_msg "From Gemfile, adding gem #{spec.full_name}"
+        Ocran.verbose_msg "From Gemfile, adding gem #{spec.full_name}"
         gems[spec.name] ||= spec
       end
 
       unless gems.any? { |name, spec| name == "bundler" }
         # Bundler itself wasn't added for some reason, let's put it in directly
-        Ocra.verbose_msg "From Gemfile, forcing inclusion of bundler gem itself"
+        Ocran.verbose_msg "From Gemfile, forcing inclusion of bundler gem itself"
         bundler_spec = Gem.loaded_specs["bundler"]
-        bundler_spec or Ocra.fatal_error "Unable to locate bundler gem"
+        bundler_spec or Ocran.fatal_error "Unable to locate bundler gem"
         gems["bundler"] ||= spec
       end
     end
@@ -616,7 +616,7 @@ EOF
               gems[spec.name] ||= spec
               features_from_gems << feature
             else
-              Ocra.warn "Failed to load gemspec for '#{fullgemname}'"
+              Ocran.warn "Failed to load gemspec for '#{fullgemname}'"
             end
           end
         end
@@ -633,13 +633,13 @@ EOF
           default_spec_file = spec_path + "/default/" + spec_name
           if File.exist?(default_spec_file) then
             @gemspecs << Pathname(default_spec_file)
-            Ocra.msg "Using default specification #{default_spec_file} for gem #{spec.full_name}"
+            Ocran.msg "Using default specification #{default_spec_file} for gem #{spec.full_name}"
           end 
         end
 
         # Determine which set of files to include for this particular gem
         include = [:loaded, :files]
-        Ocra.gem.each do |negate, option, list|
+        Ocran.gem.each do |negate, option, list|
           if list.nil? or list.include?(spec.name)
             case option
             when :minimal
@@ -674,7 +674,7 @@ EOF
           end
         end
 
-        Ocra.msg "Detected gem #{spec.full_name} (#{include.join(", ")})"
+        Ocran.msg "Detected gem #{spec.full_name} (#{include.join(", ")})"
 
         gem_root = Pathname(spec.gem_dir)
         gem_extension = (gem_root / ".." / ".." / "extensions").expand
@@ -687,7 +687,7 @@ EOF
         files = []
 
         unless gem_root.directory?
-          Ocra.warn "Gem #{spec.full_name} root folder was not found, skipping"
+          Ocran.warn "Gem #{spec.full_name} root folder was not found, skipping"
           next
         end
 
@@ -715,11 +715,11 @@ EOF
         actual_files = files.select { |file| file.file? }
 
         (files - actual_files).each do |missing_file|
-          Ocra.warn "#{missing_file} was not found"
+          Ocran.warn "#{missing_file} was not found"
         end
 
         total_size = actual_files.inject(0) { |size, path| size + path.size }
-        Ocra.msg "\t#{actual_files.size} files, #{total_size} bytes"
+        Ocran.msg "\t#{actual_files.size} files, #{total_size} bytes"
 
         gem_files += actual_files
       end
@@ -731,7 +731,7 @@ EOF
     return gem_files, features_from_gems
   end
 
-  def Ocra.build_exe
+  def Ocran.build_exe
     all_load_paths = $LOAD_PATH.map { |loadpath| Pathname(loadpath).expand }
     @added_load_paths = ($LOAD_PATH - @load_path_before).map { |loadpath| Pathname(loadpath).expand }
     working_directory = Pathname.pwd.expand
@@ -739,9 +739,9 @@ EOF
     restore_environment
 
     # If the script was run, then detect the features it used
-    if Ocra.run_script
+    if Ocran.run_script
       # Attempt to autoload libraries before doing anything else.
-      attempt_load_autoload if Ocra.load_autoload
+      attempt_load_autoload if Ocran.load_autoload
     end
 
     # Store the currently loaded files (before we require rbconfig for
@@ -766,23 +766,23 @@ EOF
     features -= features_from_gems
 
     # Find the source root and adjust paths
-    src_prefix, src_files = find_src_root(Ocra.files)
+    src_prefix, src_files = find_src_root(Ocran.files)
 
     # Include encoding support files
-    if Ocra.enc
+    if Ocran.enc
       all_load_paths.each do |path|
         if path.subpath?(Host.exec_prefix)
           encpath = path / "enc"
           if encpath.exist?
             encfiles = encpath.find_all_files(/\.so$/)
             size = encfiles.inject(0) { |sum, pn| sum + pn.size }
-            Ocra.msg "Including #{encfiles.size} encoding support files (#{size} bytes, use --no-enc to exclude)"
+            Ocran.msg "Including #{encfiles.size} encoding support files (#{size} bytes, use --no-enc to exclude)"
             features.push(*encfiles)
           end
         end
       end
     else
-      Ocra.msg "Not including encoding support files"
+      Ocran.msg "Not including encoding support files"
     end
 
     # Find features and decide where to put them in the temporary
@@ -791,7 +791,7 @@ EOF
     features.each do |feature|
       path = find_load_path(all_load_paths, feature)
       if path.nil? || path.expand == Pathname.pwd
-        Ocra.files << feature
+        Ocran.files << feature
       else
         if feature.absolute?
           feature = feature.relative_path_from(path.expand)
@@ -810,7 +810,7 @@ EOF
         elsif fullpath.subpath?(src_prefix) || path == working_directory
           # Any feature found inside the src_prefix automatically gets
           # added as a source file (to go in 'src').
-          Ocra.files << fullpath
+          Ocran.files << fullpath
           # Add the load path unless it was added by the script while
           # running (or we assume that the script can also set it up
           # correctly when running from the resulting executable).
@@ -819,7 +819,7 @@ EOF
           # Any feature that exist in a load path added by the script
           # itself is added as a file to go into the 'src' (src_prefix
           # will be adjusted below to point to the common parent).
-          Ocra.files << fullpath
+          Ocran.files << fullpath
         else
           # All other feature that can not be resolved go in the the
           # Ruby sitelibdir. This is automatically in the load path
@@ -831,8 +831,8 @@ EOF
 
     # Recompute the src_prefix. Files may have been added implicitly
     # while scanning through features.
-    src_prefix, src_files = find_src_root(Ocra.files)
-    Ocra.files.replace(src_files)
+    src_prefix, src_files = find_src_root(Ocran.files)
+    Ocran.files.replace(src_files)
 
     # Add the load path that are required with the correct path after
     # src_prefix was adjusted.
@@ -847,13 +847,13 @@ EOF
         targetpath = GEMHOMEDIR / gemfile.relative_path_from(Pathname(gemhome))
         libs << [gemfile, targetpath]
       else
-        Ocra.fatal_error "Don't know where to put gemfile #{gemfile}"
+        Ocran.fatal_error "Don't know where to put gemfile #{gemfile}"
       end
     end
 
     # If requested, add all ruby standard libraries
-    if Ocra.add_all_core
-      Ocra.msg "Will include all ruby core libraries"
+    if Ocran.add_all_core
+      Ocran.msg "Will include all ruby core libraries"
       @load_path_before.each do |lp|
         path = Pathname.new(lp)
         next unless path.to_posix =~
@@ -869,27 +869,27 @@ EOF
     end
 
     # Detect additional DLLs
-    dlls = Ocra.autodll ? LibraryDetector.detect_dlls : []
+    dlls = Ocran.autodll ? LibraryDetector.detect_dlls : []
 
     # Detect external manifests
     manifests = Host.exec_prefix.find_all_files(/\.manifest$/)
 
     executable = nil
-    if Ocra.output_override
-      executable = Ocra.output_override
+    if Ocran.output_override
+      executable = Ocran.output_override
     else
-      executable = Ocra.files.first.basename.ext(".exe")
-      executable.append_to_filename!("-debug") if Ocra.debug
+      executable = Ocran.files.first.basename.ext(".exe")
+      executable.append_to_filename!("-debug") if Ocran.debug
     end
 
-    windowed = (Ocra.files.first.ext?(".rbw") || Ocra.force_windows) && !Ocra.force_console
+    windowed = (Ocran.files.first.ext?(".rbw") || Ocran.force_windows) && !Ocran.force_console
 
-    Ocra.msg "Building #{executable}"
+    Ocran.msg "Building #{executable}"
     target_script = nil
-    OcraBuilder.new(executable, windowed) do |sb|
+    OcranBuilder.new(executable, windowed) do |sb|
       # Add explicitly mentioned files
-      Ocra.msg "Adding user-supplied source files"
-      Ocra.files.each do |file|
+      Ocran.msg "Adding user-supplied source files"
+      Ocran.files.each do |file|
         file = src_prefix / file
         if file.subpath?(Host.exec_prefix)
           target = file.relative_path_from(Host.exec_prefix)
@@ -918,7 +918,7 @@ EOF
       else
         rubyexe = Host.ruby_exe
       end
-      Ocra.msg "Adding ruby executable #{rubyexe}"
+      Ocran.msg "Adding ruby executable #{rubyexe}"
       sb.createfile(Host.bindir / rubyexe, BINDIR / rubyexe)
       if Host.libruby_so
         sb.createfile(Host.bindir / Host.libruby_so, BINDIR / Host.libruby_so)
@@ -926,7 +926,7 @@ EOF
 
       # Add detected DLLs
       dlls.each do |dll|
-        Ocra.msg "Adding detected DLL #{dll}"
+        Ocran.msg "Adding detected DLL #{dll}"
         if dll.subpath?(Host.exec_prefix)
           target = dll.relative_path_from(Host.exec_prefix)
         else
@@ -937,14 +937,14 @@ EOF
 
       # Add external manifest files
       manifests.each do |manifest|
-        Ocra.msg "Adding external manifest #{manifest}"
+        Ocran.msg "Adding external manifest #{manifest}"
         target = manifest.relative_path_from(Host.exec_prefix)
         sb.createfile(manifest, target)
       end
 
       # Add extra DLLs specified on the command line
-      Ocra.extra_dlls.each do |dll|
-        Ocra.msg "Adding supplied DLL #{dll}"
+      Ocran.extra_dlls.each do |dll|
+        Ocran.msg "Adding supplied DLL #{dll}"
         sb.createfile(Host.bindir / dll, BINDIR / dll)
       end
 
@@ -958,12 +958,12 @@ EOF
           path = GEMHOMEDIR / gemspec.relative_path_from(gemhome)
           sb.createfile(gemspec, path)
         else
-          Ocra.fatal_error "Gem spec #{gemspec} does not exist in the Ruby installation. Don't know where to put it."
+          Ocran.fatal_error "Gem spec #{gemspec} does not exist in the Ruby installation. Don't know where to put it."
         end
       end
 
       # Add loaded libraries (features, gems)
-      Ocra.msg "Adding library files"
+      Ocran.msg "Adding library files"
       libs.each do |path, target|
         sb.createfile(path, target)
       end
@@ -975,15 +975,15 @@ EOF
       sb.setenv("GEM_PATH", (TEMPDIR_ROOT / GEMHOMEDIR).to_native)
 
       # Add the opcode to launch the script
-      extra_arg = Ocra.arg.map { |arg| ' "' + arg.gsub("\"", "\\\"") + '"' }.join
+      extra_arg = Ocran.arg.map { |arg| ' "' + arg.gsub("\"", "\\\"") + '"' }.join
       installed_ruby_exe = TEMPDIR_ROOT / BINDIR / rubyexe
       launch_script = (TEMPDIR_ROOT / target_script).to_native
       sb.postcreateprocess(installed_ruby_exe,
                            "#{rubyexe} \"#{launch_script}\"#{extra_arg}")
     end
 
-    unless Ocra.inno_script
-      Ocra.msg "Finished building #{executable} (#{File.size(executable)} bytes)"
+    unless Ocran.inno_script
+      Ocran.msg "Finished building #{executable} (#{File.size(executable)} bytes)"
     end
   end
 
@@ -1049,10 +1049,10 @@ EOF
         modulefilename_length = getmodulefilename.call(handle, str, str.size)
         unless modulefilename_length > 0
           errorcode = getlasterror.call()
-          Ocra.fatal_error "LibraryDetector: GetModuleFileNameW failed with error code 0x" + errorcode.to_s(16)
+          Ocran.fatal_error "LibraryDetector: GetModuleFileNameW failed with error code 0x" + errorcode.to_s(16)
         end
         modulefilename = str[0, modulefilename_length * 2].force_encoding("UTF-16LE").encode("UTF-8")
-        Ocra.Pathname(modulefilename)
+        Ocran.Pathname(modulefilename)
       end
     end
 
@@ -1065,8 +1065,8 @@ EOF
 
   # Utility class that produces the actual executable. Opcodes
   # (createfile, mkdir etc) are added by invoking methods on an
-  # instance of OcraBuilder.
-  class OcraBuilder
+  # instance of OcranBuilder.
+  class OcranBuilder
     Signature = [0x41, 0xb6, 0xba, 0x4e]
     OP_END = 0
     OP_CREATE_DIRECTORY = 1
@@ -1081,69 +1081,69 @@ EOF
     def initialize(path, windowed)
       @paths = {}
       @files = {}
-      File.open(path, "wb") do |ocrafile|
+      File.open(path, "wb") do |ocranfile|
         image = nil
         if windowed
-          image = Ocra.stubwimage
+          image = Ocran.stubwimage
         else
-          image = Ocra.stubimage
+          image = Ocran.stubimage
         end
 
         unless image
-          Ocra.fatal_error "Stub image not available"
+          Ocran.fatal_error "Stub image not available"
         end
-        ocrafile.write(image)
+        ocranfile.write(image)
       end
 
-      if Ocra.icon_filename
-        system Ocra.ediconpath, path, Ocra.icon_filename
+      if Ocran.icon_filename
+        system Ocran.ediconpath, path, Ocran.icon_filename
       end
 
       opcode_offset = File.size(path)
 
-      File.open(path, "ab") do |ocrafile|
+      File.open(path, "ab") do |ocranfile|
         tmpinpath = "tmpin"
 
-        if Ocra.lzma_mode
+        if Ocran.lzma_mode
           @of = File.open(tmpinpath, "wb")
         else
-          @of = ocrafile
+          @of = ocranfile
         end
 
-        if Ocra.debug
-          Ocra.msg("Enabling debug mode in executable")
-          ocrafile.write([OP_ENABLE_DEBUG_MODE].pack("V"))
+        if Ocran.debug
+          Ocran.msg("Enabling debug mode in executable")
+          ocranfile.write([OP_ENABLE_DEBUG_MODE].pack("V"))
         end
 
-        createinstdir Ocra.debug_extract, !Ocra.debug_extract, Ocra.chdir_first
+        createinstdir Ocran.debug_extract, !Ocran.debug_extract, Ocran.chdir_first
 
         yield(self)
 
-        @of.close if Ocra.lzma_mode
+        @of.close if Ocran.lzma_mode
 
-        if Ocra.lzma_mode and not Ocra.inno_script
+        if Ocran.lzma_mode and not Ocran.inno_script
           tmpoutpath = "tmpout"
           begin
             data_size = File.size(tmpinpath)
-            Ocra.msg "Compressing #{data_size} bytes"
-            system(Ocra.lzmapath, "e", tmpinpath, tmpoutpath) or fail
+            Ocran.msg "Compressing #{data_size} bytes"
+            system(Ocran.lzmapath, "e", tmpinpath, tmpoutpath) or fail
             compressed_data_size = File.size?(tmpoutpath)
-            ocrafile.write([OP_DECOMPRESS_LZMA, compressed_data_size].pack("VV"))
-            IO.copy_stream(tmpoutpath, ocrafile)
+            ocranfile.write([OP_DECOMPRESS_LZMA, compressed_data_size].pack("VV"))
+            IO.copy_stream(tmpoutpath, ocranfile)
           ensure
             File.unlink(@of.path) if File.exist?(@of.path)
             File.unlink(tmpoutpath) if File.exist?(tmpoutpath)
           end
         end
 
-        ocrafile.write([OP_END].pack("V"))
-        ocrafile.write([opcode_offset].pack("V")) # Pointer to start of opcodes
-        ocrafile.write(Signature.pack("C*"))
+        ocranfile.write([OP_END].pack("V"))
+        ocranfile.write([opcode_offset].pack("V")) # Pointer to start of opcodes
+        ocranfile.write(Signature.pack("C*"))
       end
 
-      if Ocra.inno_script
+      if Ocran.inno_script
         begin
-          iss = File.read(Ocra.inno_script) + "\n\n"
+          iss = File.read(Ocran.inno_script) + "\n\n"
 
           iss << "[Dirs]\n"
           @paths.each_key do |p|
@@ -1161,16 +1161,16 @@ EOF
           end
           iss << "\n"
 
-          Ocra.verbose_msg "### INNOSETUP SCRIPT ###\n\n#{iss}\n\n"
+          Ocran.verbose_msg "### INNOSETUP SCRIPT ###\n\n#{iss}\n\n"
 
-          f = File.open("ocratemp.iss", "w")
+          f = File.open("ocrantemp.iss", "w")
           f.write(iss)
           f.close()
 
           iscc_cmd = ["iscc"]
-          iscc_cmd << "/Q" unless Ocra.verbose
-          iscc_cmd << "ocratemp.iss"
-          Ocra.msg "Running InnoSetup compiler ISCC"
+          iscc_cmd << "/Q" unless Ocran.verbose
+          iscc_cmd << "ocrantemp.iss"
+          Ocran.msg "Running InnoSetup compiler ISCC"
           result = system(*iscc_cmd)
           if not result
             case $?
@@ -1181,9 +1181,9 @@ EOF
             end
           end
         rescue Exception => e
-          Ocra.fatal_error("InnoSetup installer creation failed: #{e.message}")
+          Ocran.fatal_error("InnoSetup installer creation failed: #{e.message}")
         ensure
-          File.unlink("ocratemp.iss") if File.exist?("ocratemp.iss")
+          File.unlink("ocrantemp.iss") if File.exist?("ocrantemp.iss")
           File.unlink(path) if File.exist?(path)
         end
       end
@@ -1192,14 +1192,14 @@ EOF
     def mkdir(path)
       return if @paths[path.path.downcase]
       @paths[path.path.downcase] = true
-      Ocra.verbose_msg "m #{showtempdir path}"
-      unless Ocra.inno_script # The directory will be created by InnoSetup with a [Dirs] statement
+      Ocran.verbose_msg "m #{showtempdir path}"
+      unless Ocran.inno_script # The directory will be created by InnoSetup with a [Dirs] statement
         @of << [OP_CREATE_DIRECTORY, path.to_native].pack("VZ*")
       end
     end
 
     def ensuremkdir(tgt)
-      tgt = Ocra.Pathname(tgt)
+      tgt = Ocran.Pathname(tgt)
       return if tgt.path == "."
       if not @paths[tgt.to_posix.downcase]
         ensuremkdir(tgt.dirname)
@@ -1208,7 +1208,7 @@ EOF
     end
 
     def createinstdir(next_to_exe = false, delete_after = false, chdir_before = false)
-      unless Ocra.inno_script # Creation of installation directory will be handled by InnoSetup
+      unless Ocran.inno_script # Creation of installation directory will be handled by InnoSetup
         @of << [OP_CREATE_INST_DIRECTORY, next_to_exe ? 1 : 0, delete_after ? 1 : 0, chdir_before ? 1 : 0].pack("VVVV")
       end
     end
@@ -1216,28 +1216,28 @@ EOF
     def createfile(src, tgt)
       return if @files[tgt]
       @files[tgt] = src
-      src, tgt = Ocra.Pathname(src), Ocra.Pathname(tgt)
+      src, tgt = Ocran.Pathname(src), Ocran.Pathname(tgt)
       ensuremkdir(tgt.dirname)
       str = File.open(src, "rb") { |file| file.read }
-      Ocra.verbose_msg "a #{showtempdir tgt}"
-      unless Ocra.inno_script # InnoSetup will install the file with a [Files] statement
+      Ocran.verbose_msg "a #{showtempdir tgt}"
+      unless Ocran.inno_script # InnoSetup will install the file with a [Files] statement
         @of << [OP_CREATE_FILE, tgt.to_native, str.size].pack("VZ*V")
         @of << str
       end
     end
 
     def createprocess(image, cmdline)
-      Ocra.verbose_msg "l #{showtempdir image} #{showtempdir cmdline}"
+      Ocran.verbose_msg "l #{showtempdir image} #{showtempdir cmdline}"
       @of << [OP_CREATE_PROCESS, image.to_native, cmdline].pack("VZ*Z*")
     end
 
     def postcreateprocess(image, cmdline)
-      Ocra.verbose_msg "p #{showtempdir image} #{showtempdir cmdline}"
+      Ocran.verbose_msg "p #{showtempdir image} #{showtempdir cmdline}"
       @of << [OP_POST_CREATE_PROCESS, image.to_native, cmdline].pack("VZ*Z*")
     end
 
     def setenv(name, value)
-      Ocra.verbose_msg "e #{name} #{showtempdir value}"
+      Ocran.verbose_msg "e #{name} #{showtempdir value}"
       @of << [OP_SETENV, name, value].pack("VZ*Z*")
     end
 
@@ -1248,27 +1248,27 @@ EOF
     def showtempdir(x)
       x.to_s.gsub(TEMPDIR_ROOT, "<tempdir>")
     end
-  end # class OcraBuilder
-end # module Ocra
+  end # class OcranBuilder
+end # module Ocran
 
 if File.basename(__FILE__) == File.basename($0)
-  Ocra.init(ARGV)
-  ARGV.replace(Ocra.arg)
+  Ocran.init(ARGV)
+  ARGV.replace(Ocran.arg)
 
-  if not Ocra.files.first.exist?
-    Ocra.fatal_error "#{Ocra.files[0]} was not found!"
+  if not Ocran.files.first.exist?
+    Ocran.fatal_error "#{Ocran.files[0]} was not found!"
   end
 
   at_exit do
     if $!.nil? or $!.kind_of?(SystemExit)
-      Ocra.build_exe
+      Ocran.build_exe
       exit 0
     end
   end
 
-  if Ocra.run_script
-    Ocra.msg "Loading script to check dependencies"
-    $0 = Ocra.files.first
-    load Ocra.files.first
+  if Ocran.run_script
+    Ocran.msg "Loading script to check dependencies"
+    $0 = Ocran.files.first
+    load Ocran.files.first
   end
 end

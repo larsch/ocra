@@ -1,1 +1,1 @@
-puts "Hello, World!" unless defined?(Ocra)
+puts "Hello, World!" unless defined?(Ocran)

@@ -1,7 +1,7 @@
 SRCS = lzma/LzmaDec.c
 OBJS = $(SRCS:.c=.o) stubicon.o
 CC = gcc
-BINDIR = $(CURDIR)/../share/ocra
+BINDIR = $(CURDIR)/../share/ocran
 
 CFLAGS = -Wall -O2 -DWITH_LZMA -Ilzma -s
 STUB_CFLAGS = -D_CONSOLE $(CFLAGS)

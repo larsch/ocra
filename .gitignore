@@ -1,7 +1,7 @@
 *.o
 *.exe
-bin/ocrasa.rb
+bin/ocransa.rb
 pkg
 README.txt
-ocrasa-*.zip
+ocransa-*.zip
 

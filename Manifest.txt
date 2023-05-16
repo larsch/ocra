@@ -2,10 +2,10 @@ History.txt
 Manifest.txt
 README.md
 Rakefile
-bin/ocra
-share/ocra/lzma.exe
-share/ocra/stub.exe
-share/ocra/stubw.exe
-share/ocra/edicon.exe
-test/test_ocra.rb
-lib/ocra.rb
+bin/ocran
+share/ocran/lzma.exe
+share/ocran/stub.exe
+share/ocran/stubw.exe
+share/ocran/edicon.exe
+test/test_ocran.rb
+lib/ocran.rb
