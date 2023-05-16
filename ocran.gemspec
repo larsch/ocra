@@ -27,8 +27,6 @@ Gem::Specification.new do |spec|
     #     end
     #   end
   spec.files = Dir.glob("bin/ocran") + Dir.glob("lib/**")  + Dir.glob("share/ocran/**") 
-
-  p spec.files
   spec.bindir = "bin"
   spec.executables = %w[ocran]
   spec.require_paths = ["lib"]
