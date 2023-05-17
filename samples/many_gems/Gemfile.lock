@@ -1,0 +1,111 @@
+GEM
+  remote: https://rubygems.org/
+  specs:
+    addressable (2.8.4)
+      public_suffix (>= 2.0.2, < 6.0)
+    concurrent-ruby (1.2.2)
+    crass (1.0.6)
+    date (3.3.3)
+    domain_name (0.5.20190701)
+      unf (>= 0.0.5, < 1.0.0)
+    et-orbi (1.2.7)
+      tzinfo
+    ffi (1.15.5)
+    ffi-win32-extensions (1.0.4)
+      ffi
+    fugit (1.8.1)
+      et-orbi (~> 1, >= 1.2.7)
+      raabro (~> 1.4)
+    http-accept (1.7.0)
+    http-cookie (1.0.5)
+      domain_name (~> 0.5)
+    logger (1.5.3)
+    loofah (2.21.3)
+      crass (~> 1.0.2)
+      nokogiri (>= 1.12.0)
+    lumberjack (1.2.8)
+    mime-types (3.4.1)
+      mime-types-data (~> 3.2015)
+    mime-types-data (3.2023.0218.1)
+    mini_magick (4.12.0)
+    net-ftp (0.2.0)
+      net-protocol
+      time
+    net-ftp-list (3.3.0)
+    net-protocol (0.2.1)
+      timeout
+    netrc (0.11.0)
+    nokogiri (1.15.0-x64-mingw-ucrt)
+      racc (~> 1.4)
+    openssl (3.1.0)
+    openssl-win-root (1.1.2)
+    psych (5.1.0)
+      stringio
+    public_suffix (5.0.1)
+    raabro (1.4.0)
+    racc (1.6.2)
+    rest-client (2.1.0)
+      http-accept (>= 1.7.0, < 2.0)
+      http-cookie (>= 1.0.2, < 2.0)
+      mime-types (>= 1.16, < 4.0)
+      netrc (~> 0.8)
+    rexml (3.2.5)
+    roo (2.10.0)
+      nokogiri (~> 1)
+      rubyzip (>= 1.3.0, < 3.0.0)
+    ruby-measurement (1.3.0)
+    rubyzip (2.3.2)
+    rufus-scheduler (3.8.2)
+      fugit (~> 1.1, >= 1.1.6)
+    sequel (5.68.0)
+    sqlite3 (1.6.3-x64-mingw-ucrt)
+    stringio (3.0.6)
+    time (0.2.2)
+      date
+    timeout (0.3.2)
+    tiny_tds (2.1.5)
+    tzinfo (2.0.6)
+      concurrent-ruby (~> 1.0)
+    tzinfo-data (1.2023.3)
+      tzinfo (>= 1.0.0)
+    unf (0.1.4)
+      unf_ext
+    unf_ext (0.0.8.2)
+    win32-process (0.9.0)
+      ffi (>= 1.0.0)
+    win32-service (2.3.2)
+      ffi
+      ffi-win32-extensions
+    xml-simple (1.1.9)
+      rexml
+
+PLATFORMS
+  x64-mingw-ucrt
+
+DEPENDENCIES
+  addressable
+  ffi
+  logger
+  loofah
+  lumberjack
+  mini_magick
+  net-ftp
+  net-ftp-list (~> 3.3, >= 3.3.0)
+  openssl
+  openssl-win-root
+  psych
+  rest-client
+  roo
+  ruby-measurement
+  rufus-scheduler
+  sequel
+  sqlite3 (~> 1.6)
+  tiny_tds (~> 2.1)
+  tzinfo
+  tzinfo-data
+  win32-process (~> 0.9.0)
+  win32-service
+  xml-simple
+
+BUNDLED WITH
+   2.4.13

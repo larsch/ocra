@@ -12,7 +12,7 @@ executable that contains the Ruby interpreter, your source code and
 any additionally needed ruby libraries or DLL.
 
 OCRAN is a fork of Ocra (https://github.com/larsch/ocra) in order to
-maintain compatibility with newer Ruby versions after 2.7
+maintain compatibility with newer Ruby versions after 2.6
 
 ## Features
 
@@ -164,12 +164,12 @@ Executable options:
 
 * Windows
 * Working Ruby installation.
-* MinGW Installation (when working with the source code only)
+* Ruby Installation with devkit from rubyinstaller (when working with the source code only)
 
 ### Stand-alone version
 
-Get ocransa.rb from http://rubyforge.org/frs/?group_id=8185. Requires
-nothing but a working Ruby installation on Windows.
+Get ocransa.rb from the github releases. Requires
+nothing but a working Ruby installation on Windows. (currently not supported - open an issue if you need this)
 
 ## Technical details
 
@@ -449,6 +449,10 @@ logs any errors to a file:
 
 ## CREDITS:
 
+Lars Christensen and contributors for the OCRA project which this is forked from.
+
+Kevin Walzer of codebykevin, Maxim Samsonov for ocra2, John Mair for codesigining support (to be merged) 
+
 Thanks for Igor Pavlov for the LZMA compressor and decompressor. The
 source code used was place into Public Domain by Igor Pavlov.
 
@@ -462,6 +466,7 @@ http://ruby.morphball.net/vit-ruby-ico_en.html)
 (The MIT License)
 
 Copyright (c) 2009-2020 Lars Christensen
+Copyright (c) 2020-2023 The OCRAN Committers Team
 
 Permission is hereby granted, free of charge, to any person obtaining
 a copy of this software and associated documentation files (the

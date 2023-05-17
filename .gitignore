@@ -6,4 +6,4 @@ bin/ocransa.rb
 pkg
 README.txt
 ocransa-*.zip
-
+*.tmp

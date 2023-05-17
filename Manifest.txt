@@ -9,3 +9,4 @@ share/ocran/stubw.exe
 share/ocran/edicon.exe
 test/test_ocran.rb
 lib/ocran.rb
+lib/version/ocran.rb

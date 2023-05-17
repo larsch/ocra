@@ -1,0 +1,34 @@
+# frozen_string_literal: true
+
+source "https://rubygems.org"
+
+gem "tiny_tds", "~> 2.1"
+gem "sqlite3", "~> 1.6"
+
+gem 'tzinfo' if Gem.win_platform?
+gem 'tzinfo-data' if Gem.win_platform?
+gem 'xml-simple'
+
+gem 'psych'
+gem 'win32-service'
+gem 'win32-process', '~> 0.9.0'
+gem 'rufus-scheduler'
+
+gem 'net-ftp'
+gem 'net-ftp-list', '~> 3.3', '>= 3.3.0'
+
+gem 'ffi'
+gem 'logger'
+gem 'rest-client'
+gem 'sequel'
+gem 'addressable'
+
+gem 'roo'
+gem 'mini_magick'
+gem 'openssl'
+
+gem 'openssl-win-root'
+gem 'ruby-measurement'
+
+gem 'loofah'
+gem 'lumberjack'

@@ -1,3 +1,6 @@
-class Ocran
-  VERSION = '1.3.12
+# frozen_string_literal: true
+
+require_relative "ocran/version"
+
+module Ocran
 end

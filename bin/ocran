@@ -121,6 +121,7 @@ module Ocran
     def basename; Pathname.new(File.basename(@path)); end
     def expand(dir = nil); Pathname.new(File.expand_path(@path, dir && Ocran.Pathname(dir))); end
     def size; File.size(@path); end
+    def encode(e); to_posix.encode(e); end # called when creating an installer with innosetup 
 
     alias to_s to_posix
     alias to_str to_posix
@@ -972,6 +973,11 @@ EOF
         sb.createfile(path, target)
       end
 
+      # Workaround: RubyInstaller cannot find the msys folder if ../msys64/usr/bin/msys-2.0.dll is not present (since RubyInstaller-2.4.1 rubyinstaller 2 issue 23)
+      # Add an empty file to /msys64/usr/bin/msys-2.0.dll if the dll was not required otherwise
+      require 'tempfile'
+      sb.createfile((Tempfile.new("msys-2.0.dll")).path.to_s, 'msys64/usr/bin/msys-2.0.dll') unless sb.files.keys.any? { |entry| entry.to_s.include?("msys-2.0.dll") }
+
       # Set environment variable
       sb.setenv("RUBYOPT", ENV["RUBYOPT"] || "")
       sb.setenv("RUBYLIB", load_path.map { |path| path.to_native }.uniq.join(";"))
@@ -1081,6 +1087,8 @@ EOF
     OP_POST_CREATE_PROCESS = 6
     OP_ENABLE_DEBUG_MODE = 7
     OP_CREATE_INST_DIRECTORY = 8
+
+    attr_reader :files
 
     def initialize(path, windowed)
       @paths = {}
@@ -1228,6 +1236,9 @@ EOF
         @of << [OP_CREATE_FILE, tgt.to_native, str.size].pack("VZ*V")
         @of << str
       end
+    end
+
+    def hasFile?(src)
     end
 
     def createprocess(image, cmdline)
