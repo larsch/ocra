@@ -22,7 +22,9 @@ jobs:
 
       - name: Get Gem File Name
         id: gem_file_name
-        run: echo "::set-output name=filename::$(ls *.gem)"
+        run: |
+          filename=$(basename $(ls *.gem))
+          echo "filename=${filename}" >> $GITHUB_OUTPUT
 
       - name: Create Release
         id: create_release

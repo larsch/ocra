@@ -1,6 +1,7 @@
 # -*- ruby -*-
 
 require "rubygems"
+require 'bundler/setup'
 require "hoe"
 
 Hoe.plugin :minitest
