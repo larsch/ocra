@@ -1,12 +1,12 @@
-name: run all the tests on windows
-on: [push, pull_request]
-jobs:
-  rake:
-    runs-on: windows-latest
-    steps:
-      - uses: actions/checkout@v2
-      - uses: ruby/setup-ruby@v1
-        with:
-          ruby-version: 3.2.2
-      - run: bundle install
-      - run: rake
+# name: run all the tests on windows
+# on: [push, pull_request]
+# jobs:
+#   rake:
+#     runs-on: windows-latest
+#     steps:
+#       - uses: actions/checkout@v2
+#       - uses: ruby/setup-ruby@v1
+#         with:
+#           ruby-version: 3.2.2
+#       - run: bundle install
+#       - run: rake

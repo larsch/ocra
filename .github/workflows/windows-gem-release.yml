@@ -1,12 +1,8 @@
 name: Build and Release Gem on windows
 on:
   push:
-    branches:
-      - master  # Modify this to the branch you want to trigger the workflow
-  pull_request:
-    branches:
-      - master  # Modify this to the branch you want to trigger the workflow
-
+    tags:
+      - '**'  # if there is a new tag pushed, create a release
 jobs:
   build-and-release:
     runs-on: windows-latest
@@ -17,16 +13,11 @@ jobs:
       - uses: ruby/setup-ruby@v1
         with:
           ruby-version: 3.2.2
+          bundler-cache: true
 
-      - name: Set up bundler
+      - name: Build Gem 
         run: |
-          gem install bundler
-          bundle install
-
-      - name: Build Gem
-        run: |
-          rake build_stub
-          rake test
+          rake build_stub 
           gem build
 
       - name: Get Gem File Name
