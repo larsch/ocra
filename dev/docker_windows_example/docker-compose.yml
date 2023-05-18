@@ -1,0 +1,32 @@
+version: "3.4"
+
+services:
+  exampleproject_ruby_base:
+    build: 
+      context: ./
+      target: ruby_base
+      dockerfile: ./Dockerfile
+      network: "Default Switch" # cannot connect without this. windows container bug?
+    isolation: hyperv
+    platform: windows/amd64
+    network_mode: "Default Switch"
+  exampleproject:
+    build: 
+      context: ./
+      target: exampleproject_dev
+      dockerfile: ./Dockerfile
+      network: "Default Switch" # cannot connect without this. windows container bug?
+    isolation: hyperv
+    platform: windows/amd64
+    network_mode: "Default Switch"
+    volumes:
+      - "./:C:/drived/exampleproject" 
+  exampleproject_no_volume:
+    build: 
+      context: ./
+      target: exampleproject_dev
+      dockerfile: ./Dockerfile
+      network: "Default Switch" # cannot connect without this. windows container bug?
+    isolation: hyperv
+    platform: windows/amd64
+    network_mode: "Default Switch"
