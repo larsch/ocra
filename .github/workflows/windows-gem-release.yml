@@ -1,9 +1,8 @@
-name: Build and Release Gem on windows # if there is a new tag pushed, create a release
+name: Build and Release Gem on windows
 on:
   push:
     tags:
       - '*'
-
 jobs:
   build-and-release:
     runs-on: windows-latest
