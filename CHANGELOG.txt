@@ -1,6 +1,9 @@
 === 1.3.13
 - Fixed the bug why Innosetup did not run because of missing encode method 
 - Fix an issue where rubyinstaller did not find the msys path by putting in an empty msys-2.0.dll into msys64/usr/bin/msys-2.0.dll
+- compatibility with the tiny_tds gem (see above)
+- GitHub builds through github action: making sure you can trust the included binaries.
+- Added some samples including the glimmer-libui GUI example. GUI that starts fast.
 
 === 1.3.12
 * Forked from Ocra
