@@ -1,0 +1,55 @@
+name: Build and Release Gem on windows
+on:
+  push:
+    branches:
+      - master  # Modify this to the branch you want to trigger the workflow
+  pull_request:
+    branches:
+      - master  # Modify this to the branch you want to trigger the workflow
+
+jobs:
+  build-and-release:
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: 3.2.2
+
+      - name: Set up bundler
+        run: |
+          gem install bundler
+          bundle install
+
+      - name: Build Gem
+        run: |
+          rake build_stub
+          rake test
+          gem build
+
+      - name: Get Gem File Name
+        id: gem_file_name
+        run: echo "::set-output name=filename::$(ls *.gem)"
+
+      - name: Create Release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ github.ref }}
+          release_name: Release ${{ github.ref }}
+          draft: false
+          prerelease: false
+
+      - name: Upload Gem
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ${{ steps.gem_file_name.outputs.filename }}
+          asset_name: ${{ steps.gem_file_name.outputs.filename }}
+          asset_content_type: application/octet-stream

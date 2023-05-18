@@ -1,4 +1,4 @@
-name: Rake on Windows
+name: run all the tests on windows
 on: [push, pull_request]
 jobs:
   rake:
