@@ -23,8 +23,8 @@ jobs:
       - name: Get Gem File Name
         id: gem_file_name
         run: |
-          filename=$(basename $(ls *.gem))
-          echo "filename=${filename}" >> $GITHUB_OUTPUT
+          $filename = (Get-ChildItem -Filter "*.gem").Name
+          echo "filename=$filename" >> $env:GITHUB_OUTPUT
 
       - name: Create Release
         id: create_release
