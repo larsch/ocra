@@ -5,7 +5,7 @@ require "hoe"
 
 Hoe.plugin :minitest
 
-spec = Hoe.spec "ocra" do
+spec = Hoe.spec "ocra2" do
   developer "Lars Christensen", "larsch@belunktum.dk"
   license "MIT"
 end
