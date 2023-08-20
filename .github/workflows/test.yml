@@ -6,8 +6,6 @@ on:
       - main
       - master
   pull_request:
-  
-  # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
 
 jobs:
@@ -15,12 +13,12 @@ jobs:
     runs-on: windows-latest
 
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
 
     - name: Set up Ruby
       uses: ruby/setup-ruby@v1
       with:
-        ruby-version: 2.6.6
+        ruby-version: 2.7
         bundler-cache: true
 
     - name: Build with Rake

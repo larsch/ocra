@@ -16,7 +16,7 @@ end
 
 include FileUtils
 
-class TestOcra < MiniTest::Test
+class TestOcra < Minitest::Test
 
   # Default arguments for invoking OCRA when running tests.
   DefaultArgs = [ '--no-lzma', '--verbose' ]
