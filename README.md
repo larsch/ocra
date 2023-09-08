@@ -6,7 +6,7 @@ issues :: http://github.com/largo/ocran/issues
 
 ## Description
 
-OCRAN (One-Click Ruby Application) builds Windows executables from Ruby
+OCRAN (One-Click Ruby Application Next) builds Windows executables from Ruby
 source code. The executable is a self-extracting, self-running
 executable that contains the Ruby interpreter, your source code and
 any additionally needed ruby libraries or DLL.
@@ -14,18 +14,30 @@ any additionally needed ruby libraries or DLL.
 OCRAN is a fork of Ocra (https://github.com/larsch/ocra) in order to
 maintain compatibility with newer Ruby versions after 2.6
 
+## Recommended usage
+Most commonly you will needs this, when you want to ship your program to windows servers / users that don't have Ruby installed.
+By default each time the .exe is opened it will extract the ruby interpeter along with the code to the temp directory.
+Since this process takes time, we recommend using the innosetup edition which will install your program together with the ruby intepreter into
+a directory.
+
 ## Features
 
 * LZMA Compression (optional, default on)
 * Both windowed/console mode supported
 * Includes gems based on usage, or from a Bundler Gemfile
 
-## Problems & Bug Reporiting
+## Problems & Bug Reporting
 
 * Windows support only
 
 If you experience problems with OCRAN or have found a bug, please use
 the issue tracker on GitHub (http://github.com/largo/ocran/issues).
+
+## Safety
+
+As this gem comes with binaries, we have taken actions to insure your safety.
+The gem releases are built on Github Actions. Feel free verify that it matches the version on rubygems.
+It ships with seb.exe and LZMA.exe in this repository, which come from official sources.
 
 ## Installation
 
