@@ -187,7 +187,7 @@ module Ocran
     a.sort.inject([]) { |r, e| r.last == e ? r : r << e }
   end
 
-  VERSION = "1.3.13"
+  VERSION = "1.3.14"
 
   IGNORE_MODULE_NAMES = /\/(enumerator.so|rational.so|complex.so|fiber.so|thread.rb|ruby2_keywords.rb)$/
 

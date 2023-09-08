@@ -1,3 +1,6 @@
+=== 1.3.14
+- Add option to suppress or override RUBYOPT environment variable #3 by ccorn90
+
 === 1.3.13
 - Fixed the bug why Innosetup did not run because of missing encode method 
 - Fix an issue where rubyinstaller did not find the msys path by putting in an empty msys-2.0.dll into msys64/usr/bin/msys-2.0.dll
