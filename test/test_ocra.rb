@@ -549,7 +549,7 @@ class TestOcran < MiniTest::Test
     end
   end
 
-  # Test that the RUBYOPT environment variable is preserved.
+  # Test that the RUBYOPT environment variable is preserved when --rubyopt is not passed
   def test_rubyopt
     with_fixture 'environment' do
       with_env "RUBYOPT" => "-rtime" do
@@ -558,6 +558,22 @@ class TestOcran < MiniTest::Test
           assert system("environment.exe")
           env = Marshal.load(File.open("environment", "rb") { |f| f.read })
           assert_equal "-rtime", env['RUBYOPT']
+        end
+      end
+    end
+  end
+
+  # Test that the RUBYOPT environment variable can be set manually with --rubyopt
+  def test_rubyopt_manual
+    specified_rubyopt = "-rbundler --verbose"
+    test_args = DefaultArgs + ["--rubyopt", "'#{specified_rubyopt}'"
+    with_fixture 'environment' do
+      with_env "RUBYOPT" => "-rtime" do
+        assert system("ruby", ocran, "environment.rb", *test_args)
+        pristine_env "environment.exe" do
+          assert system("environment.exe")
+          env = Marshal.load(File.open("environment", "rb") { |f| f.read })
+          assert_equal specified_rubyopt, env['RUBYOPT']
         end
       end
     end

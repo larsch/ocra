@@ -187,7 +187,7 @@ module Ocran
     a.sort.inject([]) { |r, e| r.last == e ? r : r << e }
   end
 
-  VERSION = "1.3.13"
+  VERSION = "1.3.14"
 
   IGNORE_MODULE_NAMES = /\/(enumerator.so|rational.so|complex.so|fiber.so|thread.rb|ruby2_keywords.rb)$/
 
@@ -230,6 +230,7 @@ module Ocran
     :force_windows => false,
     :force_console => false,
     :icon_filename => nil,
+    :rubyopt => nil,
     :gemfile => nil,
     :inno_script => nil,
     :quiet => false,
@@ -362,6 +363,7 @@ Executable options:
 --console          Force console application (ruby.exe)
 --chdir-first      When exe starts, change working directory to app dir.
 --icon <ico>       Replace icon with a custom one.
+--rubyopt <str>    Set the RUBYOPT environment variable when running the executable
 --debug            Executable will be verbose.
 --debug-extract    Executable will unpack to local dir and not delete after.
 EOF
@@ -393,6 +395,8 @@ EOF
       when /\A--icon\z/
         @options[:icon_filename] = Pathname(argv.shift)
         Ocran.fatal_error "Icon file #{icon_filename} not found.\n" unless icon_filename.exist?
+      when /\A--rubyopt\z/
+        @options[:rubyopt] = argv.shift
       when /\A--gemfile\z/
         @options[:gemfile] = Pathname(argv.shift)
         Ocran.fatal_error "Gemfile #{gemfile} not found.\n" unless gemfile.exist?
@@ -979,7 +983,7 @@ EOF
       sb.createfile((Tempfile.new("msys-2.0.dll")).path.to_s, 'msys64/usr/bin/msys-2.0.dll') unless sb.files.keys.any? { |entry| entry.to_s.include?("msys-2.0.dll") }
 
       # Set environment variable
-      sb.setenv("RUBYOPT", ENV["RUBYOPT"] || "")
+      sb.setenv("RUBYOPT", Ocran.rubyopt || ENV["RUBYOPT"] || "")
       sb.setenv("RUBYLIB", load_path.map { |path| path.to_native }.uniq.join(";"))
 
       sb.setenv("GEM_PATH", (TEMPDIR_ROOT / GEMHOMEDIR).to_native)
