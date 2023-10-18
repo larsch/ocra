@@ -1066,7 +1066,7 @@ EOF
         str = "\x00\x00" * MAX_PATH
         modulefilename_length = getmodulefilename.call(handle, str, str.size)
         unless modulefilename_length > 0
-          errorcode = getlasterror.call()
+          errorcode = getlasterror.call
           Ocran.fatal_error "LibraryDetector: GetModuleFileNameW failed with error code 0x" + errorcode.to_s(16)
         end
         modulefilename = str[0, modulefilename_length * 2].force_encoding("UTF-16LE").encode("UTF-8")
