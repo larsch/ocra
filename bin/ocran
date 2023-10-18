@@ -1065,7 +1065,7 @@ EOF
       str = "\x00".encode("UTF-16LE") * MAX_PATH
       handles.select { |handle| handle > 0 }.map do |handle|
         modulefilename_length = getmodulefilename.call(handle, str, str.bytesize)
-        unless modulefilename_length > 0
+        if modulefilename_length == 0
           errorcode = getlasterror.call
           Ocran.fatal_error "LibraryDetector: GetModuleFileNameW failed with error code 0x" + errorcode.to_s(16)
         end
