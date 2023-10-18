@@ -1002,6 +1002,10 @@ EOF
   end
 
   module LibraryDetector
+    # https://learn.microsoft.com/en-us/windows/win32/fileio/maximum-file-path-limitation?tabs=registry
+    # In the Windows API, the maximum length for a path is MAX_PATH, which is defined as 260 characters.
+    MAX_PATH = 260
+
     def LibraryDetector.init_fiddle
       require "fiddle"
       require "fiddle/types"
@@ -1059,7 +1063,7 @@ EOF
 
       handles = module_handle_buffer.unpack(f_array)
       handles.select { |handle| handle > 0 }.map do |handle|
-        str = "\x00\x00" * 256
+        str = "\x00\x00" * MAX_PATH
         modulefilename_length = getmodulefilename.call(handle, str, str.size)
         unless modulefilename_length > 0
           errorcode = getlasterror.call()
