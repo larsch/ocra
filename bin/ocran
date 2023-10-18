@@ -1063,13 +1063,13 @@ EOF
 
       handles = module_handle_buffer.unpack(f_array)
       handles.select { |handle| handle > 0 }.map do |handle|
-        str = "\x00\x00" * MAX_PATH
-        modulefilename_length = getmodulefilename.call(handle, str, str.size)
+        str = "\x00".encode("UTF-16LE") * MAX_PATH
+        modulefilename_length = getmodulefilename.call(handle, str, str.bytesize)
         unless modulefilename_length > 0
           errorcode = getlasterror.call
           Ocran.fatal_error "LibraryDetector: GetModuleFileNameW failed with error code 0x" + errorcode.to_s(16)
         end
-        modulefilename = str[0, modulefilename_length * 2].force_encoding("UTF-16LE").encode("UTF-8")
+        modulefilename = str[0, modulefilename_length].encode("UTF-8")
         Ocran.Pathname(modulefilename)
       end
     end
