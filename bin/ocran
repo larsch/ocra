@@ -1062,8 +1062,8 @@ EOF
       end
 
       handles = module_handle_buffer.unpack(f_array)
+      str = "\x00".encode("UTF-16LE") * MAX_PATH
       handles.select { |handle| handle > 0 }.map do |handle|
-        str = "\x00".encode("UTF-16LE") * MAX_PATH
         modulefilename_length = getmodulefilename.call(handle, str, str.bytesize)
         unless modulefilename_length > 0
           errorcode = getlasterror.call
