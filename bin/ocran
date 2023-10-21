@@ -1043,19 +1043,22 @@ EOF
 
       dword = "L" # A DWORD is a 32-bit unsigned integer.
       bytes_needed = Fiddle::SIZEOF_VOIDP * 32
-      module_handle_buffer = nil
-      process_handle = getcurrentprocess.call()
-      loop do
+      process_handle = getcurrentprocess.call
+      bytes_needed_buffer = [0].pack(dword)
+      while true
         module_handle_buffer = "\x00" * bytes_needed
-        bytes_needed_buffer = [0].pack(dword)
-        r = enumprocessmodules.call(process_handle, module_handle_buffer, module_handle_buffer.size, bytes_needed_buffer)
+        r = enumprocessmodules.call(process_handle, module_handle_buffer, module_handle_buffer.bytesize, bytes_needed_buffer)
+        if r == 0
+          errorcode = getlasterror.call
+          Ocran.fatal_error "LibraryDetector: EnumProcessModules failed with error code 0x" + errorcode.to_s(16)
+        end
         bytes_needed = bytes_needed_buffer.unpack1(dword)
-        break if bytes_needed <= module_handle_buffer.size
+        break if bytes_needed <= module_handle_buffer.bytesize
       end
 
-      handles = module_handle_buffer.unpack("J*")
+      handles = module_handle_buffer.unpack("J#{bytes_needed / Fiddle::SIZEOF_VOIDP}")
       str = "\x00".encode("UTF-16LE") * MAX_PATH
-      handles.select { |handle| handle > 0 }.map do |handle|
+      handles.map do |handle|
         modulefilename_length = getmodulefilename.call(handle, str, str.bytesize)
         if modulefilename_length == 0
           errorcode = getlasterror.call
