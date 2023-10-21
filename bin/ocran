@@ -1007,49 +1007,36 @@ EOF
     MAX_PATH = 260
 
     def LibraryDetector.init_fiddle
-      require "fiddle"
+      require "fiddle/import"
       require "fiddle/types"
-      module_eval {
-        extend Fiddle::Importer
-        dlload "psapi.dll"
-        include Fiddle::Win32Types
-        extern "BOOL EnumProcessModules(HANDLE, HMODULE*, DWORD, DWORD*)"
-        extend Fiddle::Importer
-        dlload "kernel32.dll"
-        include Fiddle::Win32Types
 
-# https://docs.microsoft.com/en-us/windows/win32/winprog/windows-data-types
-# typedef PVOID HANDLE
-# typedef HINSTANCE HMODULE;
+      extend Fiddle::Importer
+      dlload "kernel32.dll", "psapi.dll"
 
-        typealias "HMODULE", "voidp"
-        typealias "HANDLE", "voidp"
-        typealias "LPWSTR", "char*"
+      include Fiddle::Win32Types
+      # https://docs.microsoft.com/en-us/windows/win32/winprog/windows-data-types
+      typealias "HMODULE", "HINSTANCE"
+      typealias "LPDWORD", "PDWORD"
+      typealias "LPWSTR", "char*"
 
-        extern "DWORD GetModuleFileNameW(HMODULE, LPWSTR, DWORD)"
-        extern "HANDLE GetCurrentProcess(void)"
-        extern "DWORD GetLastError(void)"
-      }
+      extern "BOOL EnumProcessModules(HANDLE, HMODULE*, DWORD, LPDWORD)"
+      extern "DWORD GetModuleFileNameW(HMODULE, LPWSTR, DWORD)"
+      extern "HANDLE GetCurrentProcess()"
+      extern "DWORD GetLastError()"
     end
 
     def LibraryDetector.loaded_dlls
-      require "fiddle"
-      psapi = Fiddle.dlopen("psapi")
-      enumprocessmodules = Fiddle::Function.new(psapi["EnumProcessModules"], [Fiddle::TYPE_UINTPTR_T, Fiddle::TYPE_VOIDP, Fiddle::TYPE_LONG, Fiddle::TYPE_VOIDP], Fiddle::TYPE_LONG)
-      kernel32 = Fiddle.dlopen("kernel32")
-      getcurrentprocess = Fiddle::Function.new(kernel32["GetCurrentProcess"], [], Fiddle::TYPE_LONG)
-      getmodulefilename = Fiddle::Function.new(kernel32["GetModuleFileNameW"], [Fiddle::TYPE_UINTPTR_T, Fiddle::TYPE_VOIDP, Fiddle::TYPE_LONG], Fiddle::TYPE_LONG)
-      getlasterror = Fiddle::Function.new(kernel32["GetLastError"], [], Fiddle::TYPE_LONG)
+      init_fiddle
 
       dword = "L" # A DWORD is a 32-bit unsigned integer.
       bytes_needed = Fiddle::SIZEOF_VOIDP * 32
-      process_handle = getcurrentprocess.call
+      process_handle = GetCurrentProcess()
       bytes_needed_buffer = [0].pack(dword)
       while true
         module_handle_buffer = "\x00" * bytes_needed
-        r = enumprocessmodules.call(process_handle, module_handle_buffer, module_handle_buffer.bytesize, bytes_needed_buffer)
+        r = EnumProcessModules(process_handle, module_handle_buffer, module_handle_buffer.bytesize, bytes_needed_buffer)
         if r == 0
-          errorcode = getlasterror.call
+          errorcode = GetLastError()
           Ocran.fatal_error "LibraryDetector: EnumProcessModules failed with error code 0x" + errorcode.to_s(16)
         end
         bytes_needed = bytes_needed_buffer.unpack1(dword)
@@ -1059,9 +1046,9 @@ EOF
       handles = module_handle_buffer.unpack("J#{bytes_needed / Fiddle::SIZEOF_VOIDP}")
       str = "\x00".encode("UTF-16LE") * MAX_PATH
       handles.map do |handle|
-        modulefilename_length = getmodulefilename.call(handle, str, str.bytesize)
+        modulefilename_length = GetModuleFileNameW(handle, str, str.bytesize)
         if modulefilename_length == 0
-          errorcode = getlasterror.call
+          errorcode = GetLastError()
           Ocran.fatal_error "LibraryDetector: GetModuleFileNameW failed with error code 0x" + errorcode.to_s(16)
         end
         modulefilename = str[0, modulefilename_length].encode("UTF-8")
