@@ -1041,27 +1041,19 @@ EOF
       getmodulefilename = Fiddle::Function.new(kernel32["GetModuleFileNameW"], [Fiddle::TYPE_UINTPTR_T, Fiddle::TYPE_VOIDP, Fiddle::TYPE_LONG], Fiddle::TYPE_LONG)
       getlasterror = Fiddle::Function.new(kernel32["GetLastError"], [], Fiddle::TYPE_LONG)
 
-# Different packing/unpacking for 64/32 bits systems      
-      if Fiddle::SIZEOF_VOIDP == 8 then
-        f_single = "Q"
-        f_array  = "Q*"
-      else
-        f_single = "I"
-        f_array = "I*"
-      end
-
+      dword = "L" # A DWORD is a 32-bit unsigned integer.
       bytes_needed = Fiddle::SIZEOF_VOIDP * 32
       module_handle_buffer = nil
       process_handle = getcurrentprocess.call()
       loop do
         module_handle_buffer = "\x00" * bytes_needed
-        bytes_needed_buffer = [0].pack(f_single)
+        bytes_needed_buffer = [0].pack(dword)
         r = enumprocessmodules.call(process_handle, module_handle_buffer, module_handle_buffer.size, bytes_needed_buffer)
-        bytes_needed = bytes_needed_buffer.unpack(f_single)[0]
+        bytes_needed = bytes_needed_buffer.unpack1(dword)
         break if bytes_needed <= module_handle_buffer.size
       end
 
-      handles = module_handle_buffer.unpack(f_array)
+      handles = module_handle_buffer.unpack("J*")
       str = "\x00".encode("UTF-16LE") * MAX_PATH
       handles.select { |handle| handle > 0 }.map do |handle|
         modulefilename_length = getmodulefilename.call(handle, str, str.bytesize)
