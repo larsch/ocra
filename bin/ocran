@@ -1006,6 +1006,14 @@ EOF
     # In the Windows API, the maximum length for a path is MAX_PATH, which is defined as 260 characters.
     MAX_PATH = 260
 
+    # The byte size of the buffer given as an argument to the EnumProcessModules function.
+    # This buffer is used to store the handles of the loaded modules.
+    # If the buffer size is smaller than the number of loaded modules,
+    # it will automatically increase the buffer size and call the EnumProcessModules function again.
+    # Increasing the initial buffer size can reduce the number of iterations required.
+    # https://learn.microsoft.com/en-us/windows/win32/psapi/enumerating-all-modules-for-a-process
+    DEFAULT_HMODULE_BUFFER_SIZE = 1024
+
     def LibraryDetector.init_fiddle
       require "fiddle/import"
       require "fiddle/types"
@@ -1029,30 +1037,26 @@ EOF
       init_fiddle
 
       dword = "L" # A DWORD is a 32-bit unsigned integer.
-      bytes_needed = Fiddle::SIZEOF_VOIDP * 32
+      bytes_needed = [0].pack(dword)
+      bytes = DEFAULT_HMODULE_BUFFER_SIZE
       process_handle = GetCurrentProcess()
-      bytes_needed_buffer = [0].pack(dword)
-      while true
-        module_handle_buffer = "\x00" * bytes_needed
-        r = EnumProcessModules(process_handle, module_handle_buffer, module_handle_buffer.bytesize, bytes_needed_buffer)
-        if r == 0
-          errorcode = GetLastError()
-          Ocran.fatal_error "LibraryDetector: EnumProcessModules failed with error code 0x" + errorcode.to_s(16)
-        end
-        bytes_needed = bytes_needed_buffer.unpack1(dword)
-        break if bytes_needed <= module_handle_buffer.bytesize
-      end
-
-      handles = module_handle_buffer.unpack("J#{bytes_needed / Fiddle::SIZEOF_VOIDP}")
+      handles = while true
+                  buffer = "\x00" * bytes
+                  if EnumProcessModules(process_handle, buffer, buffer.bytesize, bytes_needed) == 0
+                    Ocran.fatal_error "LibraryDetector: EnumProcessModules failed with error code %#010x" % GetLastError()
+                  end
+                  bytes = bytes_needed.unpack1(dword)
+                  if bytes <= buffer.bytesize
+                    break buffer.unpack("J#{bytes / Fiddle::SIZEOF_VOIDP}")
+                  end
+                end
       str = "\x00".encode("UTF-16LE") * MAX_PATH
       handles.map do |handle|
-        modulefilename_length = GetModuleFileNameW(handle, str, str.bytesize)
-        if modulefilename_length == 0
-          errorcode = GetLastError()
-          Ocran.fatal_error "LibraryDetector: GetModuleFileNameW failed with error code 0x" + errorcode.to_s(16)
+        length = GetModuleFileNameW(handle, str, str.bytesize)
+        if length == 0
+          Ocran.fatal_error "LibraryDetector: GetModuleFileNameW failed with error code %#010x" % GetLastError()
         end
-        modulefilename = str[0, modulefilename_length].encode("UTF-8")
-        Ocran.Pathname(modulefilename)
+        Ocran.Pathname(str[0, length])
       end
     end
 
