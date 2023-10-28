@@ -979,8 +979,11 @@ EOF
 
       # Workaround: RubyInstaller cannot find the msys folder if ../msys64/usr/bin/msys-2.0.dll is not present (since RubyInstaller-2.4.1 rubyinstaller 2 issue 23)
       # Add an empty file to /msys64/usr/bin/msys-2.0.dll if the dll was not required otherwise
-      require 'tempfile'
-      sb.createfile((Tempfile.new("msys-2.0.dll")).path.to_s, 'msys64/usr/bin/msys-2.0.dll') unless sb.files.keys.any? { |entry| entry.to_s.include?("msys-2.0.dll") }
+      unless sb.files.keys.any? { |entry| entry.to_s.include?("msys-2.0.dll") }
+        sb.createfile(
+          "share/ocran/empty",
+          "msys64/usr/bin/msys-2.0.dll")
+      end
 
       # Set environment variable
       sb.setenv("RUBYOPT", Ocran.rubyopt || ENV["RUBYOPT"] || "")
@@ -1002,9 +1005,11 @@ EOF
   end
 
   module LibraryDetector
-    # https://learn.microsoft.com/en-us/windows/win32/fileio/maximum-file-path-limitation?tabs=registry
-    # In the Windows API, the maximum length for a path is MAX_PATH, which is defined as 260 characters.
-    MAX_PATH = 260
+    # Windows API functions for handling files may return long paths,
+    # with a maximum character limit of 32,767.
+    # "\\?\" prefix(4 characters) + long path(32762 characters) + NULL = 32767 characters
+    # https://learn.microsoft.com/en-us/windows/win32/fileio/maximum-file-path-limitation
+    MAX_PATH = 32767
 
     # The byte size of the buffer given as an argument to the EnumProcessModules function.
     # This buffer is used to store the handles of the loaded modules.
