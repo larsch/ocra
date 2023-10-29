@@ -270,11 +270,6 @@ module Ocran
     exit 1
   end
 
-  # Returns a binary blob store embedded in the current Ruby script.
-  def Ocran.get_next_embedded_image
-    DATA.read(DATA.readline.to_i).unpack("m")[0]
-  end
-
   def Ocran.save_environment
     @load_path_before = $LOAD_PATH.dup
     @pwd_before = Dir.pwd
@@ -288,22 +283,11 @@ module Ocran
   end
 
   def Ocran.find_stubs
-    if defined?(DATA)
-      @stubimage = get_next_embedded_image
-      @stubwimage = get_next_embedded_image
-      lzmaimage = get_next_embedded_image
-      @lzmapath = Host.tempdir / "lzma.exe"
-      File.open(@lzmapath, "wb") { |file| file << lzmaimage }
-      ediconimage = get_next_embedded_image
-      @ediconpath = Host.tempdir / "edicon.exe"
-      File.open(@ediconpath, "wb") { |file| file << ediconimage }
-    else
-      ocranpath = Pathname(File.dirname(__FILE__))
-      @stubimage = File.open(ocranpath / "../share/ocran/stub.exe", "rb") { |file| file.read }
-      @stubwimage = File.open(ocranpath / "../share/ocran/stubw.exe", "rb") { |file| file.read }
-      @lzmapath = (ocranpath / "../share/ocran/lzma.exe").expand
-      @ediconpath = (ocranpath / "../share/ocran/edicon.exe").expand
-    end
+    ocranpath = Pathname(File.dirname(__FILE__))
+    @stubimage = File.open(ocranpath / "../share/ocran/stub.exe", "rb") { |file| file.read }
+    @stubwimage = File.open(ocranpath / "../share/ocran/stubw.exe", "rb") { |file| file.read }
+    @lzmapath = (ocranpath / "../share/ocran/lzma.exe").expand
+    @ediconpath = (ocranpath / "../share/ocran/edicon.exe").expand
   end
 
   def Ocran.parseargs(argv)
