@@ -979,8 +979,11 @@ EOF
 
       # Workaround: RubyInstaller cannot find the msys folder if ../msys64/usr/bin/msys-2.0.dll is not present (since RubyInstaller-2.4.1 rubyinstaller 2 issue 23)
       # Add an empty file to /msys64/usr/bin/msys-2.0.dll if the dll was not required otherwise
-      require 'tempfile'
-      sb.createfile((Tempfile.new("msys-2.0.dll")).path.to_s, 'msys64/usr/bin/msys-2.0.dll') unless sb.files.keys.any? { |entry| entry.to_s.include?("msys-2.0.dll") }
+      unless sb.files.keys.any? { |entry| entry.to_s.include?("msys-2.0.dll") }
+        sb.createfile(
+          "share/ocran/empty",
+          "msys64/usr/bin/msys-2.0.dll")
+      end
 
       # Set environment variable
       sb.setenv("RUBYOPT", Ocran.rubyopt || ENV["RUBYOPT"] || "")
@@ -1002,71 +1005,63 @@ EOF
   end
 
   module LibraryDetector
+    # Windows API functions for handling files may return long paths,
+    # with a maximum character limit of 32,767.
+    # "\\?\" prefix(4 characters) + long path(32762 characters) + NULL = 32767 characters
+    # https://learn.microsoft.com/en-us/windows/win32/fileio/maximum-file-path-limitation
+    MAX_PATH = 32767
+
+    # The byte size of the buffer given as an argument to the EnumProcessModules function.
+    # This buffer is used to store the handles of the loaded modules.
+    # If the buffer size is smaller than the number of loaded modules,
+    # it will automatically increase the buffer size and call the EnumProcessModules function again.
+    # Increasing the initial buffer size can reduce the number of iterations required.
+    # https://learn.microsoft.com/en-us/windows/win32/psapi/enumerating-all-modules-for-a-process
+    DEFAULT_HMODULE_BUFFER_SIZE = 1024
+
     def LibraryDetector.init_fiddle
-      require "fiddle"
+      require "fiddle/import"
       require "fiddle/types"
-      module_eval {
-        extend Fiddle::Importer
-        dlload "psapi.dll"
-        include Fiddle::Win32Types
-        extern "BOOL EnumProcessModules(HANDLE, HMODULE*, DWORD, DWORD*)"
-        extend Fiddle::Importer
-        dlload "kernel32.dll"
-        include Fiddle::Win32Types
 
-# https://docs.microsoft.com/en-us/windows/win32/winprog/windows-data-types
-# typedef PVOID HANDLE
-# typedef HINSTANCE HMODULE;
+      extend Fiddle::Importer
+      dlload "kernel32.dll", "psapi.dll"
 
-        typealias "HMODULE", "voidp"
-        typealias "HANDLE", "voidp"
-        typealias "LPWSTR", "char*"
+      include Fiddle::Win32Types
+      # https://docs.microsoft.com/en-us/windows/win32/winprog/windows-data-types
+      typealias "HMODULE", "HINSTANCE"
+      typealias "LPDWORD", "PDWORD"
+      typealias "LPWSTR", "char*"
 
-        extern "DWORD GetModuleFileNameW(HMODULE, LPWSTR, DWORD)"
-        extern "HANDLE GetCurrentProcess(void)"
-        extern "DWORD GetLastError(void)"
-      }
+      extern "BOOL EnumProcessModules(HANDLE, HMODULE*, DWORD, LPDWORD)"
+      extern "DWORD GetModuleFileNameW(HMODULE, LPWSTR, DWORD)"
+      extern "HANDLE GetCurrentProcess()"
+      extern "DWORD GetLastError()"
     end
 
     def LibraryDetector.loaded_dlls
-      require "fiddle"
-      psapi = Fiddle.dlopen("psapi")
-      enumprocessmodules = Fiddle::Function.new(psapi["EnumProcessModules"], [Fiddle::TYPE_UINTPTR_T, Fiddle::TYPE_VOIDP, Fiddle::TYPE_LONG, Fiddle::TYPE_VOIDP], Fiddle::TYPE_LONG)
-      kernel32 = Fiddle.dlopen("kernel32")
-      getcurrentprocess = Fiddle::Function.new(kernel32["GetCurrentProcess"], [], Fiddle::TYPE_LONG)
-      getmodulefilename = Fiddle::Function.new(kernel32["GetModuleFileNameW"], [Fiddle::TYPE_UINTPTR_T, Fiddle::TYPE_VOIDP, Fiddle::TYPE_LONG], Fiddle::TYPE_LONG)
-      getlasterror = Fiddle::Function.new(kernel32["GetLastError"], [], Fiddle::TYPE_LONG)
+      init_fiddle
 
-# Different packing/unpacking for 64/32 bits systems      
-      if Fiddle::SIZEOF_VOIDP == 8 then
-        f_single = "Q"
-        f_array  = "Q*"
-      else
-        f_single = "I"
-        f_array = "I*"
-      end
-
-      bytes_needed = Fiddle::SIZEOF_VOIDP * 32
-      module_handle_buffer = nil
-      process_handle = getcurrentprocess.call()
-      loop do
-        module_handle_buffer = "\x00" * bytes_needed
-        bytes_needed_buffer = [0].pack(f_single)
-        r = enumprocessmodules.call(process_handle, module_handle_buffer, module_handle_buffer.size, bytes_needed_buffer)
-        bytes_needed = bytes_needed_buffer.unpack(f_single)[0]
-        break if bytes_needed <= module_handle_buffer.size
-      end
-
-      handles = module_handle_buffer.unpack(f_array)
-      handles.select { |handle| handle > 0 }.map do |handle|
-        str = "\x00\x00" * 256
-        modulefilename_length = getmodulefilename.call(handle, str, str.size)
-        unless modulefilename_length > 0
-          errorcode = getlasterror.call()
-          Ocran.fatal_error "LibraryDetector: GetModuleFileNameW failed with error code 0x" + errorcode.to_s(16)
+      dword = "L" # A DWORD is a 32-bit unsigned integer.
+      bytes_needed = [0].pack(dword)
+      bytes = DEFAULT_HMODULE_BUFFER_SIZE
+      process_handle = GetCurrentProcess()
+      handles = while true
+                  buffer = "\x00" * bytes
+                  if EnumProcessModules(process_handle, buffer, buffer.bytesize, bytes_needed) == 0
+                    Ocran.fatal_error "LibraryDetector: EnumProcessModules failed with error code %#010x" % GetLastError()
+                  end
+                  bytes = bytes_needed.unpack1(dword)
+                  if bytes <= buffer.bytesize
+                    break buffer.unpack("J#{bytes / Fiddle::SIZEOF_VOIDP}")
+                  end
+                end
+      str = "\x00".encode("UTF-16LE") * MAX_PATH
+      handles.map do |handle|
+        length = GetModuleFileNameW(handle, str, str.bytesize)
+        if length == 0
+          Ocran.fatal_error "LibraryDetector: GetModuleFileNameW failed with error code %#010x" % GetLastError()
         end
-        modulefilename = str[0, modulefilename_length * 2].force_encoding("UTF-16LE").encode("UTF-8")
-        Ocran.Pathname(modulefilename)
+        Ocran.Pathname(str[0, length])
       end
     end
 
