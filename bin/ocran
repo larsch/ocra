@@ -1184,7 +1184,7 @@ EOF
           Ocran.msg "Running InnoSetup compiler ISCC"
           result = system(*iscc_cmd)
           if not result
-            case $?
+            case $?.exitstatus
             when 0 then raise RuntimeError.new("ISCC reported success, but system reported error?")
             when 1 then raise RuntimeError.new("ISCC reports invalid command line parameters")
             when 2 then raise RuntimeError.new("ISCC reports that compilation failed")
