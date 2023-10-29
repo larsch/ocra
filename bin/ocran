@@ -979,11 +979,8 @@ EOF
 
       # Workaround: RubyInstaller cannot find the msys folder if ../msys64/usr/bin/msys-2.0.dll is not present (since RubyInstaller-2.4.1 rubyinstaller 2 issue 23)
       # Add an empty file to /msys64/usr/bin/msys-2.0.dll if the dll was not required otherwise
-      unless sb.files.keys.any? { |entry| entry.to_s.include?("msys-2.0.dll") }
-        sb.createfile(
-          "share/ocran/empty",
-          "msys64/usr/bin/msys-2.0.dll")
-      end
+      require 'tempfile'
+      sb.createfile((Tempfile.new("msys-2.0.dll")).path.to_s, 'msys64/usr/bin/msys-2.0.dll') unless sb.files.keys.any? { |entry| entry.to_s.include?("msys-2.0.dll") }
 
       # Set environment variable
       sb.setenv("RUBYOPT", Ocran.rubyopt || ENV["RUBYOPT"] || "")
