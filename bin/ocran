@@ -427,6 +427,8 @@ EOF
         puts usage
         exit 0
       else
+        # Forcing 'arg' to be encoded due to incorrect encoding of ARGV.
+        # https://bugs.ruby-lang.org/issues/9016
         @options[:files] << arg.dup.force_encoding(__FILE__.encoding)
       end
     end
