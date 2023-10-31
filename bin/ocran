@@ -585,6 +585,7 @@ EOF
         gems[spec.name] ||= spec
       end
 
+      # This code is implemented for compatibility with older Bundler versions (< v1.16.0.pre.1).
       unless gems.any? { |name, spec| name == "bundler" }
         # Bundler itself wasn't added for some reason, let's put it in directly
         Ocran.verbose_msg "From Gemfile, forcing inclusion of bundler gem itself"
