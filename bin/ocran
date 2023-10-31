@@ -590,7 +590,7 @@ EOF
         Ocran.verbose_msg "From Gemfile, forcing inclusion of bundler gem itself"
         bundler_spec = Gem.loaded_specs["bundler"]
         bundler_spec or Ocran.fatal_error "Unable to locate bundler gem"
-        gems["bundler"] ||= spec
+        gems["bundler"] ||= bundler_spec
       end
     end
 
