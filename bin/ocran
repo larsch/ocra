@@ -283,8 +283,8 @@ module Ocran
 
   def Ocran.find_stubs
     ocranpath = Pathname(File.dirname(__FILE__))
-    @stubimage = File.open(ocranpath / "../share/ocran/stub.exe", "rb") { |file| file.read }
-    @stubwimage = File.open(ocranpath / "../share/ocran/stubw.exe", "rb") { |file| file.read }
+    @stubimage = File.binread(ocranpath / "../share/ocran/stub.exe")
+    @stubwimage = File.binread(ocranpath / "../share/ocran/stubw.exe")
     @lzmapath = (ocranpath / "../share/ocran/lzma.exe").expand
     @ediconpath = (ocranpath / "../share/ocran/edicon.exe").expand
   end
