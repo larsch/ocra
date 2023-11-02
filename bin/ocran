@@ -273,12 +273,11 @@ module Ocran
   def Ocran.save_environment
     @load_path_before = $LOAD_PATH.dup
     @pwd_before = Dir.pwd
-    @env_before = {}; ENV.each { |key, value| @env_before[key] = value }
+    @env_before = ENV.to_hash
   end
 
   def Ocran.restore_environment
-    @env_before.each { |key, value| ENV[key] = value }
-    ENV.each_key { |key| ENV.delete(key) unless @env_before.has_key?(key) }
+    ENV.clear.update(@env_before)
     Dir.chdir @pwd_before
   end
 
