@@ -52,7 +52,7 @@ module Ocran
     # Determines if 'src' is contained in 'tgt' (i.e. it is a subpath of
     # 'tgt'). Both must be absolute paths and not contain '..'
     def subpath?(other)
-      other = Ocran.Pathname(other)
+      other = Pathname.new(other)
       src_normalized = to_posix.downcase
       tgt_normalized = other.to_posix.downcase
       src_normalized =~ /^#{Regexp.escape tgt_normalized}#{SEPARATOR_PAT}/i
@@ -62,11 +62,11 @@ module Ocran
     # is an absolute path. Otherwise, returns the full path of the
     # left + right.
     def /(other)
-      other = Ocran.Pathname(other)
+      other = Pathname.new(other)
       if other.absolute?
         other
       else
-        Ocran.Pathname(@path + "/" + other.path)
+        Pathname.new(@path + "/" + other.path)
       end
     end
 
@@ -119,7 +119,7 @@ module Ocran
     def absolute?; @path =~ ABSOLUTE_PAT; end
     def dirname; Pathname.new(File.dirname(@path)); end
     def basename; Pathname.new(File.basename(@path)); end
-    def expand(dir = nil); Pathname.new(File.expand_path(@path, dir && Ocran.Pathname(dir))); end
+    def expand(dir = nil); Pathname.new(File.expand_path(@path, dir && Pathname.new(dir))); end
     def size; File.size(@path); end
     def encode(e); to_posix.encode(e); end # called when creating an installer with innosetup 
 
