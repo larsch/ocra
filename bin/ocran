@@ -943,8 +943,8 @@ EOF
         if gemspec.subpath?(Host.exec_prefix)
           path = gemspec.relative_path_from(Host.exec_prefix)
           sb.createfile(gemspec, path)
-        elsif defined?(Gem) and gemhome = Pathname(Gem.path.find { |pth| gemspec.subpath?(pth) })
-          path = GEMHOMEDIR / gemspec.relative_path_from(gemhome)
+        elsif defined?(Gem) and gemhome = Gem.path.find { |pth| gemspec.subpath?(pth) }
+          path = GEMHOMEDIR / gemspec.relative_path_from(Pathname(gemhome))
           sb.createfile(gemspec, path)
         else
           Ocran.fatal_error "Gem spec #{gemspec} does not exist in the Ruby installation. Don't know where to put it."
