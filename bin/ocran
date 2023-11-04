@@ -590,7 +590,7 @@ EOF
           features_from_gems << feature
           next
         end
-        gempaths = Pathname(Gem.path)
+        gempaths = Gem.path
         gempaths.each do |gempath|
           geminstallpath = Pathname(gempath) / "gems"
           if feature.subpath?(geminstallpath)
