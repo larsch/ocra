@@ -566,7 +566,7 @@ class TestOcran < MiniTest::Test
   # Test that the RUBYOPT environment variable can be set manually with --rubyopt
   def test_rubyopt_manual
     specified_rubyopt = "-rbundler --verbose"
-    test_args = DefaultArgs + ["--rubyopt", "'#{specified_rubyopt}'"
+    test_args = DefaultArgs + ["--rubyopt", "'#{specified_rubyopt}'"]
     with_fixture 'environment' do
       with_env "RUBYOPT" => "-rtime" do
         assert system("ruby", ocran, "environment.rb", *test_args)
