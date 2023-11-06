@@ -16,7 +16,7 @@ end
 
 include FileUtils
 
-class TestOcran < MiniTest::Test
+class TestOcran < Minitest::Test
 
   # Default arguments for invoking OCRAN when running tests.
   DefaultArgs = [ '--no-lzma', '--verbose' ]
