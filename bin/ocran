@@ -289,6 +289,16 @@ module Ocran
     @ediconpath = (ocranpath / "../share/ocran/edicon.exe").expand
   end
 
+  STRING_ARG_RE = /\A(?<q>("|')?)(?<str>.*)\k<q>\z/
+
+  class << self
+    private
+
+    def extract_arg(obj)
+      STRING_ARG_RE.match(obj)&.[](:str)
+    end
+  end
+
   def Ocran.parseargs(argv)
     usage = <<EOF
 ocran [options] script.rb
@@ -379,7 +389,7 @@ EOF
         @options[:icon_filename] = Pathname(argv.shift)
         Ocran.fatal_error "Icon file #{icon_filename} not found.\n" unless icon_filename.exist?
       when /\A--rubyopt\z/
-        @options[:rubyopt] = argv.shift
+        @options[:rubyopt] = extract_arg(argv.shift)
       when /\A--gemfile\z/
         @options[:gemfile] = Pathname(argv.shift)
         Ocran.fatal_error "Gemfile #{gemfile} not found.\n" unless gemfile.exist?

@@ -566,7 +566,9 @@ class TestOcran < Minitest::Test
   # Test that the RUBYOPT environment variable can be set manually with --rubyopt
   def test_rubyopt_manual
     specified_rubyopt = "-rbundler --verbose"
-    test_args = DefaultArgs + ["--rubyopt", "'#{specified_rubyopt}'"]
+    # Starting with Ruby 2.6, Bundler is now the default GEM. To do this, use
+    # the '--add-all-core' option to include bnundler in the package.
+    test_args = DefaultArgs + ["--add-all-core", "--rubyopt", "'#{specified_rubyopt}'"]
     with_fixture 'environment' do
       with_env "RUBYOPT" => "-rtime" do
         assert system("ruby", ocran, "environment.rb", *test_args)

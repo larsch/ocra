@@ -26,7 +26,7 @@ Gem::Specification.new do |spec|
   This gem contains executables. We plan to build them on github actions for security.
   "
   spec.homepage = "https://github.com/largo/ocran"
-  spec.required_ruby_version = ">= 2.0.0"
+  spec.required_ruby_version = ">= 2.6.0"
 
   spec.metadata["homepage_uri"] = spec.homepage
   spec.metadata["source_code_uri"] = "https://github.com/largo/ocran"
