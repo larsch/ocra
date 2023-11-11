@@ -174,10 +174,6 @@ module Ocran
       def ruby_exe
         @ruby_exe ||= (RbConfig::CONFIG["ruby_install_name"] || "ruby") + exeext
       end
-
-      def tempdir
-        @tempdir ||= Ocran.Pathname(ENV["TEMP"])
-      end
     end
   end
 
