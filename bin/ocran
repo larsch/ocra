@@ -709,7 +709,7 @@ EOF
           Ocran.warn "#{missing_file} was not found"
         end
 
-        total_size = actual_files.inject(0) { |size, path| size + path.size }
+        total_size = actual_files.sum(0, &:size)
         Ocran.msg "\t#{actual_files.size} files, #{total_size} bytes"
 
         gem_files += actual_files
@@ -770,7 +770,7 @@ EOF
           encpath = path / "enc"
           if encpath.exist?
             encfiles = encpath.find_all_files(/\.so$/)
-            size = encfiles.inject(0) { |sum, pn| sum + pn.size }
+            size = encfiles.sum(0, &:size)
             Ocran.msg "Including #{encfiles.size} encoding support files (#{size} bytes, use --no-enc to exclude)"
             features.push(*encfiles)
           end
