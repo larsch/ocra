@@ -23,7 +23,7 @@ module Ocran
     ABSOLUTE_PAT = /\A([A-Z]:)?#{SEPARATOR_PAT}/i
 
     def initialize(path)
-      @path = path && path.encode("UTF-8")
+      @path = path.encode("UTF-8")
     end
 
     def to_native
@@ -44,7 +44,7 @@ module Ocran
         a.shift
         b.shift
       end
-      return other if Pathname.new(b.first).absolute?
+      return other if b.first && Pathname.new(b.first).absolute?
       b.size.times { a.unshift ".." }
       return Pathname.new(a.join("/"))
     end
