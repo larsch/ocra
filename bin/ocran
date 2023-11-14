@@ -15,6 +15,16 @@ module Ocran
       a.downcase == b.downcase
     end
 
+    def Pathname.glob(pattern, flags = 0)
+      if block_given?
+        Dir.glob(pattern, flags) { |s| yield Pathname.new(s) }
+      else
+        ary = Dir.glob(pattern, flags)
+        ary.map! { |s| Pathname.new(s) }
+        ary
+      end
+    end
+
     attr_reader :path
     if File::ALT_SEPARATOR.nil?
       File::ALT_SEPARATOR = "\\"
@@ -39,14 +49,14 @@ module Ocran
     # be reached from 'src'.
     def relative_path_from(other)
       a = @path.split(SEPARATOR_PAT)
-      b = other.path.split(SEPARATOR_PAT)
+      b = other.to_s.split(SEPARATOR_PAT)
       while a.first && b.first && Pathname.pathequal(a.first, b.first)
         a.shift
         b.shift
       end
       return other if b.first && Pathname.new(b.first).absolute?
       b.size.times { a.unshift ".." }
-      return Pathname.new(a.join("/"))
+      Pathname.new(File.join(*a))
     end
 
     # Determines if 'src' is contained in 'tgt' (i.e. it is a subpath of
@@ -66,33 +76,45 @@ module Ocran
       if other.absolute?
         other
       else
-        Pathname.new(@path + "/" + other.path)
+        Pathname.new(File.join(@path, other.to_s))
       end
     end
 
     def append_to_filename!(s)
-      @path.sub!(/(\.[^.]*?|)$/) { s.to_s + $1 }
+      @path = sub(/(\.[^.]*?|)$/) { s.to_s + $1 }
+    end
+
+    def sub(*a, &b)
+      Pathname.new(@path.sub(*a, &b))
+    end
+
+    def sub_ext(new_ext)
+      sub(/(\.[^.]*?)?$/, new_ext)
+    end
+
+    def extname
+      File.extname(@path)
     end
 
     def ext(new_ext = nil)
       if new_ext
-        Pathname.new(@path.sub(/(\.[^.]*?)?$/) { new_ext })
+        sub_ext(new_ext)
       else
-        File.extname(@path)
+        extname
       end
     end
 
     def ext?(expected_ext)
-      Pathname.pathequal(ext, expected_ext)
+      Pathname.pathequal(extname, expected_ext)
     end
 
     def entries
-      Dir.entries(@path).map { |e| self / e.encode("UTF-8") }
+      Dir.entries(@path, encoding: "UTF-8").map { |e| self / e }
     end
 
     # Recursively find all files which match a specified regular
     # expression.
-    def find_all_files(re)
+    def find_all_files(re = //)
       entries.map do |pn|
         if pn.directory?
           if pn.basename =~ /^\.\.?$/
@@ -111,17 +133,34 @@ module Ocran
     end
 
     def ==(other); to_posix.downcase == other.to_posix.downcase; end
+    alias === ==
+    alias eql? ==
     def =~(o); @path =~ o; end
-    def <=>(other); @path.casecmp(other.path); end
+    def <=>(other); @path.casecmp(other.to_s); end
     def exist?; File.exist?(@path); end
     def file?; File.file?(@path); end
     def directory?; File.directory?(@path); end
     def absolute?; @path =~ ABSOLUTE_PAT; end
     def dirname; Pathname.new(File.dirname(@path)); end
     def basename; Pathname.new(File.basename(@path)); end
-    def expand(dir = nil); Pathname.new(File.expand_path(@path, dir && Pathname.new(dir))); end
+
+    def expand_path(dir = ".")
+      Pathname.new(File.expand_path(@path, dir))
+    end
+
+    def expand(dir = nil); dir ? expand_path(dir) : expand_path; end
     def size; File.size(@path); end
     def encode(e); to_posix.encode(e); end # called when creating an installer with innosetup 
+
+    def binread(*args)
+      File.binread(@path, *args)
+    end
+
+    def parent
+      Pathname.new(File.basename(File.dirname(@path)))
+    end
+
+    alias to_path to_posix
 
     alias to_s to_posix
     alias to_str to_posix
@@ -279,10 +318,10 @@ module Ocran
 
   def Ocran.find_stubs
     ocranpath = Pathname(File.dirname(__FILE__))
-    @stubimage = File.binread(ocranpath / "../share/ocran/stub.exe")
-    @stubwimage = File.binread(ocranpath / "../share/ocran/stubw.exe")
-    @lzmapath = (ocranpath / "../share/ocran/lzma.exe").expand
-    @ediconpath = (ocranpath / "../share/ocran/edicon.exe").expand
+    @stubimage = (ocranpath / "../share/ocran/stub.exe").binread
+    @stubwimage = (ocranpath / "../share/ocran/stubw.exe").binread
+    @lzmapath = (ocranpath / "../share/ocran/lzma.exe").expand_path
+    @ediconpath = (ocranpath / "../share/ocran/edicon.exe").expand_path
   end
 
   STRING_ARG_RE = /\A(?<q>("|')?)(?<str>.*)\k<q>\z/
@@ -447,7 +486,7 @@ EOF
       end
       files = Dir[path]
       Ocran.fatal_error "#{path} not found!" if files.empty?
-      files.map { |path| Pathname(path).expand }
+      files.map { |path| Pathname(path).expand_path }
     }.flatten!
   end
 
@@ -494,26 +533,26 @@ EOF
   def Ocran.find_load_path(loadpaths, feature)
     if feature.absolute?
       # Choose those loadpaths which contain the feature
-      candidate_loadpaths = loadpaths.select { |loadpath| feature.subpath?(loadpath.expand) }
+      candidate_loadpaths = loadpaths.select { |loadpath| feature.subpath?(loadpath.expand_path) }
       # Guess the require'd feature
-      feature_pairs = candidate_loadpaths.map { |loadpath| [loadpath, feature.relative_path_from(loadpath.expand)] }
+      feature_pairs = candidate_loadpaths.map { |loadpath| [loadpath, feature.relative_path_from(loadpath.expand_path)] }
       # Select the shortest possible require-path (longest load-path)
       if feature_pairs.empty?
         nil
       else
-        feature_pairs.sort_by { |loadpath, feature| feature.path.size }.first[0]
+        feature_pairs.sort_by { |loadpath, feature| feature.to_s.size }.first[0]
       end
     else
       # Select the loadpaths that contain 'feature' and select the shortest
-      candidates = loadpaths.select { |loadpath| feature.expand(loadpath).exist? }
-      candidates.sort_by { |loadpath| loadpath.path.size }.last
+      candidates = loadpaths.select { |loadpath| feature.expand_path(loadpath).exist? }
+      candidates.sort_by { |loadpath| loadpath.to_s.size }.last
     end
   end
 
   # Find the root of all files specified on the command line and use
   # it as the "src" of the output.
   def Ocran.find_src_root(files)
-    src_files = files.map { |file| file.expand }
+    src_files = files.map { |file| file.expand_path }
     src_prefix = src_files.inject(src_files.first.dirname) do |srcroot, path|
       if path.subpath?(Host.exec_prefix)
         srcroot
@@ -564,7 +603,7 @@ EOF
         end
       end
 
-      ENV["BUNDLE_GEMFILE"] = Ocran.gemfile
+      ENV["BUNDLE_GEMFILE"] = Ocran.gemfile.to_s
       Bundler.load.specs.each do |spec|
         Ocran.verbose_msg "From Gemfile, adding gem #{spec.full_name}"
         gems[spec.name] ||= spec
@@ -601,7 +640,7 @@ EOF
           geminstallpath = Pathname(gempath) / "gems"
           if feature.subpath?(geminstallpath)
             gemlocalpath = feature.relative_path_from(geminstallpath)
-            fullgemname = gemlocalpath.path.split("/").first
+            fullgemname = gemlocalpath.to_s.split("/").first
             gemspecpath = gempath / "specifications" / "#{fullgemname}.gemspec"
             if spec = Gem::Specification.load(gemspecpath)
               gems[spec.name] ||= spec
@@ -668,9 +707,9 @@ EOF
         Ocran.msg "Detected gem #{spec.full_name} (#{include.join(", ")})"
 
         gem_root = Pathname(spec.gem_dir)
-        gem_extension = (gem_root / ".." / ".." / "extensions").expand
+        gem_extension = (gem_root / ".." / ".." / "extensions").expand_path
         if gem_extension.exist?
-          build_complete = gem_extension.find_all_files(/gem.build_complete/).select { |p| p.dirname.basename.to_s == spec.full_name }
+          build_complete = gem_extension.find_all_files(/gem.build_complete/).select { |p| p.parent.to_s == spec.full_name }
         else
           build_complete = nil
         end
@@ -690,14 +729,14 @@ EOF
           when :loaded
             files << features_from_gems.select { |feature| feature.subpath?(gem_root) }
           when :files
-            gem_root_files ||= gem_root.find_all_files(//)
+            gem_root_files ||= gem_root.find_all_files
             files << gem_root_files.select { |path| path.relative_path_from(gem_root) !~ GEM_NON_FILE_RE }
             files << build_complete if build_complete
           when :extras
-            gem_root_files ||= gem_root.find_all_files(//)
+            gem_root_files ||= gem_root.find_all_files
             files << gem_root_files.select { |path| path.relative_path_from(gem_root) =~ GEM_EXTRA_RE }
           when :scripts
-            gem_root_files ||= gem_root.find_all_files(//)
+            gem_root_files ||= gem_root.find_all_files
             files << gem_root_files.select { |path| path.relative_path_from(gem_root) =~ GEM_SCRIPT_RE }
           end
         end
@@ -723,9 +762,9 @@ EOF
   end
 
   def Ocran.build_exe
-    all_load_paths = $LOAD_PATH.map { |loadpath| Pathname(loadpath).expand }
-    @added_load_paths = ($LOAD_PATH - @load_path_before).map { |loadpath| Pathname(loadpath).expand }
-    working_directory = Pathname.pwd.expand
+    all_load_paths = $LOAD_PATH.map { |loadpath| Pathname(loadpath).expand_path }
+    @added_load_paths = ($LOAD_PATH - @load_path_before).map { |loadpath| Pathname(loadpath).expand_path }
+    working_directory = Pathname.pwd
 
     restore_environment
 
@@ -785,13 +824,13 @@ EOF
     libs = []
     features.each do |feature|
       path = find_load_path(all_load_paths, feature)
-      if path.nil? || path.expand == Pathname.pwd
+      if path.nil? || path.expand_path == Pathname.pwd
         Ocran.files << feature
       else
         if feature.absolute?
-          feature = feature.relative_path_from(path.expand)
+          feature = feature.relative_path_from(path.expand_path)
         end
-        fullpath = feature.expand(path)
+        fullpath = feature.expand_path(path)
 
         if fullpath.subpath?(Host.exec_prefix)
           # Features found in the Ruby installation are put in the
@@ -854,11 +893,10 @@ EOF
         next unless path.to_posix =~
                     /\/(ruby\/(?:site_ruby\/|vendor_ruby\/)?[0-9.]+)\/?$/i
         subdir = $1
-        Dir["#{lp}/**/*"].each do |f|
-          fpath = Pathname.new(f)
+        Pathname.glob("#{lp}/**/*").each do |fpath|
           next if fpath.directory?
           tgt = "lib/#{subdir}/#{fpath.relative_path_from(path).to_posix}"
-          libs << [f, tgt]
+          libs << [fpath, tgt]
         end
       end
     end
@@ -873,7 +911,7 @@ EOF
     if Ocran.output_override
       executable = Ocran.output_override
     else
-      executable = Ocran.files.first.basename.ext(".exe")
+      executable = Ocran.files.first.basename.sub_ext(".exe")
       executable.append_to_filename!("-debug") if Ocran.debug
     end
 
@@ -1090,7 +1128,7 @@ EOF
       end
 
       if Ocran.icon_filename
-        system Ocran.ediconpath, path, Ocran.icon_filename
+        system Ocran.ediconpath.to_s, path.to_s, Ocran.icon_filename.to_s
       end
 
       opcode_offset = File.size(path)
@@ -1120,7 +1158,7 @@ EOF
           begin
             data_size = File.size(tmpinpath)
             Ocran.msg "Compressing #{data_size} bytes"
-            system(Ocran.lzmapath, "e", tmpinpath, tmpoutpath) or fail
+            system(Ocran.lzmapath.to_s, "e", tmpinpath, tmpoutpath) or fail
             compressed_data_size = File.size?(tmpoutpath)
             ocranfile.write([OP_DECOMPRESS_LZMA, compressed_data_size].pack("VV"))
             IO.copy_stream(tmpoutpath, ocranfile)
@@ -1184,8 +1222,8 @@ EOF
     end
 
     def mkdir(path)
-      return if @paths[path.path.downcase]
-      @paths[path.path.downcase] = true
+      return if @paths[path.to_s.downcase]
+      @paths[path.to_posix.downcase] = true
       Ocran.verbose_msg "m #{showtempdir path}"
       unless Ocran.inno_script # The directory will be created by InnoSetup with a [Dirs] statement
         @of << [OP_CREATE_DIRECTORY, path.to_native].pack("VZ*")
@@ -1194,7 +1232,7 @@ EOF
 
     def ensuremkdir(tgt)
       tgt = Ocran.Pathname(tgt)
-      return if tgt.path == "."
+      return if tgt.to_s == "."
       if not @paths[tgt.to_posix.downcase]
         ensuremkdir(tgt.dirname)
         mkdir(tgt)
@@ -1212,7 +1250,7 @@ EOF
       @files[tgt] = src
       src, tgt = Ocran.Pathname(src), Ocran.Pathname(tgt)
       ensuremkdir(tgt.dirname)
-      str = File.open(src, "rb") { |file| file.read }
+      str = src.binread
       Ocran.verbose_msg "a #{showtempdir tgt}"
       unless Ocran.inno_script # InnoSetup will install the file with a [Files] statement
         @of << [OP_CREATE_FILE, tgt.to_native, str.size].pack("VZ*V")
@@ -1243,7 +1281,7 @@ EOF
     end
 
     def showtempdir(x)
-      x.to_s.gsub(TEMPDIR_ROOT, "<tempdir>")
+      x.to_s.gsub(TEMPDIR_ROOT.to_s, "<tempdir>")
     end
   end # class OcranBuilder
 end # module Ocran
@@ -1265,7 +1303,7 @@ if File.basename(__FILE__) == File.basename($0)
 
   if Ocran.run_script
     Ocran.msg "Loading script to check dependencies"
-    $0 = Ocran.files.first
+    $0 = Ocran.files.first.to_s
     load Ocran.files.first
   end
 end
