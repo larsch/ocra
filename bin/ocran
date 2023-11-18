@@ -421,16 +421,19 @@ EOF
       when /\A--chdir-first\z/
         @options[:chdir_first] = true
       when /\A--icon\z/
-        @options[:icon_filename] = Pathname(argv.shift)
-        Ocran.fatal_error "Icon file #{icon_filename} not found.\n" unless icon_filename.exist?
+        path = extract_arg(argv.shift)
+        Ocran.fatal_error "Icon file #{path} not found.\n" unless File.exist?(path.to_s)
+        @options[:icon_filename] = Pathname.new(path)
       when /\A--rubyopt\z/
         @options[:rubyopt] = extract_arg(argv.shift)
       when /\A--gemfile\z/
-        @options[:gemfile] = Pathname(argv.shift)
-        Ocran.fatal_error "Gemfile #{gemfile} not found.\n" unless gemfile.exist?
+        path = extract_arg(argv.shift)
+        Ocran.fatal_error "Gemfile #{path} not found.\n" unless File.exist?(path.to_s)
+        @options[:gemfile] = Pathname.new(path)
       when /\A--innosetup\z/
-        @options[:inno_script] = Pathname(argv.shift)
-        Ocran.fatal_error "Inno Script #{inno_script} not found.\n" unless inno_script.exist?
+        path = extract_arg(argv.shift)
+        Ocran.fatal_error "Inno Script #{path} not found.\n" unless File.exist?(path.to_s)
+        @options[:inno_script] = Pathname.new(path)
       when /\A--no-autodll\z/
         @options[:autodll] = false
       when /\A--version\z/
@@ -457,7 +460,13 @@ EOF
       else
         # Forcing 'arg' to be encoded due to incorrect encoding of ARGV.
         # https://bugs.ruby-lang.org/issues/9016
-        @options[:files] << arg.dup.force_encoding(__FILE__.encoding)
+        path = extract_arg(arg.dup.force_encoding(__FILE__.encoding))
+
+        if !File.exist?(path) || Dir.empty?(path)
+          Ocran.fatal_error "#{path} not found!"
+        end
+
+        @options[:files] << path
       end
     end
 
@@ -479,14 +488,11 @@ EOF
     end
 
     @options[:files].map! { |path|
-      path = path.encode("UTF-8").tr('\\', "/")
       if File.directory?(path)
         # If a directory is passed, we want all files under that directory
         path = "#{path}/**/*"
       end
-      files = Dir[path]
-      Ocran.fatal_error "#{path} not found!" if files.empty?
-      files.map { |path| Pathname(path).expand_path }
+      Pathname.glob(path).map!(&:expand_path)
     }.flatten!
   end
 
