@@ -405,9 +405,11 @@ EOF
       when /\A--add-all-core\z/
         @options[:add_all_core] = true
       when /\A--output\z/
-        @options[:output_override] = Pathname(argv.shift)
+        path = extract_arg(argv.shift)
+        @options[:output_override] = Pathname.new(path) if path
       when /\A--dll\z/
-        @options[:extra_dlls] << argv.shift
+        path = extract_arg(argv.shift)
+        @options[:extra_dlls] << path if path
       when /\A--quiet\z/
         @options[:quiet] = true
       when /\A--verbose\z/
@@ -422,17 +424,17 @@ EOF
         @options[:chdir_first] = true
       when /\A--icon\z/
         path = extract_arg(argv.shift)
-        Ocran.fatal_error "Icon file #{path} not found.\n" unless File.exist?(path.to_s)
+        Ocran.fatal_error "Icon file #{path} not found.\n" unless path && File.exist?(path)
         @options[:icon_filename] = Pathname.new(path)
       when /\A--rubyopt\z/
         @options[:rubyopt] = extract_arg(argv.shift)
       when /\A--gemfile\z/
         path = extract_arg(argv.shift)
-        Ocran.fatal_error "Gemfile #{path} not found.\n" unless File.exist?(path.to_s)
+        Ocran.fatal_error "Gemfile #{path} not found.\n" unless path && File.exist?(path)
         @options[:gemfile] = Pathname.new(path)
       when /\A--innosetup\z/
         path = extract_arg(argv.shift)
-        Ocran.fatal_error "Inno Script #{path} not found.\n" unless File.exist?(path.to_s)
+        Ocran.fatal_error "Inno Script #{path} not found.\n" unless path && File.exist?(path)
         @options[:inno_script] = Pathname.new(path)
       when /\A--no-autodll\z/
         @options[:autodll] = false
@@ -452,8 +454,7 @@ EOF
         @options[:enc] = !$1
       when /\A--(no-)?gem-(\w+)(?:=(.*))?$/
         negate, group, list = $1, $2, $3
-        @options[:gem] ||= []
-        @options[:gem] << [negate, group.to_sym, list && list.split(",")]
+        @options[:gem] << [negate, group.to_sym, list&.split(",")] if group
       when /\A--help\z/, /\A--./
         puts usage
         exit 0
