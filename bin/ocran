@@ -241,7 +241,7 @@ module Ocran
     # Directories anywhere
     (^|\/)(\.autotest|\.svn|\.cvs|\.git)(\/|$) |
     # Unlikely extensions
-    \.(rdoc|c|cpp|c\+\+|cxx|h|hxx|hpp|obj|o|a)$/
+    \.(rdoc|c|cpp|c\+\+|cxx|h|hxx|hpp|obj|o|a)$
   )}xi
 
   GEM_NON_FILE_RE = /(#{GEM_EXTRA_RE}|#{GEM_SCRIPT_RE})/
