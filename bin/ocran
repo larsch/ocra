@@ -463,9 +463,7 @@ EOF
         puts usage
         exit 0
       else
-        # Forcing 'arg' to be encoded due to incorrect encoding of ARGV.
-        # https://bugs.ruby-lang.org/issues/9016
-        path = extract_arg(arg.dup.force_encoding(__FILE__.encoding))
+        path = extract_arg(arg.dup)
 
         if !File.exist?(path) || Dir.empty?(path)
           Ocran.fatal_error "#{path} not found!"
