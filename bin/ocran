@@ -915,7 +915,13 @@ EOF
     dlls = Ocran.autodll ? LibraryDetector.detect_dlls : []
 
     # Detect external manifests
-    manifests = Host.exec_prefix.find_all_files(/\.manifest$/)
+    # For RubyInstaller environments supporting Ruby 2.4 and above,
+    # a manifest file is required.
+    if (manifest = Host.exec_prefix / "bin/ruby_builtin_dlls/ruby_builtin_dlls.manifest").exist?
+      manifests = [manifest]
+    else
+      manifests = []
+    end
 
     executable = nil
     if Ocran.output_override
