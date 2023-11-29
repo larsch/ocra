@@ -115,7 +115,7 @@
 * Now includes most files from any require'd Rubygem (Now works with
   mime-types, oledb and other gems that load additional data files
   from the Gem installation). Some files are still ignored
-  (e.g. Readme's). Use "--no-gem-filter" to make Ocran unconditionally
+  (e.g. Readme's). Use "--no-gem-filter" to make Ocra unconditionally
   include all files listed in the Gem specification (Thanks to Jorge
   L. Cangas for patch & ideas).
 
@@ -126,7 +126,7 @@
   while running.
 
 * Fixed a regression in 1.1.4 when resource files are specified;
-  directory layout would not be maintained, e.g. when running "ocran
+  directory layout would not be maintained, e.g. when running "ocra
   bin/script share/data.dat".
 
 * Added support for passing arguments to script. Specify argument to
@@ -147,7 +147,7 @@
 * Now uses config settings for Ruby executable names (should now also
   work with ruby installations built with --program-suffix).
 
-* Supported invoking ocran with an absolute path to the script. Will
+* Supported invoking ocra with an absolute path to the script. Will
   assume that the script is in the root of the source hierachy.
 
 === 1.1.3
@@ -165,11 +165,11 @@
 * Fixed not .exe being generated when script calls 'exit'.
 
 * Path to the generated executable is now avilable to the running
-  script in the OCRAN_EXECUTABLE environment variable.
+  script in the OCRA_EXECUTABLE environment variable.
 
 * Directories on the command line will now be created.
 
-* Supports path globs, fx. "ocran script.rb assets/**/*.png". (See
+* Supports path globs, fx. "ocra script.rb assets/**/*.png". (See
   documentation for Ruby's Dir class).
 
 * Fixed issue with spaces in temporary path (TMP environment).
@@ -188,7 +188,7 @@
 
 * Another slight fix for relative load paths.
 
-* RUBYOPT is now set to the value it had when OCRAN was invoked.
+* RUBYOPT is now set to the value it had when OCRA was invoked.
 
 === 1.1.0
 
@@ -217,7 +217,7 @@
 === 1.0.1 / 2009-05-05
 
 * Added stub with windows runtime for windowed applications
-  (e.g. wxRuby) and fixed issue where OCRAN would use ruby.exe instead
+  (e.g. wxRuby) and fixed issue where OCRA would use ruby.exe instead
   of rubyw.exe for such programs. [#25774]
 
 === 1.0.0 / 2009-04-05
