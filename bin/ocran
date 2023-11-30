@@ -328,16 +328,6 @@ module Ocran
     @ediconpath = (ocranpath / "../share/ocran/edicon.exe").expand_path
   end
 
-  STRING_ARG_RE = /\A(?<q>("|')?)(?<str>.*)\k<q>\z/
-
-  class << self
-    private
-
-    def extract_arg(obj)
-      STRING_ARG_RE.match(obj)&.[](:str)
-    end
-  end
-
   def Ocran.parseargs(argv)
     usage = <<EOF
 ocran [options] script.rb
@@ -409,10 +399,10 @@ EOF
       when /\A--add-all-core\z/
         @options[:add_all_core] = true
       when /\A--output\z/
-        path = extract_arg(argv.shift)
+        path = argv.shift
         @options[:output_override] = Pathname.new(path) if path
       when /\A--dll\z/
-        path = extract_arg(argv.shift)
+        path = argv.shift
         @options[:extra_dlls] << path if path
       when /\A--quiet\z/
         @options[:quiet] = true
@@ -427,17 +417,17 @@ EOF
       when /\A--chdir-first\z/
         @options[:chdir_first] = true
       when /\A--icon\z/
-        path = extract_arg(argv.shift)
+        path = argv.shift
         Ocran.fatal_error "Icon file #{path} not found.\n" unless path && File.exist?(path)
         @options[:icon_filename] = Pathname.new(path)
       when /\A--rubyopt\z/
-        @options[:rubyopt] = extract_arg(argv.shift)
+        @options[:rubyopt] = argv.shift
       when /\A--gemfile\z/
-        path = extract_arg(argv.shift)
+        path = argv.shift
         Ocran.fatal_error "Gemfile #{path} not found.\n" unless path && File.exist?(path)
         @options[:gemfile] = Pathname.new(path)
       when /\A--innosetup\z/
-        path = extract_arg(argv.shift)
+        path = argv.shift
         Ocran.fatal_error "Inno Script #{path} not found.\n" unless path && File.exist?(path)
         @options[:inno_script] = Pathname.new(path)
       when /\A--no-autodll\z/
@@ -463,7 +453,7 @@ EOF
         puts usage
         exit 0
       else
-        path = extract_arg(arg.dup)
+        path = arg.dup
 
         if !File.exist?(path) || Dir.empty?(path)
           Ocran.fatal_error "#{path} not found!"

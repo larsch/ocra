@@ -6,8 +6,6 @@
 - Fixed bugs in tests. All tests can now be executed.
 - Improved the speed of manifest file discovery. This manifest file is only required in the RubyInstaller environment.
 - Fixed bugs in the regular expressions of GEM_EXTRA_RE. This allows excluding C source files, etc., from the ocran executable package based on command options.
-- Quoted strings can be provided as arguments to the `rubyopt` option of the command.
-- Quoted strings can be used when providing file paths as command option arguments, including those with spaces.
 - Added methods to Ocran::Pathname, making it closer to the implementation of Ruby's Pathname.
 - Reimplemented certain parts to match the implementation of Ruby 2.6 era, for compatibility with older Ruby versions. Therefore, the ocran command cannot be executed on Ruby versions earlier than 2.6.
 

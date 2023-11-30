@@ -568,7 +568,7 @@ class TestOcran < Minitest::Test
     specified_rubyopt = "-rbundler --verbose"
     # Starting with Ruby 2.6, Bundler is now the default GEM. To do this, use
     # the '--add-all-core' option to include bnundler in the package.
-    test_args = DefaultArgs + ["--add-all-core", "--rubyopt", "'#{specified_rubyopt}'"]
+    test_args = DefaultArgs + ["--add-all-core", "--rubyopt", "#{specified_rubyopt}"]
     with_fixture 'environment' do
       with_env "RUBYOPT" => "-rtime" do
         assert system("ruby", ocran, "environment.rb", *test_args)
