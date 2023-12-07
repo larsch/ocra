@@ -1121,19 +1121,18 @@ EOF
     def initialize(path, windowed)
       @paths = {}
       @files = {}
-      File.open(path, "wb") do |ocranfile|
-        image = nil
-        if windowed
-          image = Ocran.stubwimage
-        else
-          image = Ocran.stubimage
-        end
 
-        unless image
-          Ocran.fatal_error "Stub image not available"
-        end
-        ocranfile.write(image)
+      if windowed
+        image = Ocran.stubwimage
+      else
+        image = Ocran.stubimage
       end
+
+      unless image
+        Ocran.fatal_error "Stub image not available"
+      end
+
+      File.binwrite(path, image)
 
       if Ocran.icon_filename
         system Ocran.ediconpath.to_s, path.to_s, Ocran.icon_filename.to_s
