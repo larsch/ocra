@@ -1142,12 +1142,11 @@ EOF
       @opcode_offset = File.size(path)
 
       File.open(path, "ab") do |ocranfile|
-        tmpinpath = "tmpin"
+        @of = ocranfile
 
-        if Ocran.lzma_mode
-          @of = File.open(tmpinpath, "wb")
-        else
-          @of = ocranfile
+        if lzma_mode?
+          require "tempfile"
+          @of = Tempfile.new(mode: IO::BINARY)
         end
 
         if Ocran.debug
@@ -1159,20 +1158,16 @@ EOF
 
         yield(self)
 
-        @of.close if Ocran.lzma_mode
-
-        if Ocran.lzma_mode and not Ocran.inno_script
-          tmpoutpath = "tmpout"
-          begin
-            data_size = File.size(tmpinpath)
-            Ocran.msg "Compressing #{data_size} bytes"
-            system(Ocran.lzmapath.to_s, "e", tmpinpath, tmpoutpath) or fail
-            compressed_data_size = File.size?(tmpoutpath)
-            ocranfile.write([OP_DECOMPRESS_LZMA, compressed_data_size].pack("VV"))
-            IO.copy_stream(tmpoutpath, ocranfile)
-          ensure
-            File.unlink(@of.path) if File.exist?(@of.path)
-            File.unlink(tmpoutpath) if File.exist?(tmpoutpath)
+        if lzma_mode?
+          @of.close
+          data_size = File.size(@of.path)
+          Ocran.msg "Compressing #{data_size} bytes"
+          Tempfile.create do |out|
+            out.close
+            system(Ocran.lzmapath.to_s, "e", @of.path, out.path) or fail
+            compressed_data_size = File.size(out.path)
+            ocranfile << [OP_DECOMPRESS_LZMA, compressed_data_size].pack("VV")
+            IO.copy_stream(out.path, ocranfile)
           end
           @of = ocranfile
         end
@@ -1287,6 +1282,10 @@ EOF
     def close
       @of << ([OP_END, @opcode_offset] + Signature).pack("VVC*")
       @of.close
+    end
+
+    def lzma_mode?
+      Ocran.lzma_mode and not Ocran.inno_script
     end
 
     def showtempdir(x)
