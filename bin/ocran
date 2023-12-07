@@ -941,7 +941,7 @@ EOF
         target_script ||= target
 
         if file.directory?
-          sb.ensuremkdir(target)
+          sb.mkdir(target)
         else
           begin
             sb.createfile(file, target)
@@ -1230,21 +1230,22 @@ EOF
     end
 
     def mkdir(path)
-      return if @paths[path.to_s.downcase]
-      @paths[path.to_posix.downcase] = true
-      Ocran.verbose_msg "m #{showtempdir path}"
-      unless Ocran.inno_script # The directory will be created by InnoSetup with a [Dirs] statement
-        @of << [OP_CREATE_DIRECTORY, path.to_native].pack("VZ*")
-      end
-    end
+      return if path.to_s == "."
 
-    def ensuremkdir(tgt)
-      tgt = Ocran.Pathname(tgt)
-      return if tgt.to_s == "."
-      if not @paths[tgt.to_posix.downcase]
-        ensuremkdir(tgt.dirname)
-        mkdir(tgt)
-      end
+      key = path.to_s.downcase
+      return if @paths[key]
+
+      @paths[key] = true
+      Ocran.verbose_msg "m #{showtempdir path}"
+      path = Ocran.Pathname(path)
+
+      # To create intermediate directories, perform a recursive call
+      mkdir(path.dirname)
+
+      # The directory will be created by InnoSetup with a [Dirs] statement
+      return if Ocran.inno_script
+
+      @of << [OP_CREATE_DIRECTORY, path.to_native].pack("VZ*")
     end
 
     def createinstdir(next_to_exe = false, delete_after = false, chdir_before = false)
@@ -1257,7 +1258,7 @@ EOF
       return if @files[tgt]
       @files[tgt] = src
       src, tgt = Ocran.Pathname(src), Ocran.Pathname(tgt)
-      ensuremkdir(tgt.dirname)
+      mkdir(tgt.dirname)
       str = src.binread
       Ocran.verbose_msg "a #{showtempdir tgt}"
       unless Ocran.inno_script # InnoSetup will install the file with a [Files] statement
