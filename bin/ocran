@@ -1139,7 +1139,7 @@ EOF
         system Ocran.ediconpath.to_s, path.to_s, Ocran.icon_filename.to_s
       end
 
-      opcode_offset = File.size(path)
+      @opcode_offset = File.size(path)
 
       File.open(path, "ab") do |ocranfile|
         tmpinpath = "tmpin"
@@ -1174,11 +1174,10 @@ EOF
             File.unlink(@of.path) if File.exist?(@of.path)
             File.unlink(tmpoutpath) if File.exist?(tmpoutpath)
           end
+          @of = ocranfile
         end
 
-        ocranfile.write([OP_END].pack("V"))
-        ocranfile.write([opcode_offset].pack("V")) # Pointer to start of opcodes
-        ocranfile.write(Signature.pack("C*"))
+        close
       end
 
       if Ocran.inno_script
@@ -1286,6 +1285,7 @@ EOF
     end
 
     def close
+      @of << ([OP_END, @opcode_offset] + Signature).pack("VVC*")
       @of.close
     end
 
