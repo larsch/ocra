@@ -1288,10 +1288,8 @@ EOF
     end
 
     def enable_debug_mode
-      if @debug_mode
-        raise "Calling enable_debug_mode method twice"
-      end
-      @debug_mode = true
+      return if @debug_mode_enabled
+      @debug_mode_enabled = true
       Ocran.msg("Enabling debug mode in executable")
       @of << [OP_ENABLE_DEBUG_MODE].pack("V")
     end
