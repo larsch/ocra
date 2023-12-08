@@ -1143,14 +1143,13 @@ EOF
       File.open(path, "ab") do |ocranfile|
         @of = ocranfile
 
+        if Ocran.debug
+          enable_debug_mode
+        end
+
         if lzma_mode?
           require "tempfile"
           @of = Tempfile.new(mode: IO::BINARY)
-        end
-
-        if Ocran.debug
-          Ocran.msg("Enabling debug mode in executable")
-          ocranfile.write([OP_ENABLE_DEBUG_MODE].pack("V"))
         end
 
         createinstdir Ocran.debug_extract, !Ocran.debug_extract, Ocran.chdir_first
@@ -1286,6 +1285,15 @@ EOF
 
     def showtempdir(x)
       x.to_s.gsub(TEMPDIR_ROOT.to_s, "<tempdir>")
+    end
+
+    def enable_debug_mode
+      if @debug_mode
+        raise "Calling enable_debug_mode method twice"
+      end
+      @debug_mode = true
+      Ocran.msg("Enabling debug mode in executable")
+      @of << [OP_ENABLE_DEBUG_MODE].pack("V")
     end
   end # class OcranBuilder
 end # module Ocran
