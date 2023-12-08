@@ -1260,9 +1260,6 @@ EOF
       IO.copy_stream(src, @of)
     end
 
-    def hasFile?(src)
-    end
-
     def createprocess(image, cmdline)
       Ocran.verbose_msg "l #{showtempdir image} #{showtempdir cmdline}"
       @of << [OP_CREATE_PROCESS, image.to_native, cmdline].pack("VZ*Z*")
