@@ -1248,14 +1248,16 @@ EOF
     def createfile(src, tgt)
       return if @files[tgt]
       @files[tgt] = src
-      src, tgt = Ocran.Pathname(src), Ocran.Pathname(tgt)
+      tgt = Ocran.Pathname(tgt)
       mkdir(tgt.dirname)
-      str = src.binread
       Ocran.verbose_msg "a #{showtempdir tgt}"
-      unless Ocran.inno_script # InnoSetup will install the file with a [Files] statement
-        @of << [OP_CREATE_FILE, tgt.to_native, str.size].pack("VZ*V")
-        @of << str
-      end
+
+      # InnoSetup will install the file with a [Files] statement
+      return if Ocran.inno_script
+
+      src = Ocran.Pathname(src)
+      @of << [OP_CREATE_FILE, tgt.to_native, src.size].pack("VZ*V")
+      IO.copy_stream(src, @of)
     end
 
     def hasFile?(src)
