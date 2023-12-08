@@ -1105,7 +1105,7 @@ EOF
   # (createfile, mkdir etc) are added by invoking methods on an
   # instance of OcranBuilder.
   class OcranBuilder
-    Signature = [0x41, 0xb6, 0xba, 0x4e]
+    Signature = [0x41, 0xb6, 0xba, 0x4e].freeze
     OP_END = 0
     OP_CREATE_DIRECTORY = 1
     OP_CREATE_FILE = 2
