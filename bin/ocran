@@ -925,7 +925,7 @@ EOF
 
     Ocran.msg "Building #{executable}"
     target_script = nil
-    OcranBuilder.new(executable, windowed) do |sb|
+    OcranBuilder.new(executable, windowed, debug_mode: Ocran.debug) do |sb|
       # Add explicitly mentioned files
       Ocran.msg "Adding user-supplied source files"
       Ocran.files.each do |file|
@@ -1118,7 +1118,13 @@ EOF
 
     attr_reader :files
 
-    def initialize(path, windowed)
+    # debug_mode:
+    # When the debug_mode option is set to true, the stub will output debug information
+    # when the exe file is executed. Debug mode can also be enabled within the directive
+    # code using the enable_debug_mode method. This option is provided to transition to
+    # debug mode from the initialization point of the stub.
+    #
+    def initialize(path, windowed, debug_mode: nil)
       @paths = {}
       @files = {}
 
@@ -1143,9 +1149,7 @@ EOF
       File.open(path, "ab") do |ocranfile|
         @of = ocranfile
 
-        if Ocran.debug
-          enable_debug_mode
-        end
+        enable_debug_mode if debug_mode
 
         if lzma_mode?
           require "tempfile"
@@ -1287,6 +1291,11 @@ EOF
       x.to_s.gsub(TEMPDIR_ROOT.to_s, "<tempdir>")
     end
 
+    # The `enable_debug_mode` method instructs the stub to output debugging
+    # information at runtime. It should be called only once; subsequent calls
+    # have no effect. The method writes OP_ENABLE_DEBUG_MODE to the stub's data
+    # stream. When OP_ENABLE_DEBUG_MODE is encountered during execution, the
+    # stub will start reporting debugging information.
     def enable_debug_mode
       return if @debug_mode_enabled
       @debug_mode_enabled = true
