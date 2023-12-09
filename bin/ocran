@@ -925,7 +925,9 @@ EOF
 
     Ocran.msg "Building #{executable}"
     target_script = nil
-    OcranBuilder.new(executable, windowed, debug_mode: Ocran.debug) do |sb|
+    OcranBuilder.new(executable, windowed, debug_mode: Ocran.debug,
+                     debug_extract: Ocran.debug_extract,
+                     chdir_before: Ocran.chdir_first) do |sb|
       # Add explicitly mentioned files
       Ocran.msg "Adding user-supplied source files"
       Ocran.files.each do |file|
@@ -1124,7 +1126,17 @@ EOF
     # code using the enable_debug_mode method. This option is provided to transition to
     # debug mode from the initialization point of the stub.
     #
-    def initialize(path, windowed, debug_mode: nil)
+    # debug_extract:
+    # When set to true, the runtime file is extracted to the directory where the executable resides,
+    # and the extracted files remain even after the application exits.
+    # When set to false, the runtime file is extracted to the system's temporary directory,
+    # and the extracted files are deleted after the application exits.
+    #
+    # chdir_before:
+    # When set to true, the working directory is changed to the application's
+    # deployment location at runtime.
+    #
+    def initialize(path, windowed, debug_mode: nil, debug_extract: nil, chdir_before: nil)
       @paths = {}
       @files = {}
 
@@ -1150,13 +1162,12 @@ EOF
         @of = ocranfile
 
         enable_debug_mode if debug_mode
+        create_inst_dir debug_extract, !debug_extract, chdir_before
 
         if lzma_mode?
           require "tempfile"
           @of = Tempfile.new(mode: IO::BINARY)
         end
-
-        createinstdir Ocran.debug_extract, !Ocran.debug_extract, Ocran.chdir_first
 
         yield(self)
 
@@ -1242,11 +1253,21 @@ EOF
       @of << [OP_CREATE_DIRECTORY, path.to_native].pack("VZ*")
     end
 
-    def createinstdir(next_to_exe = false, delete_after = false, chdir_before = false)
-      unless Ocran.inno_script # Creation of installation directory will be handled by InnoSetup
-        @of << [OP_CREATE_INST_DIRECTORY, next_to_exe ? 1 : 0, delete_after ? 1 : 0, chdir_before ? 1 : 0].pack("VVVV")
-      end
+    # When OP_CREATE_INST_DIRECTORY appears in the data stream,
+    # the stub changes the destination for file extraction.
+    # Therefore, this method should be called before the start
+    # of file extraction. Calling it in the middle of directive
+    # code or multiple times is not allowed.
+    def create_inst_dir(next_to_exe, delete_after, chdir_before)
+      raise "duplicated create_inst_dir method" if @inst_dir_created
+      @inst_dir_created = true
+
+      # Creation of installation directory will be handled by InnoSetup
+      return if Ocran.inno_script
+
+      @of << [OP_CREATE_INST_DIRECTORY, next_to_exe ? 1 : 0, delete_after ? 1 : 0, chdir_before ? 1 : 0].pack("VVVV")
     end
+    private :create_inst_dir
 
     def createfile(src, tgt)
       return if @files[tgt]
