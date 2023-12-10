@@ -1022,11 +1022,11 @@ EOF
       sb.setenv("GEM_PATH", (TEMPDIR_ROOT / GEMHOMEDIR).to_native)
 
       # Add the opcode to launch the script
-      extra_arg = Ocran.arg.map { |arg| ' "' + arg.gsub("\"", "\\\"") + '"' }.join
+      extra_arg = Ocran.arg.map { |arg| "\"#{arg.gsub("\"", "\\\"")}\"" }.join(" ")
       installed_ruby_exe = TEMPDIR_ROOT / BINDIR / rubyexe
       launch_script = (TEMPDIR_ROOT / target_script).to_native
-      sb.postcreateprocess(installed_ruby_exe,
-                           "#{rubyexe} \"#{launch_script}\"#{extra_arg}")
+      sb.post_create_process(installed_ruby_exe,
+                             "#{rubyexe} \"#{launch_script}\" #{extra_arg}")
     end
 
     unless Ocran.inno_script
@@ -1289,7 +1289,14 @@ EOF
       @of << [OP_CREATE_PROCESS, image.to_native, cmdline].pack("VZ*Z*")
     end
 
-    def postcreateprocess(image, cmdline)
+    # Specifies the final application script to be launched, which can be called
+    # from any position in the data stream. If specified multiple times, the last
+    # one takes effect.
+    #
+    # You can omit setting OP_POST_CREATE_PROCESS without issues, in which case
+    # the stub terminates without launching anything after performing other
+    # runtime operations.
+    def post_create_process(image, cmdline)
       Ocran.verbose_msg "p #{showtempdir image} #{showtempdir cmdline}"
       @of << [OP_POST_CREATE_PROCESS, image.to_native, cmdline].pack("VZ*Z*")
     end
