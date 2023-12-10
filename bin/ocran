@@ -1241,7 +1241,7 @@ EOF
       return if @paths[key]
 
       @paths[key] = true
-      Ocran.verbose_msg "m #{showtempdir path}"
+      Ocran.verbose_msg "m #{show_path path}"
       path = Ocran.Pathname(path)
 
       # To create intermediate directories, perform a recursive call
@@ -1274,7 +1274,7 @@ EOF
       @files[tgt] = src
       tgt = Ocran.Pathname(tgt)
       mkdir(tgt.dirname)
-      Ocran.verbose_msg "a #{showtempdir tgt}"
+      Ocran.verbose_msg "a #{show_path tgt}"
 
       # InnoSetup will install the file with a [Files] statement
       return if Ocran.inno_script
@@ -1285,7 +1285,7 @@ EOF
     end
 
     def createprocess(image, cmdline)
-      Ocran.verbose_msg "l #{showtempdir image} #{showtempdir cmdline}"
+      Ocran.verbose_msg "l #{show_path image} #{show_path cmdline}"
       @of << [OP_CREATE_PROCESS, image.to_native, cmdline].pack("VZ*Z*")
     end
 
@@ -1297,12 +1297,12 @@ EOF
     # the stub terminates without launching anything after performing other
     # runtime operations.
     def post_create_process(image, cmdline)
-      Ocran.verbose_msg "p #{showtempdir image} #{showtempdir cmdline}"
+      Ocran.verbose_msg "p #{show_path image} #{show_path cmdline}"
       @of << [OP_POST_CREATE_PROCESS, image.to_native, cmdline].pack("VZ*Z*")
     end
 
     def setenv(name, value)
-      Ocran.verbose_msg "e #{name} #{showtempdir value}"
+      Ocran.verbose_msg "e #{name} #{show_path value}"
       @of << [OP_SETENV, name, value].pack("VZ*Z*")
     end
 
@@ -1315,7 +1315,7 @@ EOF
       Ocran.lzma_mode and not Ocran.inno_script
     end
 
-    def showtempdir(x)
+    def show_path(x)
       x.to_s.gsub(TEMPDIR_ROOT.to_s, "<tempdir>")
     end
 
