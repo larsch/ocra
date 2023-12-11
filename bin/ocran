@@ -1140,17 +1140,13 @@ EOF
       @paths = {}
       @files = {}
 
-      if windowed
-        image = Ocran.stubwimage
-      else
-        image = Ocran.stubimage
-      end
-
-      unless image
+      begin
+        image = windowed ? Ocran.stubwimage : Ocran.stubimage
+      rescue
         Ocran.fatal_error "Stub image not available"
+      else
+        File.binwrite(path, image)
       end
-
-      File.binwrite(path, image)
 
       if Ocran.icon_filename
         system Ocran.ediconpath.to_s, path.to_s, Ocran.icon_filename.to_s
