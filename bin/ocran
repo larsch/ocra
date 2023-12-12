@@ -1148,25 +1148,30 @@ EOF
         File.binwrite(path, image)
       end
 
-      if Ocran.icon_filename
-        system Ocran.ediconpath.to_s, path.to_s, Ocran.icon_filename.to_s
-      end
-
-      @opcode_offset = File.size(path)
-
-      File.open(path, "ab") do |ocranfile|
-        @of = ocranfile
-
-        enable_debug_mode if debug_mode
-        create_inst_dir debug_extract, !debug_extract, chdir_before
-
-        if compress_mode?
-          compress(&b)
-        else
-          yield(self)
+      begin
+        if Ocran.icon_filename
+          system(Ocran.ediconpath.to_s, path.to_s, Ocran.icon_filename.to_s, exception: true)
         end
 
-        close
+        @opcode_offset = File.size(path)
+
+        File.open(path, "ab") do |ocranfile|
+          @of = ocranfile
+
+          enable_debug_mode if debug_mode
+          create_inst_dir debug_extract, !debug_extract, chdir_before
+
+          if compress_mode?
+            compress(&b)
+          else
+            yield(self)
+          end
+
+          close
+        end
+      rescue Exception => e
+        File.unlink(path) if File.exist?(path)
+        Ocran.fatal_error("Ocran building failed: #{e.message}")
       end
 
       if Ocran.inno_script
