@@ -1136,7 +1136,7 @@ EOF
     # When set to true, the working directory is changed to the application's
     # deployment location at runtime.
     #
-    def initialize(path, windowed, debug_mode: nil, debug_extract: nil, chdir_before: nil)
+    def initialize(path, windowed, debug_mode: nil, debug_extract: nil, chdir_before: nil, &b)
       @paths = {}
       @files = {}
 
@@ -1160,25 +1160,10 @@ EOF
         enable_debug_mode if debug_mode
         create_inst_dir debug_extract, !debug_extract, chdir_before
 
-        if lzma_mode?
-          require "tempfile"
-          @of = Tempfile.new(mode: IO::BINARY)
-        end
-
-        yield(self)
-
-        if lzma_mode?
-          @of.close
-          data_size = File.size(@of.path)
-          Ocran.msg "Compressing #{data_size} bytes"
-          Tempfile.create do |out|
-            out.close
-            system(Ocran.lzmapath.to_s, "e", @of.path, out.path) or fail
-            compressed_data_size = File.size(out.path)
-            ocranfile << [OP_DECOMPRESS_LZMA, compressed_data_size].pack("VV")
-            IO.copy_stream(out.path, ocranfile)
-          end
-          @of = ocranfile
+        if compress_mode?
+          compress(&b)
+        else
+          yield(self)
         end
 
         close
@@ -1307,7 +1292,7 @@ EOF
       @of.close
     end
 
-    def lzma_mode?
+    def compress_mode?
       Ocran.lzma_mode and not Ocran.inno_script
     end
 
@@ -1326,6 +1311,29 @@ EOF
       Ocran.msg("Enabling debug mode in executable")
       @of << [OP_ENABLE_DEBUG_MODE].pack("V")
     end
+
+    def compress
+      @of << [OP_DECOMPRESS_LZMA, 0].pack("VV")
+      offset = @of.pos
+
+      require "tempfile"
+      tmp = Tempfile.open(mode: IO::BINARY) do |tmp|
+        _of = @of
+        @of = tmp
+
+        yield(self)
+
+        Ocran.msg "Compressing #{tmp.size} bytes"
+        @of = _of
+        tmp
+      end
+
+      out = IO.popen([Ocran.lzmapath, "e", tmp.path, "-so"])
+      IO.copy_stream(out, @of)
+      compressed_data_size = @of.pos - offset
+      File.binwrite(@of.path, [compressed_data_size].pack("V"), offset - 4)
+    end
+    private :compress
   end # class OcranBuilder
 end # module Ocran
 
