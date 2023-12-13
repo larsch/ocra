@@ -1200,10 +1200,10 @@ EOF
           Ocran.verbose_msg "### INNOSETUP SCRIPT ###"
           Ocran.verbose_msg File.read(iss.path)
 
+          Ocran.msg "Running InnoSetup compiler ISCC"
           iscc_cmd = ["ISCC"]
           iscc_cmd << "/Q" unless Ocran.verbose
           iscc_cmd << iss.path
-          Ocran.msg "Running InnoSetup compiler ISCC"
           unless system(*iscc_cmd)
             case $?.exitstatus
             when 0 then raise "ISCC reported success, but system reported error?"
