@@ -1178,8 +1178,8 @@ EOF
         esc = -> (s) { s.to_s.gsub('"', '""') }
 
         begin
-          iss_path = "ocrantemp.iss"
-          File.open(iss_path, "w") do |f|
+          require "tempfile"
+          iss = Tempfile.open(["", ".iss"], Dir.pwd) do |f|
             f.puts File.read(Ocran.inno_script)
             f.puts
             f.puts "[Dirs]"
@@ -1194,14 +1194,15 @@ EOF
               dest_dir = Pathname.new(tgt).dirname
               f.puts "Source: \"#{ esc.(src) }\"; DestDir: \"{app}/#{ esc.(dest_dir) }\""
             end
+            f
           end
 
           Ocran.verbose_msg "### INNOSETUP SCRIPT ###"
-          Ocran.verbose_msg File.read(iss_path)
+          Ocran.verbose_msg File.read(iss.path)
 
           iscc_cmd = ["ISCC"]
           iscc_cmd << "/Q" unless Ocran.verbose
-          iscc_cmd << iss_path
+          iscc_cmd << iss.path
           Ocran.msg "Running InnoSetup compiler ISCC"
           unless system(*iscc_cmd)
             case $?.exitstatus
@@ -1214,7 +1215,6 @@ EOF
         rescue Exception => e
           Ocran.fatal_error("InnoSetup installer creation failed: #{e.message}")
         ensure
-          File.unlink(iss_path) if File.exist?(iss_path)
           File.unlink(path) if File.exist?(path)
         end
       end
