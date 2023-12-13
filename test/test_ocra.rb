@@ -767,4 +767,14 @@ class TestOcran < Minitest::Test
     end
   end
 
+  # Should be able to build an installer using Inno Setup.
+  def test_innosetup
+    skip unless system("where ISCC")
+    with_fixture 'innosetup' do
+      assert system("ruby", ocran, "innosetup.rb", "--quiet",
+                    "--innosetup", "innosetup.iss", "--chdir-first", "--no-lzma")
+      assert File.exist?("Output/innosetup.exe")
+    end
+  end
+
 end
