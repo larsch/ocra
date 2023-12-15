@@ -1256,8 +1256,10 @@ EOF
     private :create_inst_dir
 
     def create_file(src, tgt)
-      return if @files[tgt]
-      @files[tgt] = src
+      key = tgt.to_s.downcase
+      return if @files[key]
+
+      @files[key] = src
       tgt = Ocran.Pathname(tgt)
 
       # InnoSetup will install the file with a [Files] statement
