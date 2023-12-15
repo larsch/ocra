@@ -946,7 +946,7 @@ EOF
           sb.mkdir(target)
         else
           begin
-            sb.createfile(file, target)
+            sb.create_file(file, target)
           rescue Errno::ENOENT
             raise unless file =~ IGNORE_MODULE_NAMES
           end
@@ -960,9 +960,9 @@ EOF
         rubyexe = Host.ruby_exe
       end
       Ocran.msg "Adding ruby executable #{rubyexe}"
-      sb.createfile(Host.bindir / rubyexe, BINDIR / rubyexe)
+      sb.create_file(Host.bindir / rubyexe, BINDIR / rubyexe)
       if Host.libruby_so
-        sb.createfile(Host.bindir / Host.libruby_so, BINDIR / Host.libruby_so)
+        sb.create_file(Host.bindir / Host.libruby_so, BINDIR / Host.libruby_so)
       end
 
       # Add detected DLLs
@@ -973,20 +973,20 @@ EOF
         else
           target = BINDIR / File.basename(dll)
         end
-        sb.createfile(dll, target)
+        sb.create_file(dll, target)
       end
 
       # Add external manifest files
       manifests.each do |manifest|
         Ocran.msg "Adding external manifest #{manifest}"
         target = manifest.relative_path_from(Host.exec_prefix)
-        sb.createfile(manifest, target)
+        sb.create_file(manifest, target)
       end
 
       # Add extra DLLs specified on the command line
       Ocran.extra_dlls.each do |dll|
         Ocran.msg "Adding supplied DLL #{dll}"
-        sb.createfile(Host.bindir / dll, BINDIR / dll)
+        sb.create_file(Host.bindir / dll, BINDIR / dll)
       end
 
       # Add gemspec files
@@ -994,10 +994,10 @@ EOF
       @gemspecs.each do |gemspec|
         if gemspec.subpath?(Host.exec_prefix)
           path = gemspec.relative_path_from(Host.exec_prefix)
-          sb.createfile(gemspec, path)
+          sb.create_file(gemspec, path)
         elsif defined?(Gem) and gemhome = Gem.path.find { |pth| gemspec.subpath?(pth) }
           path = GEMHOMEDIR / gemspec.relative_path_from(Pathname(gemhome))
-          sb.createfile(gemspec, path)
+          sb.create_file(gemspec, path)
         else
           Ocran.fatal_error "Gem spec #{gemspec} does not exist in the Ruby installation. Don't know where to put it."
         end
@@ -1006,13 +1006,13 @@ EOF
       # Add loaded libraries (features, gems)
       Ocran.msg "Adding library files"
       libs.each do |path, target|
-        sb.createfile(path, target)
+        sb.create_file(path, target)
       end
 
       # Workaround: RubyInstaller cannot find the msys folder if ../msys64/usr/bin/msys-2.0.dll is not present (since RubyInstaller-2.4.1 rubyinstaller 2 issue 23)
       # Add an empty file to /msys64/usr/bin/msys-2.0.dll if the dll was not required otherwise
       unless sb.files.keys.any? { |entry| entry.to_s.include?("msys-2.0.dll") }
-        sb.createfile(Pathname(File.dirname(__FILE__)) / "../share/ocran/empty-msys-2.0.dll".to_s, 'msys64/usr/bin/msys-2.0.dll')
+        sb.create_file(Pathname(File.dirname(__FILE__)) / "../share/ocran/empty-msys-2.0.dll".to_s, 'msys64/usr/bin/msys-2.0.dll')
       end
 
       # Set environment variable
@@ -1104,7 +1104,7 @@ EOF
   end
 
   # Utility class that produces the actual executable. Opcodes
-  # (createfile, mkdir etc) are added by invoking methods on an
+  # (create_file, mkdir etc) are added by invoking methods on an
   # instance of OcranBuilder.
   class OcranBuilder
     Signature = [0x41, 0xb6, 0xba, 0x4e].freeze
@@ -1255,7 +1255,7 @@ EOF
     end
     private :create_inst_dir
 
-    def createfile(src, tgt)
+    def create_file(src, tgt)
       return if @files[tgt]
       @files[tgt] = src
       tgt = Ocran.Pathname(tgt)
