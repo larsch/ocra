@@ -1002,7 +1002,6 @@ EOF
       # Set environment variable
       sb.setenv("RUBYOPT", Ocran.rubyopt || ENV["RUBYOPT"] || "")
       sb.setenv("RUBYLIB", load_path.map { |path| path.to_native }.uniq.join(";"))
-
       sb.setenv("GEM_PATH", (TEMPDIR_ROOT / GEMHOMEDIR).to_native)
 
       # Add the opcode to launch the script
