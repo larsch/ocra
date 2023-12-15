@@ -176,8 +176,6 @@ module Ocran
       obj.map { |x| Pathname(x) }
     when String
       Pathname.new(obj)
-    when NilClass
-      nil
     else
       raise ArgumentError, obj
     end
