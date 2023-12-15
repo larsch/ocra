@@ -285,13 +285,6 @@ module Ocran
 
   @options.each_key { |opt| eval("def self.#{opt}; @options[:#{opt}]; end") }
 
-  class << self
-    attr_reader :lzmapath
-    attr_reader :ediconpath
-    attr_reader :stubimage
-    attr_reader :stubwimage
-  end
-
   def Ocran.msg(s)
     puts "=== #{s}" unless Ocran.quiet
   end
@@ -318,14 +311,6 @@ module Ocran
   def Ocran.restore_environment
     ENV.clear.update(@env_before)
     Dir.chdir @pwd_before
-  end
-
-  def Ocran.find_stubs
-    ocranpath = Pathname(File.dirname(__FILE__))
-    @stubimage = (ocranpath / "../share/ocran/stub.exe").binread
-    @stubwimage = (ocranpath / "../share/ocran/stubw.exe").binread
-    @lzmapath = (ocranpath / "../share/ocran/lzma.exe").expand_path
-    @ediconpath = (ocranpath / "../share/ocran/edicon.exe").expand_path
   end
 
   def Ocran.parseargs(argv)
@@ -493,7 +478,6 @@ EOF
   def Ocran.init(argv)
     save_environment
     parseargs(argv)
-    find_stubs
     IGNORE_MODULES.push(*ObjectSpace.each_object(Module).to_a)
   end
 
@@ -1118,6 +1102,12 @@ EOF
     OP_ENABLE_DEBUG_MODE = 7
     OP_CREATE_INST_DIRECTORY = 8
 
+    base_dir = File.join(File.dirname(__FILE__), "../share/ocran")
+    STUB_PATH = File.join(base_dir, "stub.exe")
+    STUBW_PATH = File.join(base_dir, "stubw.exe")
+    LZMA_PATH = File.join(base_dir, "lzma.exe")
+    EDICON_PATH = File.join(base_dir, "edicon.exe")
+
     attr_reader :files
 
     # debug_mode:
@@ -1141,7 +1131,7 @@ EOF
       @files = {}
 
       begin
-        image = windowed ? Ocran.stubwimage : Ocran.stubimage
+        image = Ocran.Pathname(windowed ? STUBW_PATH : STUB_PATH).binread
       rescue
         Ocran.fatal_error "Stub image not available"
       else
@@ -1150,7 +1140,7 @@ EOF
 
       begin
         if Ocran.icon_filename
-          system(Ocran.ediconpath.to_s, path.to_s, Ocran.icon_filename.to_s, exception: true)
+          system(EDICON_PATH, path.to_s, Ocran.icon_filename.to_s, exception: true)
         end
 
         @opcode_offset = File.size(path)
@@ -1341,7 +1331,7 @@ EOF
         tmp
       end
 
-      out = IO.popen([Ocran.lzmapath, "e", tmp.path, "-so"])
+      out = IO.popen([LZMA_PATH, "e", tmp.path, "-so"])
       IO.copy_stream(out, @of)
       compressed_data_size = @of.pos - offset
       File.binwrite(@of.path, [compressed_data_size].pack("V"), offset - 4)
