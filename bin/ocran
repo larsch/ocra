@@ -897,7 +897,6 @@ EOF
       manifests = []
     end
 
-    executable = nil
     if Ocran.output_override
       executable = Ocran.output_override
     else
