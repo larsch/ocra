@@ -1270,7 +1270,13 @@ EOF
       IO.copy_stream(src, @of)
     end
 
-    def createprocess(image, cmdline)
+    # Execute the specified application script during stub's data stream reading and
+    # wait for it to finish. The return value from the executed script is ignored. If
+    # the script execution succeeds, the stub continues processing the remaining
+    # data stream. If the script execution fails, the stub outputs an error and exits.
+    # This method overwrites information about the script to be launched after file
+    # extraction provided by the `post_create_process` method.
+    def create_process(image, cmdline)
       Ocran.verbose_msg "l #{show_path image} #{show_path cmdline}"
       @of << [OP_CREATE_PROCESS, image.to_native, cmdline].pack("VZ*Z*")
     end
