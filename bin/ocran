@@ -1230,11 +1230,11 @@ EOF
       Ocran.verbose_msg "m #{show_path path}"
       path = Ocran.Pathname(path)
 
-      # To create intermediate directories, perform a recursive call
-      mkdir(path.dirname)
-
       # The directory will be created by InnoSetup with a [Dirs] statement
       return if Ocran.inno_script
+
+      # To create intermediate directories, perform a recursive call
+      mkdir(path.dirname)
 
       @of << [OP_CREATE_DIRECTORY, path.to_native].pack("VZ*")
     end
@@ -1259,12 +1259,12 @@ EOF
       return if @files[tgt]
       @files[tgt] = src
       tgt = Ocran.Pathname(tgt)
-      mkdir(tgt.dirname)
-      Ocran.verbose_msg "a #{show_path tgt}"
 
       # InnoSetup will install the file with a [Files] statement
       return if Ocran.inno_script
 
+      mkdir(tgt.dirname)
+      Ocran.verbose_msg "a #{show_path tgt}"
       src = Ocran.Pathname(src)
       @of << [OP_CREATE_FILE, tgt.to_native, src.size].pack("VZ*V")
       IO.copy_stream(src, @of)
