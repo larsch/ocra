@@ -62,7 +62,7 @@ module Ocran
     # Determines if 'src' is contained in 'tgt' (i.e. it is a subpath of
     # 'tgt'). Both must be absolute paths and not contain '..'
     def subpath?(other)
-      other = Pathname.new(other)
+      other = Pathname === other ? other : Pathname.new(other)
       src_normalized = to_posix.downcase
       tgt_normalized = other.to_posix.downcase
       src_normalized =~ /^#{Regexp.escape tgt_normalized}#{SEPARATOR_PAT}/i
@@ -72,7 +72,7 @@ module Ocran
     # is an absolute path. Otherwise, returns the full path of the
     # left + right.
     def /(other)
-      other = Pathname.new(other)
+      other = Pathname === other ? other : Pathname.new(other)
       if other.absolute?
         other
       else
@@ -94,14 +94,6 @@ module Ocran
 
     def extname
       File.extname(@path)
-    end
-
-    def ext(new_ext = nil)
-      if new_ext
-        sub_ext(new_ext)
-      else
-        extname
-      end
     end
 
     def ext?(expected_ext)
@@ -148,9 +140,7 @@ module Ocran
       Pathname.new(File.expand_path(@path, dir))
     end
 
-    def expand(dir = nil); dir ? expand_path(dir) : expand_path; end
     def size; File.size(@path); end
-    def encode(e); to_posix.encode(e); end # called when creating an installer with innosetup 
 
     def binread(*args)
       File.binread(@path, *args)
@@ -163,7 +153,6 @@ module Ocran
     alias to_path to_posix
 
     alias to_s to_posix
-    alias to_str to_posix
   end
 
   # Type conversion for the Pathname class. Works with Pathname,
