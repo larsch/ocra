@@ -981,7 +981,7 @@ EOF
 
       # Workaround: RubyInstaller cannot find the msys folder if ../msys64/usr/bin/msys-2.0.dll is not present (since RubyInstaller-2.4.1 rubyinstaller 2 issue 23)
       # Add an empty file to /msys64/usr/bin/msys-2.0.dll if the dll was not required otherwise
-      unless sb.files.keys.any? { |entry| entry.to_s.include?("msys-2.0.dll") }
+      unless sb.files.values.any? { |entry, _src| entry.to_s.include?("msys-2.0.dll") }
         sb.create_file(Pathname(File.dirname(__FILE__)) / "../share/ocran/empty-msys-2.0.dll".to_s, 'msys64/usr/bin/msys-2.0.dll')
       end
 
@@ -1158,15 +1158,15 @@ EOF
             f.puts File.read(Ocran.inno_script)
             f.puts
             f.puts "[Dirs]"
-            @paths.each_key do |dir|
+            @paths.each_value do |dir|
               f.puts "Name: \"{app}/#{ esc.(dir) }\""
             end
             f.puts
             f.puts "[Files]"
             f.puts "Source: \"#{ esc.(path) }\"; DestDir: \"{app}\""
-            @files.each do |tgt, src|
+            @files.each_value do |tgt, src|
               next if src =~ IGNORE_MODULE_NAMES
-              dest_dir = Pathname.new(tgt).dirname
+              dest_dir = Ocran.Pathname(tgt).dirname
               f.puts "Source: \"#{ esc.(src) }\"; DestDir: \"{app}/#{ esc.(dest_dir) }\""
             end
             f
@@ -1201,7 +1201,7 @@ EOF
       key = path.to_s.downcase
       return if @paths[key]
 
-      @paths[key] = true
+      @paths[key] = path
       Ocran.verbose_msg "m #{show_path path}"
       path = Ocran.Pathname(path)
 
@@ -1234,7 +1234,7 @@ EOF
       key = tgt.to_s.downcase
       return if @files[key]
 
-      @files[key] = src
+      @files[key] = [tgt, src]
       tgt = Ocran.Pathname(tgt)
 
       # InnoSetup will install the file with a [Files] statement
