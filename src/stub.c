@@ -188,39 +188,6 @@ void MarkForDeletion(LPTSTR path)
    CloseHandle(h);
 }
 
-void DeleteRecursivelyNowOrLater(LPTSTR path)
-{
-   if (!DeleteRecursively(path))
-      MarkForDeletion(path);
-}
-
-void DeleteOldFiles()
-{
-   TCHAR path[MAX_PATH];
-   DWORD len = GetTempPath(MAX_PATH, path);
-   if (path[len-1] != '\\') {
-      lstrcat(path, "\\");
-      len += 1;
-   }
-   lstrcat(path, "*.ocran-delete-me");
-   WIN32_FIND_DATA findData;
-   HANDLE handle = FindFirstFile(path, &findData);
-   path[len] = 0;
-   if (handle == INVALID_HANDLE_VALUE)
-      return;
-   do {
-      TCHAR ocranPath[MAX_PATH];
-      lstrcpy(ocranPath, path);
-      lstrcat(ocranPath, findData.cFileName);
-      DeleteFile(ocranPath);
-      DWORD len = lstrlen(ocranPath);
-      len -= lstrlen(".ocran-delete-me");
-      ocranPath[len] = 0;
-      DeleteRecursivelyNowOrLater(ocranPath);
-   } while (FindNextFile(handle, &findData));
-   FindClose(handle);
-}
-
 BOOL OpCreateInstDirectory(LPVOID* p)
 {
    DWORD DebugExtractMode = GetInteger(p);
@@ -275,8 +242,6 @@ BOOL OpCreateInstDirectory(LPVOID* p)
 
 int CALLBACK _tWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPTSTR lpCmdLine, int nCmdShow)
 {
-   DeleteOldFiles();
-
    /* Find name of image */
    if (!GetModuleFileName(NULL, ImageFileName, MAX_PATH))
    {
@@ -363,7 +328,9 @@ int CALLBACK _tWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPTSTR lpCm
          SetCurrentDirectory(SystemDirectory);
       else
          SetCurrentDirectory("C:\\");
-      DeleteRecursivelyNowOrLater(InstDir);
+
+      if (!DeleteRecursively(InstDir))
+            MarkForDeletion(InstDir);
    }
 
    ExitProcess(ExitStatus);
